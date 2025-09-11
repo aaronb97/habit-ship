@@ -1,7 +1,9 @@
 import { Button, Text } from '@react-navigation/elements';
 import { StyleSheet, View } from 'react-native';
+import { useSetup } from '../../utils/useIsSetupFinished';
 
 export function Home() {
+  const { setIsSetupFinished } = useSetup();
   return (
     <View style={styles.container}>
       <Text>Home Screen</Text>
@@ -10,6 +12,7 @@ export function Home() {
         Go to Profile
       </Button>
       <Button screen="Settings">Go to Settings</Button>
+      <Button onPress={() => setIsSetupFinished(false)}>Revert Setup</Button>
     </View>
   );
 }

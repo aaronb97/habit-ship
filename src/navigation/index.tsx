@@ -13,6 +13,9 @@ import { Profile } from './screens/Profile';
 import { Settings } from './screens/Settings';
 import { Updates } from './screens/Updates';
 import { NotFound } from './screens/NotFound';
+import { SetupFirstHabit } from './screens/SetupFirstHabit';
+import { SetupFirstMountain } from './screens/SetupFirstMountain';
+import { useSetup } from '../utils/useIsSetupFinished';
 
 const HomeTabs = createBottomTabNavigator({
   screens: {
@@ -52,14 +55,24 @@ const HomeTabs = createBottomTabNavigator({
 
 const RootStack = createNativeStackNavigator({
   screens: {
+    SetupFirstHabit: {
+      screen: SetupFirstHabit,
+      if: () => !useSetup().isSetupFinished,
+    },
+    SetupFirstMountain: {
+      screen: SetupFirstMountain,
+      if: () => !useSetup().isSetupFinished,
+    },
     HomeTabs: {
       screen: HomeTabs,
+      if: () => useSetup().isSetupFinished,
       options: {
         title: 'Home',
         headerShown: false,
       },
     },
     Profile: {
+      if: () => useSetup().isSetupFinished,
       screen: Profile,
       linking: {
         path: ':user(@[a-zA-Z0-9-_]+)',
@@ -72,6 +85,7 @@ const RootStack = createNativeStackNavigator({
       },
     },
     Settings: {
+      if: () => useSetup().isSetupFinished,
       screen: Settings,
       options: ({ navigation }) => ({
         presentation: 'modal',
