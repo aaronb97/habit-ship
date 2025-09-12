@@ -9,7 +9,7 @@ function createHabitId(): HabitId {
   return Date.now().toString() as HabitId;
 }
 
-type Habit = {
+export type Habit = {
   id: HabitId;
   title: string;
   description?: string;
@@ -17,10 +17,20 @@ type Habit = {
   timerLength?: number;
 };
 
+export type Hike = {
+  /**
+   * The height of the hiker (initialized to 0)
+   */
+  height: number;
+  mountainName: string;
+};
+
 type Store = {
   isSetupFinished: boolean;
   setIsSetupFinished: (value: boolean) => void;
   habits: Habit[];
+  hike?: Hike;
+  setHike: (hike: Hike) => void;
 
   addHabit: (habit: {
     title: string;
@@ -33,7 +43,11 @@ type Store = {
     editedHabit: Partial<Omit<Habit, 'id'>>,
   ) => void;
 
+  completeHabit: (habitId: HabitId) => void;
+
   removeHabit: (habitId: HabitId) => void;
+
+  clearData: () => void;
 };
 
 export const useStore = create<Store>()(
@@ -66,12 +80,35 @@ export const useStore = create<Store>()(
         });
       },
 
+      completeHabit: (habitId: HabitId) => {
+        set((state) => {
+          const habitToComplete = state.habits.find((h) => h.id === habitId);
+          if (habitToComplete) {
+            habitToComplete.completions.push(new Date());
+          }
+        });
+      },
+
       removeHabit: (habitId) => {
         set((state) => {
           const habitIndex = state.habits.findIndex((h) => h.id === habitId);
           if (habitIndex !== -1) {
             state.habits.splice(habitIndex, 1);
           }
+        });
+      },
+
+      setHike: (hike) => {
+        set((state) => {
+          state.hike = hike;
+        });
+      },
+
+      clearData: () => {
+        set((state) => {
+          state.isSetupFinished = false;
+          state.habits = [];
+          state.hike = undefined;
         });
       },
     })),
