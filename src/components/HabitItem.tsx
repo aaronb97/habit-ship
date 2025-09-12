@@ -1,6 +1,6 @@
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Habit, useStore } from '../utils/store';
-import { useEffect, useState } from 'react';
+import { useTimer } from 'react-timer-hook';
 
 type HabitItemProps = {
   habit: Habit;
@@ -28,34 +28,64 @@ export function HabitItem({
 }: HabitItemProps) {
   const isCompleted = isHabitCompletedToday(habit);
   const { activeTimer, cancelTimer } = useStore();
-  const [timeLeft, setTimeLeft] = useState<string>('');
 
   const isActiveTimer = activeTimer?.habitId === habit.id;
 
-  useEffect(() => {
-    function handleTimeLeft() {
-      if (!isActiveTimer || !habit.timerLength) return;
-
-      const startTime = new Date(activeTimer.startTime).getTime();
-      const now = Date.now();
-      const elapsed = Math.floor((now - startTime) / 1000);
-      const remaining = Math.max(0, habit.timerLength! * 60 - elapsed);
-
-      const minutes = Math.floor(remaining / 60);
-      const seconds = remaining % 60;
-      setTimeLeft(
-        `${minutes.toString().padStart(2, '0')}:${seconds
-          .toString()
-          .padStart(2, '0')}`,
+  const presentAlert = () => {
+    if (isCompleted) {
+      Alert.alert(
+        'Timer Complete',
+        `You have already completed your habit: ${habit.title} today!`,
+        [
+          {
+            text: 'OK',
+          },
+        ],
       );
+      return;
     }
 
-    handleTimeLeft();
+    Alert.alert(
+      'Timer Complete',
+      `Have you completed your habit: ${habit.title}?`,
+      [
+        {
+          text: 'Yes',
+          onPress: () => {
+            onComplete();
+          },
+        },
+        {
+          text: 'Not Yet',
+        },
+      ],
+    );
+  };
 
-    const interval = setInterval(handleTimeLeft, 1000);
+  function getTimerExpiryTimestamp() {
+    if (!activeTimer) return new Date();
+    return new Date(
+      new Date(activeTimer.startTime).getTime() +
+        habit.timerLength! * 60 * 1000,
+    );
+  }
 
-    return () => clearInterval(interval);
-  }, [isActiveTimer, activeTimer?.startTime, habit.timerLength]);
+  const { minutes, seconds, isRunning, pause, restart } = useTimer({
+    expiryTimestamp: getTimerExpiryTimestamp(),
+    autoStart: false,
+    onExpire: () => {
+      cancelTimer();
+      presentAlert();
+    },
+  });
+
+  if (isActiveTimer && !isRunning) {
+    restart(getTimerExpiryTimestamp());
+  }
+
+  if (!isActiveTimer && isRunning) {
+    pause();
+  }
 
   return (
     <TouchableOpacity
@@ -72,7 +102,9 @@ export function HabitItem({
 
       {isActiveTimer && (
         <View style={styles.timerContainer}>
-          <Text style={styles.timerDisplay}>{timeLeft}</Text>
+          <Text style={styles.timerDisplay}>{`${minutes}:${seconds
+            .toString()
+            .padStart(2, '0')}`}</Text>
           <TouchableOpacity style={styles.cancelButton} onPress={cancelTimer}>
             <Text style={styles.buttonText}>Cancel</Text>
           </TouchableOpacity>

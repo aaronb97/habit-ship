@@ -35,6 +35,7 @@
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
     "react-native-web": "^0.20.0",
+    "react-timer-hook": "^4.0.5",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
