@@ -9,6 +9,7 @@ import {
 import { HabitId, useStore } from '../../utils/store';
 import { Habit } from '../../utils/store';
 import { useEffect, useState } from 'react';
+import { mountains } from '../../mountains';
 
 interface EditHabitModalProps {
   habit: Habit | null;
@@ -102,11 +103,18 @@ function HikeDisplay() {
     return () => clearInterval(interval);
   }, [expendEnergy]);
 
+  const mountainHeight = mountains.find(
+    (mountain) => mountain.name === hike?.mountainName,
+  )!.height;
+
   return (
     <View style={styles.hikeSection}>
       <Text style={styles.sectionTitle}>Current Hike</Text>
       <Text>Mountain: {hike?.mountainName}</Text>
-      <Text>Height: {((hike?.height || 0) * 3.28084).toFixed(1)} ft</Text>
+      <Text>
+        Height: {((hike?.height || 0) * 3.28084).toFixed(1)} ft (
+        {(((hike?.height || 0) / mountainHeight) * 100).toFixed(1)}%)
+      </Text>
       <Text>Energy: {hike?.energy.toFixed(1)}</Text>
     </View>
   );
