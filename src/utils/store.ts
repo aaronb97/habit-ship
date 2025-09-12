@@ -7,7 +7,7 @@ import { mountains } from '../mountains';
 export type HabitId = string & { __habitId: true };
 
 function createHabitId(): HabitId {
-  return Date.now().toString() as HabitId;
+  return crypto.randomUUID() as HabitId;
 }
 
 export type Habit = {

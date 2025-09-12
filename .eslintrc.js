@@ -7,6 +7,7 @@ module.exports = {
   env: {
     browser: true,
     es2021: true,
+    node: true,
   },
   rules: {
     '@stylistic/jsx-newline': [
@@ -16,5 +17,18 @@ module.exports = {
   },
   settings: {
     'import/ignore': ['react-native'],
+    'import/resolver': {
+      node: {
+        paths: ['src'],
+        extensions: ['.js', '.jsx', '.ts', '.d.ts', '.tsx'],
+      },
+      typescript: {
+        project: './tsconfig.json',
+      },
+      alias: {
+        map: [['~', path.resolve(__dirname, './src')]],
+        extensions: ['.js', '.jsx', '.ts', '.d.ts', '.tsx'],
+      },
+    },
   },
 };
