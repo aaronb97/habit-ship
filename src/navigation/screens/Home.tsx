@@ -1,9 +1,9 @@
 import { Button, Text } from '@react-navigation/elements';
 import { StyleSheet, View } from 'react-native';
-import { useSetup } from '../../utils/useIsSetupFinished';
+import { useStore } from '../../utils/store';
 
 export function Home() {
-  const { setIsSetupFinished } = useSetup();
+  const { setIsSetupFinished } = useStore();
   return (
     <View style={styles.container}>
       <Text>Home Screen</Text>

@@ -6,7 +6,6 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as React from 'react';
 import { useColorScheme } from 'react-native';
 import { Navigation } from './navigation';
-import { SetupProvider } from './utils/useIsSetupFinished';
 
 Asset.loadAsync([
   ...NavigationAssets,
@@ -24,17 +23,15 @@ export function App() {
   const theme = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
 
   return (
-    <SetupProvider>
-      <Navigation
-        theme={theme}
-        linking={{
-          enabled: 'auto',
-          prefixes: [prefix],
-        }}
-        onReady={() => {
-          SplashScreen.hideAsync();
-        }}
-      />
-    </SetupProvider>
+    <Navigation
+      theme={theme}
+      linking={{
+        enabled: 'auto',
+        prefixes: [prefix],
+      }}
+      onReady={() => {
+        SplashScreen.hideAsync();
+      }}
+    />
   );
 }

@@ -1,8 +1,8 @@
 import { View, Text, Button } from 'react-native';
-import { useSetup } from '../../utils/useIsSetupFinished';
+import { useStore } from '../../utils/store';
 
 export function SetupFirstMountain() {
-  const { setIsSetupFinished } = useSetup();
+  const { setIsSetupFinished } = useStore();
 
   return (
     <View>
