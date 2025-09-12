@@ -96,12 +96,12 @@ export function HabitItem({
       <View style={styles.habitInfo}>
         <Text style={styles.habitTitle}>{habit.title}</Text>
 
-        {habit.description && (
+        {habit.description ? (
           <Text style={styles.habitDescription}>{habit.description}</Text>
-        )}
+        ) : null}
       </View>
 
-      {isActiveTimer && (
+      {isActiveTimer ? (
         <View style={styles.timerContainer}>
           <Text style={styles.timerDisplay}>{`${minutes}:${seconds
             .toString()
@@ -111,19 +111,19 @@ export function HabitItem({
             <Text style={styles.buttonText}>Cancel</Text>
           </TouchableOpacity>
         </View>
-      )}
+      ) : null}
 
-      {habit.timerLength && !isActiveTimer && (
+      {habit.timerLength && !isActiveTimer ? (
         <TouchableOpacity style={styles.timerButton} onPress={onStartTimer}>
           <Text style={styles.buttonText}>Start Timer</Text>
         </TouchableOpacity>
-      )}
+      ) : null}
 
-      {!isCompleted && !isActiveTimer && (
+      {!isCompleted && !isActiveTimer ? (
         <TouchableOpacity style={styles.completeButton} onPress={onComplete}>
           <Text style={styles.buttonText}>✓ Complete</Text>
         </TouchableOpacity>
-      )}
+      ) : null}
     </TouchableOpacity>
   );
 }
