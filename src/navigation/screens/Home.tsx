@@ -1,14 +1,14 @@
 import { Button, Text } from '@react-navigation/elements';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { CreateHabitModal } from '../../components/CreateHabitModal';
+import { EditHabitModal } from '../../components/EditHabitModal';
+import { HabitItem } from '../../components/HabitItem';
 import { mountains } from '../../mountains';
 import { Habit, HabitId, useStore } from '../../utils/store';
-import { EditHabitModal } from '../../components/EditHabitModal';
-import { CreateHabitModal } from '../../components/CreateHabitModal';
-import { HabitItem } from '../../components/HabitItem';
 
 function HikeDisplay() {
-  const { hike, expendEnergy } = useStore();
+  const { hike, expendEnergy, clearData } = useStore();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -20,7 +20,21 @@ function HikeDisplay() {
 
   const mountainHeight = mountains.find(
     (mountain) => mountain.name === hike?.mountainName,
-  )!.height;
+  )?.height;
+
+  if (!mountainHeight) {
+    console.error('encountered invalid mountain height, resetting data');
+    clearData();
+    return;
+  }
+
+  const heightInFeet = ((hike?.height || 0) * 3.28084).toFixed(1);
+  const heightPercentage = (
+    ((hike?.height || 0) / mountainHeight) *
+    100
+  ).toFixed(1);
+
+  const heightString = `${heightInFeet} ft (${heightPercentage}%)`;
 
   return (
     <View style={styles.hikeSection}>
@@ -28,10 +42,7 @@ function HikeDisplay() {
 
       <Text>Mountain: {hike?.mountainName}</Text>
 
-      <Text>
-        Height: {((hike?.height || 0) * 3.28084).toFixed(1)} ft (
-        {(((hike?.height || 0) / mountainHeight) * 100).toFixed(1)}%)
-      </Text>
+      <Text>{heightString}</Text>
 
       <Text>Energy: {hike?.energy.toFixed(1)}</Text>
     </View>
@@ -41,6 +52,7 @@ function HikeDisplay() {
 export function Home() {
   const { clearData, habits, completeHabit, editHabit, addHabit, startTimer } =
     useStore();
+
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -76,6 +88,7 @@ export function Home() {
       <View style={styles.habitsSection}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Habits</Text>
+
           <Button onPress={handleCreateNewHabit}>+ New Habit</Button>
         </View>
 

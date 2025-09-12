@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { HabitId, useIsSetupInProgress, useStore } from './store';
+import { useIsSetupInProgress, useStore } from './store';
 
 describe('store', () => {
   beforeEach(() => {
@@ -185,6 +185,7 @@ describe('store', () => {
         energy: 50,
         lastEnergyUpdate: new Date(Date.now() - 3600000).toISOString(), // 1h ago
       });
+
       result.current.expendEnergy();
     });
 
@@ -203,6 +204,7 @@ describe('store', () => {
         energy: 100,
         lastEnergyUpdate: new Date(Date.now() - 36000000).toISOString(), // 10h ago
       });
+
       result.current.expendEnergy();
     });
 
@@ -221,6 +223,7 @@ describe('store', () => {
         mountainName: 'Mount Everest',
         energy: 50,
       });
+
       result.current.clearData();
     });
 

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { useEffect, useState } from 'react';
 import {
   Button,
   ScrollView,
@@ -7,14 +8,58 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { RootStackParamList } from '..';
 import { mountains } from '../../mountains';
 import { useStore } from '../../utils/store';
 
 export function SetupFirstMountain() {
-  const { setIsSetupFinished } = useStore();
+  const navigation = useNavigation();
+  const { setIsSetupFinished, addHabit, setHike } = useStore();
   const [selectedMountain, setSelectedMountain] = useState(mountains[0].name);
+  const params =
+    useRoute<RouteProp<RootStackParamList, 'SetupFirstMountain'>>().params;
 
-  const setHike = useStore((state) => state.setHike);
+  const { habit } = params;
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Button
+          title="Finish"
+          onPress={() => {
+            addHabit(habit);
+
+            setHike({
+              height: 0,
+              energy: 0,
+              mountainName: selectedMountain,
+            });
+
+            setIsSetupFinished(true);
+          }}
+        />
+      ),
+    });
+
+    return () => {
+      navigation.setOptions({
+        headerRight: undefined,
+      });
+    };
+  }, [
+    addHabit,
+    habit,
+    navigation,
+    selectedMountain,
+    setHike,
+    setIsSetupFinished,
+  ]);
+
+  function getHeightString(height: number) {
+    return `${height.toLocaleString(undefined, {
+      maximumFractionDigits: 0,
+    })} ft`;
+  }
 
   return (
     <View style={styles.container}>
@@ -37,31 +82,13 @@ export function SetupFirstMountain() {
             </Text>
 
             <Text style={styles.mountainInfo}>
-              Height:{' '}
-
-              {(mountain.height * 3.28084).toLocaleString(undefined, {
-                maximumFractionDigits: 0,
-              })}{' '}
-              ft
+              Height: {getHeightString(mountain.height)}
             </Text>
 
             <Text style={styles.mountainInfo}>{mountain.description}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
-
-      <Button
-        title="Finish setup"
-        onPress={() => {
-          setHike({
-            height: 0,
-            energy: 0,
-            mountainName: selectedMountain,
-          });
-
-          setIsSetupFinished(true);
-        }}
-      />
     </View>
   );
 }

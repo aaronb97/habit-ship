@@ -1,6 +1,6 @@
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Habit, useStore } from '../utils/store';
 import { useTimer } from 'react-timer-hook';
+import { Habit, useStore } from '../utils/store';
 
 type HabitItemProps = {
   habit: Habit;
@@ -42,6 +42,7 @@ export function HabitItem({
           },
         ],
       );
+
       return;
     }
 
@@ -105,6 +106,7 @@ export function HabitItem({
           <Text style={styles.timerDisplay}>{`${minutes}:${seconds
             .toString()
             .padStart(2, '0')}`}</Text>
+
           <TouchableOpacity style={styles.cancelButton} onPress={cancelTimer}>
             <Text style={styles.buttonText}>Cancel</Text>
           </TouchableOpacity>

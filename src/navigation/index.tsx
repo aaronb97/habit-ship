@@ -1,9 +1,6 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { HeaderButton, Text } from '@react-navigation/elements';
-import {
-  StaticParamList,
-  createStaticNavigation,
-} from '@react-navigation/native';
+import { createStaticNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Image } from 'react-native';
 import bell from '../assets/bell.png';
@@ -110,7 +107,20 @@ const RootStack = createNativeStackNavigator({
 
 export const Navigation = createStaticNavigation(RootStack);
 
-type RootStackParamList = StaticParamList<typeof RootStack>;
+export type RootStackParamList = {
+  SetupFirstHabit: undefined;
+  SetupFirstMountain: {
+    habit: {
+      title: string;
+      description?: string;
+      timerLength?: number;
+    };
+  };
+  HomeTabs: undefined;
+  Profile: undefined;
+  Settings: undefined;
+  NotFound: undefined;
+};
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace

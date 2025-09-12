@@ -7,15 +7,22 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Habit } from '../utils/store';
 
 interface CreateHabitModalProps {
   visible: boolean;
   onClose: () => void;
-  onCreate: (habit: { title: string; description: string; timerLength?: number }) => void;
+  onCreate: (habit: {
+    title: string;
+    description: string;
+    timerLength?: number;
+  }) => void;
 }
 
-export function CreateHabitModal({ visible, onClose, onCreate }: CreateHabitModalProps) {
+export function CreateHabitModal({
+  visible,
+  onClose,
+  onCreate,
+}: CreateHabitModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [timerLength, setTimerLength] = useState('');
@@ -27,6 +34,7 @@ export function CreateHabitModal({ visible, onClose, onCreate }: CreateHabitModa
         description,
         timerLength: timerLength ? parseInt(timerLength, 10) : undefined,
       });
+
       setTitle('');
       setDescription('');
       setTimerLength('');
@@ -60,7 +68,6 @@ export function CreateHabitModal({ visible, onClose, onCreate }: CreateHabitModa
             placeholder="Habit Title"
             value={title}
             onChangeText={setTitle}
-            autoFocus
           />
 
           <TextInput

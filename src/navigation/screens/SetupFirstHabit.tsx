@@ -1,36 +1,42 @@
 import { useNavigation } from '@react-navigation/native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useStore } from '../../utils/store';
 
 export function SetupFirstHabit() {
-  const { addHabit } = useStore();
+  const navigation = useNavigation();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [timerLength, setTimerLength] = useState('');
 
-  const navigate = useNavigation();
-
-  const handleAddHabit = () => {
-    const timer = parseInt(timerLength, 10) || 0;
-    addHabit({
-      title,
-      description,
-      timerLength: timer,
-    });
-  };
-
   const isFormComplete = title.trim() !== '';
 
-  const handleAddHabitAndNext = () => {
-    if (isFormComplete) {
-      handleAddHabit();
-      navigate.reset({
-        index: 0,
-        routes: [{ name: 'SetupFirstMountain' }],
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Button
+          disabled={!isFormComplete}
+          title="Next"
+          onPress={() => {
+            const timer = parseInt(timerLength, 10) || 0;
+
+            navigation.navigate('SetupFirstMountain', {
+              habit: {
+                title,
+                description,
+                timerLength: timer,
+              },
+            });
+          }}
+        />
+      ),
+    });
+
+    return () => {
+      navigation.setOptions({
+        headerRight: undefined,
       });
-    }
-  };
+    };
+  }, [description, isFormComplete, navigation, timerLength, title]);
 
   return (
     <View style={styles.container}>
@@ -59,14 +65,6 @@ export function SetupFirstHabit() {
         keyboardType="numeric"
         onChangeText={setTimerLength}
       />
-
-      <View style={styles.button}>
-        <Button
-          disabled={!isFormComplete}
-          title="Next"
-          onPress={handleAddHabitAndNext}
-        />
-      </View>
     </View>
   );
 }
@@ -90,8 +88,5 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
     borderRadius: 5,
-  },
-  button: {
-    marginTop: 10,
   },
 });
