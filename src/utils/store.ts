@@ -6,10 +6,6 @@ import { mountains } from '../mountains';
 
 export type HabitId = string & { __habitId: true };
 
-function createHabitId(): HabitId {
-  return crypto.randomUUID() as HabitId;
-}
-
 export type Habit = {
   id: HabitId;
   title: string;
@@ -38,6 +34,7 @@ type Store = {
   habits: Habit[];
   hike?: Hike;
   completedMountains?: string[];
+  idCount: number;
 
   setIsSetupFinished: (value: boolean) => void;
   setHike: (hike: Hike) => void;
@@ -70,6 +67,8 @@ export const useStore = create<Store>()(
   persist(
     immer((set) => ({
       isSetupFinished: false,
+      idCount: 0,
+
       setIsSetupFinished: (value: boolean) => {
         set((state) => {
           state.isSetupFinished = value;
@@ -81,9 +80,11 @@ export const useStore = create<Store>()(
         set((state) => {
           state.habits.push({
             ...habit,
-            id: createHabitId(),
+            id: state.idCount.toString() as HabitId,
             completions: [],
           });
+
+          state.idCount++;
         });
       },
 
@@ -185,6 +186,7 @@ export const useStore = create<Store>()(
           state.isSetupFinished = false;
           state.habits = [];
           state.hike = undefined;
+          state.idCount = 0;
         });
       },
     })),

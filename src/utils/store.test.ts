@@ -54,6 +54,20 @@ describe('store', () => {
     expect(result.current.habits[0].completions).toEqual([]);
   });
 
+  it('should generate unique IDs for habits', () => {
+    const { result } = renderHook(() => useStore());
+
+    act(() => {
+      result.current.addHabit({ title: 'Drink Water' });
+      result.current.addHabit({ title: 'Drink Water' });
+    });
+
+    expect(result.current.habits).toHaveLength(2);
+    expect(result.current.habits[0].id).not.toEqual(
+      result.current.habits[1].id,
+    );
+  });
+
   it('should edit a habit', () => {
     const { result } = renderHook(() => useStore());
 
