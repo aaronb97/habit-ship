@@ -4,6 +4,7 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { mountains } from '../../mountains';
 import { Habit, HabitId, useStore } from '../../utils/store';
 import { EditHabitModal } from '../../components/EditHabitModal';
+import { CreateHabitModal } from '../../components/CreateHabitModal';
 
 function HikeDisplay() {
   const { hike, expendEnergy } = useStore();
@@ -37,8 +38,9 @@ function HikeDisplay() {
 }
 
 export function Home() {
-  const { clearData, habits, completeHabit, editHabit } = useStore();
+  const { clearData, habits, completeHabit, editHabit, addHabit } = useStore();
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const isHabitCompletedToday = (habit: Habit) => {
     if (habit.completions.length === 0) return false;
@@ -49,6 +51,15 @@ export function Home() {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     return lastCompletion > yesterday;
+  };
+
+  const handleCreateNewHabit = () => {
+    setShowCreateModal(true);
+  };
+
+  const handleCreate = (habit: { title: string; description: string; timerLength?: number }) => {
+    addHabit(habit);
+    setShowCreateModal(false);
   };
 
   const handleEditSave = (
@@ -64,7 +75,10 @@ export function Home() {
       <HikeDisplay />
 
       <View style={styles.habitsSection}>
-        <Text style={styles.sectionTitle}>Habits</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Habits</Text>
+          <Button onPress={handleCreateNewHabit}>+ New Habit</Button>
+        </View>
 
         {habits.map((habit) => {
           const isCompleted = isHabitCompletedToday(habit);
@@ -107,6 +121,12 @@ export function Home() {
         onClose={() => setEditingHabit(null)}
         onSave={handleEditSave}
       />
+
+      <CreateHabitModal
+        visible={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreate={handleCreate}
+      />
     </View>
   );
 }
@@ -118,6 +138,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     padding: 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 10,
   },
   sectionTitle: {
     fontSize: 18,
