@@ -1,10 +1,120 @@
 import { Button, Text } from '@react-navigation/elements';
-import { StyleSheet, View, TouchableOpacity } from 'react-native';
-import { useStore } from '../../utils/store';
+import {
+  StyleSheet,
+  View,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+} from 'react-native';
+import { HabitId, useStore } from '../../utils/store';
 import { Habit } from '../../utils/store';
+import { useEffect, useState } from 'react';
+
+interface EditHabitModalProps {
+  habit: Habit | null;
+  onClose: () => void;
+  onSave: (
+    habitId: HabitId,
+    updates: { title: string; description: string; timerLength?: number },
+  ) => void;
+}
+
+function EditHabitModal({ habit, onClose, onSave }: EditHabitModalProps) {
+  const [editTitle, setEditTitle] = useState(habit?.title || '');
+  const [editDescription, setEditDescription] = useState(
+    habit?.description || '',
+  );
+  const [editTimerLength, setEditTimerLength] = useState(
+    habit?.timerLength?.toString() || '',
+  );
+
+  const handleSave = () => {
+    if (habit) {
+      onSave(habit.id, {
+        title: editTitle,
+        description: editDescription,
+        timerLength: editTimerLength
+          ? parseInt(editTimerLength, 10)
+          : undefined,
+      });
+    }
+  };
+
+  const handleClose = () => {
+    setEditTitle('');
+    setEditDescription('');
+    setEditTimerLength('');
+    onClose();
+  };
+
+  return (
+    <Modal
+      visible={habit !== null}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={handleClose}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <TouchableOpacity onPress={handleClose}>
+            <Text style={styles.modalCloseButton}>Cancel</Text>
+          </TouchableOpacity>
+          <Text style={styles.modalTitle}>Edit Habit</Text>
+          <TouchableOpacity onPress={handleSave}>
+            <Text style={styles.modalSaveButton}>Save</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.modalContent}>
+          <TextInput
+            style={styles.input}
+            placeholder="Habit Title"
+            value={editTitle}
+            onChangeText={setEditTitle}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Description"
+            value={editDescription}
+            onChangeText={setEditDescription}
+            multiline
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Timer Length (minutes)"
+            value={editTimerLength}
+            onChangeText={setEditTimerLength}
+            keyboardType="numeric"
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function HikeDisplay() {
+  const { hike, expendEnergy } = useStore();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      expendEnergy();
+    }, 100);
+    return () => clearInterval(interval);
+  }, [expendEnergy]);
+
+  return (
+    <View style={styles.hikeSection}>
+      <Text style={styles.sectionTitle}>Current Hike</Text>
+      <Text>Mountain: {hike?.mountainName}</Text>
+      <Text>Height: {hike?.height.toFixed(1)} ft</Text>
+      <Text>Energy: {hike?.energy.toFixed(1)}</Text>
+    </View>
+  );
+}
 
 export function Home() {
-  const { clearData, habits, hike, completeHabit } = useStore();
+  const { clearData, habits, completeHabit, editHabit } = useStore();
+  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
 
   const isHabitCompletedToday = (habit: Habit) => {
     if (habit.completions.length === 0) return false;
@@ -16,35 +126,31 @@ export function Home() {
     return lastCompletion > yesterday;
   };
 
+  const handleEditSave = (
+    habitId: HabitId,
+    updates: { title: string; description: string; timerLength?: number },
+  ) => {
+    editHabit(habitId, updates);
+    setEditingHabit(null);
+  };
+
   return (
     <View style={styles.container}>
-      {hike && (
-        <View style={styles.hikeSection}>
-          <Text style={styles.sectionTitle}>Current Hike</Text>
-          <Text>Mountain: {hike.mountainName}</Text>
-          <Text>Height: {hike.height} ft</Text>
-        </View>
-      )}
+      <HikeDisplay />
 
       <View style={styles.habitsSection}>
         <Text style={styles.sectionTitle}>Habits</Text>
         {habits.map((habit) => {
           const isCompleted = isHabitCompletedToday(habit);
           return (
-            <View
+            <TouchableOpacity
               key={habit.id}
               style={[
                 styles.habitItem,
                 isCompleted && styles.completedHabitItem,
               ]}
+              onLongPress={() => setEditingHabit(habit)}
             >
-              <TouchableOpacity
-                style={[styles.checkbox, isCompleted && styles.checkedCheckbox]}
-                onPress={() => !isCompleted && completeHabit(habit.id)}
-                disabled={isCompleted}
-              >
-                <Text style={styles.checkmark}>{isCompleted ? '✓' : ''}</Text>
-              </TouchableOpacity>
               <View style={styles.habitInfo}>
                 <Text style={styles.habitTitle}>{habit.title}</Text>
                 {habit.description && (
@@ -53,12 +159,26 @@ export function Home() {
                   </Text>
                 )}
               </View>
-            </View>
+              {!isCompleted && (
+                <TouchableOpacity
+                  style={styles.completeButton}
+                  onPress={() => completeHabit(habit.id)}
+                >
+                  <Text style={styles.buttonText}>✓ Complete</Text>
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
           );
         })}
       </View>
 
       <Button onPress={() => clearData()}>Revert Setup</Button>
+
+      <EditHabitModal
+        habit={editingHabit}
+        onClose={() => setEditingHabit(null)}
+        onSave={handleEditSave}
+      />
     </View>
   );
 }
@@ -92,6 +212,7 @@ const styles = StyleSheet.create({
   habitItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 15,
     marginBottom: 10,
     backgroundColor: '#ffffff',
@@ -111,28 +232,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f9f0',
     borderColor: '#4caf50',
   },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderWidth: 2,
-    borderColor: '#28a745',
-    backgroundColor: '#28a745',
-    borderRadius: 4,
-    marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkedCheckbox: {
-    backgroundColor: '#28a745',
-    borderColor: '#28a745',
-  },
-  checkmark: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
   habitInfo: {
     flex: 1,
+    marginRight: 10,
   },
   habitTitle: {
     fontSize: 16,
@@ -142,5 +244,59 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginTop: 2,
+  },
+  completeButton: {
+    backgroundColor: '#28a745',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  completedButton: {
+    backgroundColor: '#6c757d',
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  completedButtonText: {
+    color: 'white',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  modalCloseButton: {
+    fontSize: 16,
+    color: '#007AFF',
+  },
+  modalSaveButton: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: 'bold',
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    fontSize: 16,
   },
 });

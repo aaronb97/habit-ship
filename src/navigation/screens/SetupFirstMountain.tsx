@@ -49,6 +49,7 @@ export function SetupFirstMountain() {
         onPress={() => {
           setHike({
             height: 0,
+            energy: 0,
             mountainName: selectedMountain,
           });
           setIsSetupFinished(true);
