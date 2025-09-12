@@ -37,18 +37,21 @@ export function SetupFirstHabit() {
       <Text style={styles.paragraph}>
         Begin by setting up your first habit to track.
       </Text>
+
       <TextInput
         style={styles.input}
         placeholder="Habit Title"
         value={title}
         onChangeText={setTitle}
       />
+
       <TextInput
         style={styles.input}
         placeholder="Description"
         value={description}
         onChangeText={setDescription}
       />
+
       <TextInput
         style={styles.input}
         placeholder="Timer Length (minutes)"
@@ -56,6 +59,7 @@ export function SetupFirstHabit() {
         keyboardType="numeric"
         onChangeText={setTimerLength}
       />
+
       <View style={styles.button}>
         <Button
           disabled={!isFormComplete}

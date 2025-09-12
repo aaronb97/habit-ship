@@ -60,7 +60,9 @@ function EditHabitModal({ habit, onClose, onSave }: EditHabitModalProps) {
           <TouchableOpacity onPress={handleClose}>
             <Text style={styles.modalCloseButton}>Cancel</Text>
           </TouchableOpacity>
+
           <Text style={styles.modalTitle}>Edit Habit</Text>
+
           <TouchableOpacity onPress={handleSave}>
             <Text style={styles.modalSaveButton}>Save</Text>
           </TouchableOpacity>
@@ -73,6 +75,7 @@ function EditHabitModal({ habit, onClose, onSave }: EditHabitModalProps) {
             value={editTitle}
             onChangeText={setEditTitle}
           />
+
           <TextInput
             multiline
             style={styles.input}
@@ -80,6 +83,7 @@ function EditHabitModal({ habit, onClose, onSave }: EditHabitModalProps) {
             value={editDescription}
             onChangeText={setEditDescription}
           />
+
           <TextInput
             style={styles.input}
             placeholder="Timer Length (minutes)"
@@ -111,11 +115,15 @@ function HikeDisplay() {
   return (
     <View style={styles.hikeSection}>
       <Text style={styles.sectionTitle}>Current Hike</Text>
+
       <Text>Mountain: {hike?.mountainName}</Text>
+
       <Text>
         Height: {((hike?.height || 0) * 3.28084).toFixed(1)} ft (
+
         {(((hike?.height || 0) / mountainHeight) * 100).toFixed(1)}%)
       </Text>
+
       <Text>Energy: {hike?.energy.toFixed(1)}</Text>
     </View>
   );
@@ -150,6 +158,7 @@ export function Home() {
 
       <View style={styles.habitsSection}>
         <Text style={styles.sectionTitle}>Habits</Text>
+
         {habits.map((habit) => {
           const isCompleted = isHabitCompletedToday(habit);
           return (
@@ -163,12 +172,14 @@ export function Home() {
             >
               <View style={styles.habitInfo}>
                 <Text style={styles.habitTitle}>{habit.title}</Text>
+
                 {habit.description && (
                   <Text style={styles.habitDescription}>
                     {habit.description}
                   </Text>
                 )}
               </View>
+
               {!isCompleted && (
                 <TouchableOpacity
                   style={styles.completeButton}

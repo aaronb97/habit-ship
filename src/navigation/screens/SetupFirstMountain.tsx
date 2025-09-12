@@ -19,6 +19,7 @@ export function SetupFirstMountain() {
   return (
     <View style={styles.container}>
       <Text style={styles.paragraph}>Select your first mountain to climb:</Text>
+
       <ScrollView style={styles.scrollView}>
         {mountains.map((mountain) => (
           <TouchableOpacity
@@ -30,20 +31,25 @@ export function SetupFirstMountain() {
             onPress={() => setSelectedMountain(mountain.name)}
           >
             <Text style={styles.mountainName}>{mountain.name}</Text>
+
             <Text style={styles.mountainInfo}>
               Location: {mountain.location}
             </Text>
+
             <Text style={styles.mountainInfo}>
               Height:{' '}
+
               {(mountain.height * 3.28084).toLocaleString(undefined, {
                 maximumFractionDigits: 0,
               })}{' '}
               ft
             </Text>
+
             <Text style={styles.mountainInfo}>{mountain.description}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
+
       <Button
         title="Finish setup"
         onPress={() => {
