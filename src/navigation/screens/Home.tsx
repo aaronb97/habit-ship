@@ -1,15 +1,14 @@
 import { Button, Text } from '@react-navigation/elements';
-import {
-  StyleSheet,
-  View,
-  TouchableOpacity,
-  Modal,
-  TextInput,
-} from 'react-native';
-import { HabitId, useStore } from '../../utils/store';
-import { Habit } from '../../utils/store';
 import { useEffect, useState } from 'react';
+import {
+  Modal,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { mountains } from '../../mountains';
+import { Habit, HabitId , useStore } from '../../utils/store';
 
 interface EditHabitModalProps {
   habit: Habit | null;
@@ -25,6 +24,7 @@ function EditHabitModal({ habit, onClose, onSave }: EditHabitModalProps) {
   const [editDescription, setEditDescription] = useState(
     habit?.description || '',
   );
+
   const [editTimerLength, setEditTimerLength] = useState(
     habit?.timerLength?.toString() || '',
   );
@@ -74,18 +74,18 @@ function EditHabitModal({ habit, onClose, onSave }: EditHabitModalProps) {
             onChangeText={setEditTitle}
           />
           <TextInput
+            multiline
             style={styles.input}
             placeholder="Description"
             value={editDescription}
             onChangeText={setEditDescription}
-            multiline
           />
           <TextInput
             style={styles.input}
             placeholder="Timer Length (minutes)"
             value={editTimerLength}
-            onChangeText={setEditTimerLength}
             keyboardType="numeric"
+            onChangeText={setEditTimerLength}
           />
         </View>
       </View>
@@ -100,6 +100,7 @@ function HikeDisplay() {
     const interval = setInterval(() => {
       expendEnergy();
     }, 100);
+
     return () => clearInterval(interval);
   }, [expendEnergy]);
 
@@ -129,6 +130,7 @@ export function Home() {
     const lastCompletion = new Date(
       habit.completions[habit.completions.length - 1],
     );
+
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     return lastCompletion > yesterday;

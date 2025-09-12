@@ -1,7 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { mountains } from '../mountains';
 
 export type HabitId = string & { __habitId: true };
@@ -167,7 +167,7 @@ export const useStore = create<Store>()(
             state.hike.height += heightIncrease;
 
             const mountain = mountains.find(
-              (mountain) => mountain.name === state.hike!.mountainName,
+              (m) => m.name === state.hike!.mountainName,
             );
 
             if (!mountain) throw new Error('No mountain found');
@@ -194,3 +194,6 @@ export const useStore = create<Store>()(
     },
   ),
 );
+
+export const useIsSetupFinished = () => useStore().isSetupFinished;
+export const useIsSetupInProgress = () => !useStore().isSetupFinished;

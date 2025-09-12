@@ -1,7 +1,7 @@
-import { View, Text, StyleSheet, TextInput, Button } from 'react-native';
-import { useState } from 'react';
-import { useStore } from '../../utils/store';
 import { useNavigation } from '@react-navigation/native';
+import { useState } from 'react';
+import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useStore } from '../../utils/store';
 
 export function SetupFirstHabit() {
   const { addHabit } = useStore();
@@ -53,14 +53,14 @@ export function SetupFirstHabit() {
         style={styles.input}
         placeholder="Timer Length (minutes)"
         value={timerLength}
-        onChangeText={setTimerLength}
         keyboardType="numeric"
+        onChangeText={setTimerLength}
       />
       <View style={styles.button}>
         <Button
-          onPress={handleAddHabitAndNext}
           disabled={!isFormComplete}
           title="Next"
+          onPress={handleAddHabitAndNext}
         />
       </View>
     </View>

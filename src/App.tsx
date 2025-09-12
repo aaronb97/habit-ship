@@ -3,17 +3,16 @@ import { DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { Asset } from 'expo-asset';
 import { createURL } from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
-import * as React from 'react';
 import { useColorScheme } from 'react-native';
 import { Navigation } from './navigation';
 
-Asset.loadAsync([
+void Asset.loadAsync([
   ...NavigationAssets,
   require('./assets/newspaper.png'),
   require('./assets/bell.png'),
 ]);
 
-SplashScreen.preventAutoHideAsync();
+void SplashScreen.preventAutoHideAsync();
 
 const prefix = createURL('/');
 
@@ -30,7 +29,7 @@ export function App() {
         prefixes: [prefix],
       }}
       onReady={() => {
-        SplashScreen.hideAsync();
+        void SplashScreen.hideAsync();
       }}
     />
   );

@@ -1,21 +1,21 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { HeaderButton, Text } from '@react-navigation/elements';
 import {
-  createStaticNavigation,
   StaticParamList,
+  createStaticNavigation,
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Image } from 'react-native';
 import bell from '../assets/bell.png';
 import newspaper from '../assets/newspaper.png';
+import { useIsSetupFinished, useIsSetupInProgress } from '../utils/store';
 import { Home } from './screens/Home';
+import { NotFound } from './screens/NotFound';
 import { Profile } from './screens/Profile';
 import { Settings } from './screens/Settings';
-import { Updates } from './screens/Updates';
-import { NotFound } from './screens/NotFound';
 import { SetupFirstHabit } from './screens/SetupFirstHabit';
 import { SetupFirstMountain } from './screens/SetupFirstMountain';
-import { useStore } from '../utils/store';
+import { Updates } from './screens/Updates';
 
 const HomeTabs = createBottomTabNavigator({
   screens: {
@@ -57,22 +57,22 @@ const RootStack = createNativeStackNavigator({
   screens: {
     SetupFirstHabit: {
       screen: SetupFirstHabit,
-      if: () => !useStore().isSetupFinished,
+      if: useIsSetupInProgress,
     },
     SetupFirstMountain: {
       screen: SetupFirstMountain,
-      if: () => !useStore().isSetupFinished,
+      if: useIsSetupInProgress,
     },
     HomeTabs: {
       screen: HomeTabs,
-      if: () => useStore().isSetupFinished,
+      if: useIsSetupFinished,
       options: {
         title: 'Home',
         headerShown: false,
       },
     },
     Profile: {
-      if: () => useStore().isSetupFinished,
+      if: useIsSetupFinished,
       screen: Profile,
       linking: {
         path: ':user(@[a-zA-Z0-9-_]+)',
@@ -85,7 +85,7 @@ const RootStack = createNativeStackNavigator({
       },
     },
     Settings: {
-      if: () => useStore().isSetupFinished,
+      if: useIsSetupFinished,
       screen: Settings,
       options: ({ navigation }) => ({
         presentation: 'modal',
@@ -113,6 +113,7 @@ export const Navigation = createStaticNavigation(RootStack);
 type RootStackParamList = StaticParamList<typeof RootStack>;
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace ReactNavigation {
     interface RootParamList extends RootStackParamList {}
   }

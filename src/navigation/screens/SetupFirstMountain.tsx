@@ -1,14 +1,14 @@
-import {
-  View,
-  Text,
-  Button,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
-import { useStore } from '../../utils/store';
 import { useState } from 'react';
+import {
+  Button,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { mountains } from '../../mountains';
+import { useStore } from '../../utils/store';
 
 export function SetupFirstMountain() {
   const { setIsSetupFinished } = useStore();
@@ -52,6 +52,7 @@ export function SetupFirstMountain() {
             energy: 0,
             mountainName: selectedMountain,
           });
+
           setIsSetupFinished(true);
         }}
       />
