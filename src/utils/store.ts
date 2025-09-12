@@ -35,6 +35,10 @@ type Store = {
   hike?: Hike;
   completedMountains?: string[];
   idCount: number;
+  activeTimer?: {
+    habitId: HabitId;
+    startTime: string;
+  };
 
   setIsSetupFinished: (value: boolean) => void;
   setHike: (hike: Hike) => void;
@@ -59,6 +63,10 @@ type Store = {
   completeHabit: (habitId: HabitId) => void;
 
   removeHabit: (habitId: HabitId) => void;
+
+  startTimer: (habitId: HabitId) => void;
+
+  cancelTimer: () => void;
 
   clearData: () => void;
 };
@@ -185,6 +193,21 @@ export const useStore = create<Store>()(
               state.completeMountain(mountain.name);
             }
           }
+        });
+      },
+
+      startTimer: (habitId: HabitId) => {
+        set((state) => {
+          state.activeTimer = {
+            habitId,
+            startTime: new Date().toISOString(),
+          };
+        });
+      },
+
+      cancelTimer: () => {
+        set((state) => {
+          state.activeTimer = undefined;
         });
       },
 

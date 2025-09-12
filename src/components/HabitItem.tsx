@@ -1,10 +1,12 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Habit } from '../utils/store';
+import { Habit, useStore } from '../utils/store';
+import { useEffect, useState } from 'react';
 
 type HabitItemProps = {
   habit: Habit;
   onComplete: () => void;
   onEdit: () => void;
+  onStartTimer: () => void;
 };
 
 const isHabitCompletedToday = (habit: Habit) => {
@@ -18,32 +20,73 @@ const isHabitCompletedToday = (habit: Habit) => {
   return lastCompletion > yesterday;
 };
 
-export function HabitItem({ habit, onComplete, onEdit }: HabitItemProps) {
+export function HabitItem({
+  habit,
+  onComplete,
+  onEdit,
+  onStartTimer,
+}: HabitItemProps) {
   const isCompleted = isHabitCompletedToday(habit);
-  
+  const { activeTimer, cancelTimer } = useStore();
+  const [timeLeft, setTimeLeft] = useState<string>('');
+
+  const isActiveTimer = activeTimer?.habitId === habit.id;
+
+  useEffect(() => {
+    function handleTimeLeft() {
+      if (!isActiveTimer || !habit.timerLength) return;
+
+      const startTime = new Date(activeTimer.startTime).getTime();
+      const now = Date.now();
+      const elapsed = Math.floor((now - startTime) / 1000);
+      const remaining = Math.max(0, habit.timerLength! * 60 - elapsed);
+
+      const minutes = Math.floor(remaining / 60);
+      const seconds = remaining % 60;
+      setTimeLeft(
+        `${minutes.toString().padStart(2, '0')}:${seconds
+          .toString()
+          .padStart(2, '0')}`,
+      );
+    }
+
+    handleTimeLeft();
+
+    const interval = setInterval(handleTimeLeft, 1000);
+
+    return () => clearInterval(interval);
+  }, [isActiveTimer, activeTimer?.startTime, habit.timerLength]);
+
   return (
     <TouchableOpacity
-      style={[
-        styles.habitItem,
-        isCompleted && styles.completedHabitItem,
-      ]}
+      style={[styles.habitItem, isCompleted && styles.completedHabitItem]}
       onLongPress={onEdit}
     >
       <View style={styles.habitInfo}>
         <Text style={styles.habitTitle}>{habit.title}</Text>
 
         {habit.description && (
-          <Text style={styles.habitDescription}>
-            {habit.description}
-          </Text>
+          <Text style={styles.habitDescription}>{habit.description}</Text>
         )}
       </View>
 
-      {!isCompleted && (
-        <TouchableOpacity
-          style={styles.completeButton}
-          onPress={onComplete}
-        >
+      {isActiveTimer && (
+        <View style={styles.timerContainer}>
+          <Text style={styles.timerDisplay}>{timeLeft}</Text>
+          <TouchableOpacity style={styles.cancelButton} onPress={cancelTimer}>
+            <Text style={styles.buttonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {habit.timerLength && !isActiveTimer && (
+        <TouchableOpacity style={styles.timerButton} onPress={onStartTimer}>
+          <Text style={styles.buttonText}>Start Timer</Text>
+        </TouchableOpacity>
+      )}
+
+      {!isCompleted && !isActiveTimer && (
+        <TouchableOpacity style={styles.completeButton} onPress={onComplete}>
           <Text style={styles.buttonText}>✓ Complete</Text>
         </TouchableOpacity>
       )}
@@ -88,11 +131,33 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 2,
   },
+  timerContainer: {
+    alignItems: 'center',
+    gap: 8,
+  },
   completeButton: {
     backgroundColor: '#28a745',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
+  },
+  timerButton: {
+    backgroundColor: '#007bff',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  cancelButton: {
+    backgroundColor: '#dc3545',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  timerDisplay: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#007bff',
+    paddingHorizontal: 16,
   },
   buttonText: {
     color: 'white',

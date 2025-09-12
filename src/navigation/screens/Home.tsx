@@ -39,7 +39,8 @@ function HikeDisplay() {
 }
 
 export function Home() {
-  const { clearData, habits, completeHabit, editHabit, addHabit } = useStore();
+  const { clearData, habits, completeHabit, editHabit, addHabit, startTimer } =
+    useStore();
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -64,6 +65,10 @@ export function Home() {
     setEditingHabit(null);
   };
 
+  const handleTimerStart = (habitId: HabitId) => {
+    startTimer(habitId);
+  };
+
   return (
     <View style={styles.container}>
       <HikeDisplay />
@@ -80,6 +85,7 @@ export function Home() {
             habit={habit}
             onComplete={() => completeHabit(habit.id)}
             onEdit={() => setEditingHabit(habit)}
+            onStartTimer={() => handleTimerStart(habit.id)}
           />
         ))}
       </View>
