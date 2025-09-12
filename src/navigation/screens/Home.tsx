@@ -106,7 +106,7 @@ function HikeDisplay() {
     <View style={styles.hikeSection}>
       <Text style={styles.sectionTitle}>Current Hike</Text>
       <Text>Mountain: {hike?.mountainName}</Text>
-      <Text>Height: {hike?.height.toFixed(1)} ft</Text>
+      <Text>Height: {((hike?.height || 0) * 3.28084).toFixed(1)} ft</Text>
       <Text>Energy: {hike?.energy.toFixed(1)}</Text>
     </View>
   );

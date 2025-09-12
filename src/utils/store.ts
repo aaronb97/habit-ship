@@ -146,8 +146,8 @@ export const useStore = create<Store>()(
           state.hike.lastEnergyUpdate = new Date().toISOString();
 
           if (actualEnergyDecrease > 0) {
-            // 0.5 feet per second = 500 feet per 1000 seconds
-            const heightIncrease = (timeSinceLastUpdate / 1000) * 0.5;
+            // Height increase based on energy decrease: 10 energy = 548.64 meters
+            const heightIncrease = (actualEnergyDecrease / 10) * 548.64;
             state.hike.height += heightIncrease;
 
             const mountain = mountains.find(
