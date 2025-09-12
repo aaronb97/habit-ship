@@ -63,11 +63,18 @@ type Store = {
   clearData: () => void;
 };
 
+const initialData = {
+  isSetupFinished: false,
+  habits: [],
+  hike: undefined,
+  completedMountains: undefined,
+  idCount: 0,
+} satisfies Partial<Store>;
+
 export const useStore = create<Store>()(
   persist(
     immer((set) => ({
-      isSetupFinished: false,
-      idCount: 0,
+      ...initialData,
 
       setIsSetupFinished: (value: boolean) => {
         set((state) => {
@@ -75,7 +82,6 @@ export const useStore = create<Store>()(
         });
       },
 
-      habits: [],
       addHabit: (habit) => {
         set((state) => {
           state.habits.push({
@@ -141,6 +147,7 @@ export const useStore = create<Store>()(
           state.hike = hike;
         });
       },
+
       expendEnergy: () => {
         set((state) => {
           if (!state.hike) throw new Error('No hike found');
@@ -183,10 +190,7 @@ export const useStore = create<Store>()(
 
       clearData: () => {
         set((state) => {
-          state.isSetupFinished = false;
-          state.habits = [];
-          state.hike = undefined;
-          state.idCount = 0;
+          Object.assign(state, initialData);
         });
       },
     })),
