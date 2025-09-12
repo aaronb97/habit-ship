@@ -35,10 +35,13 @@ export type Hike = {
 
 type Store = {
   isSetupFinished: boolean;
-  setIsSetupFinished: (value: boolean) => void;
   habits: Habit[];
   hike?: Hike;
+  completedMountains?: string[];
+
+  setIsSetupFinished: (value: boolean) => void;
   setHike: (hike: Hike) => void;
+  completeMountain: (mountainName: string) => void;
 
   /**
    * Compares the current time to the last energy update and updates the energy accordingly
@@ -109,6 +112,20 @@ export const useStore = create<Store>()(
         });
       },
 
+      completeMountain: (mountainName: string) => {
+        set((state) => {
+          if (!state.completedMountains) {
+            state.completedMountains = [];
+          }
+
+          if (state.completedMountains.includes(mountainName)) {
+            return;
+          }
+
+          state.completedMountains.push(mountainName);
+        });
+      },
+
       removeHabit: (habitId) => {
         set((state) => {
           const habitIndex = state.habits.findIndex((h) => h.id === habitId);
@@ -146,16 +163,18 @@ export const useStore = create<Store>()(
           state.hike.lastEnergyUpdate = new Date().toISOString();
 
           if (actualEnergyDecrease > 0) {
-            // Height increase based on energy decrease: 10 energy = 548.64 meters
-            const heightIncrease = (actualEnergyDecrease / 10) * 548.64;
+            const heightIncrease = ((actualEnergyDecrease / 10) * 548.64) / 2;
             state.hike.height += heightIncrease;
 
             const mountain = mountains.find(
               (mountain) => mountain.name === state.hike!.mountainName,
             );
 
-            if (mountain) {
-              state.hike.height = Math.min(state.hike.height, mountain.height);
+            if (!mountain) throw new Error('No mountain found');
+
+            state.hike.height = Math.min(state.hike.height, mountain.height);
+            if (state.hike.height >= mountain.height) {
+              state.completeMountain(mountain.name);
             }
           }
         });
