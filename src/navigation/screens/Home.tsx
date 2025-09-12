@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { mountains } from '../../mountains';
-import { Habit, HabitId , useStore } from '../../utils/store';
+import { Habit, HabitId, useStore } from '../../utils/store';
 
 interface EditHabitModalProps {
   habit: Habit | null;
@@ -28,6 +28,12 @@ function EditHabitModal({ habit, onClose, onSave }: EditHabitModalProps) {
   const [editTimerLength, setEditTimerLength] = useState(
     habit?.timerLength?.toString() || '',
   );
+
+  useEffect(() => {
+    setEditTitle(habit?.title || '');
+    setEditDescription(habit?.description || '');
+    setEditTimerLength(habit?.timerLength?.toString() || '');
+  }, [habit]);
 
   const handleSave = () => {
     if (habit) {
@@ -120,7 +126,6 @@ function HikeDisplay() {
 
       <Text>
         Height: {((hike?.height || 0) * 3.28084).toFixed(1)} ft (
-
         {(((hike?.height || 0) / mountainHeight) * 100).toFixed(1)}%)
       </Text>
 
