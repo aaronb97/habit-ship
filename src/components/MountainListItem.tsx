@@ -27,9 +27,9 @@ export function MountainListItem({
   return (
     <TouchableOpacity
       style={[
-        styles.mountainBox, 
+        styles.mountainBox,
         isSelected && styles.selectedMountainBox,
-        isLocked && styles.lockedMountainBox
+        isLocked && styles.lockedMountainBox,
       ]}
       disabled={isLocked}
       onPress={isLocked ? undefined : onPress}
@@ -53,14 +53,16 @@ export function MountainListItem({
         {mountain.minLevel}
       </Text>
 
-      <Text style={[styles.mountainDescription, isLocked && styles.lockedText]}>
-        {mountain.description}
-      </Text>
+      {isLocked ? null : (
+        <Text style={styles.mountainDescription}>{mountain.description}</Text>
+      )}
 
       {isLocked && (
         <View style={styles.lockOverlay}>
           <Text style={styles.lockIcon}>🔒</Text>
-          <Text style={styles.lockText}>Level {mountain.minLevel} Required</Text>
+          <Text style={styles.lockText}>
+            Level {mountain.minLevel} Required
+          </Text>
         </View>
       )}
     </TouchableOpacity>
