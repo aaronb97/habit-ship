@@ -24,6 +24,60 @@ type HabitItemProps = {
   onStartTimer: () => void;
 };
 
+const calculateDailyStreak = (completions: string[]): number => {
+  if (completions.length === 0) return 0;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const completionDates = completions
+    .map((completion) => {
+      const date = new Date(completion);
+      date.setHours(0, 0, 0, 0);
+      return date;
+    })
+    .sort((a, b) => b.getTime() - a.getTime()); // Sort descending (most recent first)
+
+  // Remove duplicates (same day completions)
+  const uniqueDates = completionDates.filter(
+    (date, index) =>
+      index === 0 || date.getTime() !== completionDates[index - 1].getTime(),
+  );
+
+  if (uniqueDates.length === 0) return 0;
+
+  const mostRecentCompletion = uniqueDates[0];
+  const daysSinceLastCompletion = Math.floor(
+    (today.getTime() - mostRecentCompletion.getTime()) / (1000 * 60 * 60 * 24),
+  );
+
+  // Don't show streak if the most recent completion was more than 1 day ago
+  // (completing today wouldn't increase the streak)
+  if (daysSinceLastCompletion > 1) return 0;
+
+  let streak = 0;
+  let expectedDate = new Date(today);
+
+  // If the most recent completion was today, start from today
+  // If it was yesterday, start from yesterday
+  if (daysSinceLastCompletion === 0) {
+    expectedDate = new Date(today);
+  } else if (daysSinceLastCompletion === 1) {
+    expectedDate = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+  }
+
+  for (const completionDate of uniqueDates) {
+    if (completionDate.getTime() === expectedDate.getTime()) {
+      streak++;
+      expectedDate = new Date(expectedDate.getTime() - 24 * 60 * 60 * 1000); // Go back one day
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+};
+
 const formatLastCompleted = (completions: string[]) => {
   if (completions.length === 0) return null;
 
@@ -67,6 +121,7 @@ export function HabitItem({
 }: HabitItemProps) {
   const isCompleted = isHabitCompletedToday(habit);
   const lastCompletedText = formatLastCompleted(habit.completions);
+  const dailyStreak = calculateDailyStreak(habit.completions);
   const {
     activeTimer,
     cancelTimer,
@@ -241,10 +296,24 @@ export function HabitItem({
     if (isCompleted) {
       return (
         <View style={styles.completedContainer}>
-          <View>
-            <Text style={[styles.habitTitle, styles.completedHabitTitle]}>
-              {habit.title}
-            </Text>
+          <View style={styles.completedHabitInfo}>
+            <View style={styles.habitTitleRow}>
+              <Text style={[styles.habitTitle, styles.completedHabitTitle]}>
+                {habit.title}
+              </Text>
+              {dailyStreak > 0 && (
+                <View style={styles.streakBadge}>
+                  <MaterialIcons
+                    name="local-fire-department"
+                    size={16}
+                    color={colors.white}
+                  />
+                  <Text style={[styles.streakText, styles.completedStreakText]}>
+                    {dailyStreak}
+                  </Text>
+                </View>
+              )}
+            </View>
             {lastCompletedText ? (
               <Text style={styles.completedTodayText}>{lastCompletedText}</Text>
             ) : null}
@@ -257,7 +326,19 @@ export function HabitItem({
     return (
       <>
         <View style={styles.habitInfo}>
-          <Text style={styles.habitTitle}>{habit.title}</Text>
+          <View style={styles.habitTitleRow}>
+            <Text style={styles.habitTitle}>{habit.title}</Text>
+            {dailyStreak > 0 && (
+              <View style={styles.streakBadge}>
+                <MaterialIcons
+                  name="local-fire-department"
+                  size={16}
+                  color={colors.accent}
+                />
+                <Text style={styles.streakText}>{dailyStreak}</Text>
+              </View>
+            )}
+          </View>
           {habit.description ? (
             <Text style={styles.habitDescription}>{habit.description}</Text>
           ) : null}
@@ -373,6 +454,31 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 16,
     backgroundColor: 'transparent',
+  },
+  habitTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.backgroundDarker,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  streakText: {
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.small,
+    color: colors.accent,
+    marginLeft: 4,
+  },
+  completedStreakText: {
+    color: colors.white,
+  },
+  completedHabitInfo: {
+    flex: 1,
   },
   habitTitle: {
     fontFamily: fonts.semiBold,
