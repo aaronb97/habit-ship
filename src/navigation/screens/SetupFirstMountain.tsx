@@ -12,6 +12,7 @@ import { RootStackParamList } from '..';
 import { mountains } from '../../mountains';
 import { colors, fonts, fontSizes } from '../../styles/theme';
 import { useStore } from '../../utils/store';
+import { Meter } from '../../utils/units';
 
 export function SetupFirstMountain() {
   const navigation = useNavigation();
@@ -26,7 +27,7 @@ export function SetupFirstMountain() {
     addHabit(habit);
 
     setHike({
-      height: 0,
+      height: 0 as Meter,
       energy: 0,
       mountainName: selectedMountain,
     });

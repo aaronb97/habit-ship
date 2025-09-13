@@ -1,16 +1,7 @@
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
-
-interface Mountain {
-  name: string;
-  height: number;
-  description: string;
-  location: string;
-}
+import { Meter, metersToFeet } from '../utils/units';
+import { Mountain } from '../mountains';
 
 interface MountainListItemProps {
   mountain: Mountain;
@@ -18,19 +9,20 @@ interface MountainListItemProps {
   onPress: () => void;
 }
 
-export function MountainListItem({ mountain, isSelected, onPress }: MountainListItemProps) {
-  function getHeightString(height: number) {
-    return `${height.toLocaleString(undefined, {
+export function MountainListItem({
+  mountain,
+  isSelected,
+  onPress,
+}: MountainListItemProps) {
+  function getHeightString(height: Meter) {
+    return `${metersToFeet(height).toLocaleString(undefined, {
       maximumFractionDigits: 0,
     })} ft`;
   }
 
   return (
     <TouchableOpacity
-      style={[
-        styles.mountainBox,
-        isSelected && styles.selectedMountainBox,
-      ]}
+      style={[styles.mountainBox, isSelected && styles.selectedMountainBox]}
       onPress={onPress}
     >
       <Text style={styles.mountainName}>{mountain.name}</Text>
@@ -45,9 +37,7 @@ export function MountainListItem({ mountain, isSelected, onPress }: MountainList
         {getHeightString(mountain.height)}
       </Text>
 
-      <Text style={styles.mountainDescription}>
-        {mountain.description}
-      </Text>
+      <Text style={styles.mountainDescription}>{mountain.description}</Text>
     </TouchableOpacity>
   );
 }

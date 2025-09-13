@@ -12,6 +12,7 @@ import { mountains } from '../mountains';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { useStore } from '../utils/store';
 import { MountainListItem } from './MountainListItem';
+import { Meter } from '../utils/units';
 
 interface MountainSelectionModalProps {
   visible: boolean;
@@ -49,7 +50,7 @@ export function MountainSelectionModal({
             style: 'destructive',
             onPress: () => {
               setHike({
-                height: 0,
+                height: 0 as Meter,
                 energy: 0,
                 mountainName: selectedMountain,
               });
@@ -61,7 +62,7 @@ export function MountainSelectionModal({
       );
     } else {
       setHike({
-        height: 0,
+        height: 0 as Meter,
         energy: 0,
         mountainName: selectedMountain,
       });

@@ -1,14 +1,10 @@
 import { useEffect } from 'react';
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { mountains } from '../mountains';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { useStore } from '../utils/store';
 import { ProgressBar } from './ProgressBar';
+import { metersToFeet } from '../utils/units';
 
 interface HikeDisplayProps {
   onMountainPress?: () => void;
@@ -20,41 +16,47 @@ export function HikeDisplay({ onMountainPress }: HikeDisplayProps) {
   useEffect(() => {
     const interval = setInterval(() => {
       expendEnergy();
-    }, 1000); // Updated to every second for smoother energy decay
+    }, 100);
 
     return () => clearInterval(interval);
   }, [expendEnergy]);
 
   const mountain = mountains.find((m) => m.name === hike?.mountainName);
 
-  if (!mountain) {
+  if (!mountain || !hike) {
     console.error('Encountered invalid mountain, resetting data');
     clearData();
     return null;
   }
 
-  const heightPercentage = (hike?.height || 0) / mountain.height;
-  const energyPercentage = (hike?.energy || 0) / 100;
+  const heightPercentage = (hike.height || 0) / mountain.height;
+  const energyPercentage = (hike.energy || 0) / 100;
+
+  const currentHeightInFeet = metersToFeet(hike.height).toFixed(1);
+  const totalHeightInFeet = metersToFeet(mountain.height).toLocaleString(
+    undefined,
+    {
+      maximumFractionDigits: 0,
+    },
+  );
+
+  const progressValue = `${currentHeightInFeet.toLocaleString()} / ${totalHeightInFeet} ft`;
 
   return (
     <View style={styles.hikeDisplayContainer}>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.mountainInfoContainer}
         activeOpacity={0.7}
         onPress={onMountainPress}
       >
-        <Text style={styles.mountainTitle}>{hike?.mountainName}</Text>
+        <Text style={styles.mountainTitle}>{hike.mountainName}</Text>
         <Text style={styles.mountainSubtitle}>{mountain.location}</Text>
       </TouchableOpacity>
 
       <View style={styles.progressContainer}>
         <View style={styles.progressRow}>
           <Text style={styles.progressLabel}>Progress</Text>
-          <Text style={styles.progressValue}>
-            {`${hike?.height
-              .toFixed(1)
-              .toLocaleString()} / ${mountain.height.toLocaleString()} ft`}
-          </Text>
+          <Text style={styles.progressValue}>{progressValue}</Text>
         </View>
         <ProgressBar progress={heightPercentage} color={colors.primary} />
       </View>

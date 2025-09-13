@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { mountains } from '../mountains';
+import { Meter } from './units';
 
 export type HabitId = string & { __habitId: true };
 
@@ -19,7 +20,7 @@ export type Hike = {
   /**
    * The height of the hiker (initialized to 0)
    */
-  height: number;
+  height: Meter;
   mountainName: string;
 
   /**
@@ -188,7 +189,7 @@ export const useStore = create<Store>()(
 
           if (actualEnergyDecrease > 0) {
             const heightIncrease = ((actualEnergyDecrease / 10) * 548.64) / 2;
-            state.hike.height += heightIncrease;
+            state.hike.height = (state.hike.height + heightIncrease) as Meter;
 
             const mountain = mountains.find(
               (m) => m.name === state.hike!.mountainName,
@@ -196,7 +197,11 @@ export const useStore = create<Store>()(
 
             if (!mountain) throw new Error('No mountain found');
 
-            state.hike.height = Math.min(state.hike.height, mountain.height);
+            state.hike.height = Math.min(
+              state.hike.height,
+              mountain.height,
+            ) as Meter;
+
             if (state.hike.height >= mountain.height) {
               state.completeMountain(mountain.name);
             }
