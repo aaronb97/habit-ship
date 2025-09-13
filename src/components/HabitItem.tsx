@@ -1,7 +1,12 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useEffect } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useSharedValue, withTiming, Easing } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { useTimer } from 'react-timer-hook';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { Habit, useStore } from '../utils/store';
@@ -61,20 +66,20 @@ export function HabitItem({
     );
   }
 
-  const { minutes, seconds, isRunning, pause, restart } = useTimer({
-    expiryTimestamp: getTimerExpiryTimestamp(),
-    autoStart: false,
-    onExpire: () => {
-      cancelTimer();
-      presentAlert();
-    },
-  });
+  const { minutes, seconds, isRunning, pause, restart, totalMilliseconds } =
+    useTimer({
+      expiryTimestamp: getTimerExpiryTimestamp(),
+      autoStart: false,
+      onExpire: () => {
+        cancelTimer();
+        presentAlert();
+      },
+    });
 
   useEffect(() => {
     if (isActiveTimer) {
       const totalSeconds = habit.timerLength! * 60;
-      const elapsedSeconds = totalSeconds - (minutes * 60 + seconds);
-      const progress = elapsedSeconds / totalSeconds;
+      const progress = 1 - (totalMilliseconds - 1000) / (totalSeconds * 1000);
       timerProgress.value = withTiming(progress, {
         duration: 1000,
         easing: Easing.linear,
@@ -82,7 +87,14 @@ export function HabitItem({
     } else {
       timerProgress.value = 0;
     }
-  }, [isActiveTimer, minutes, seconds, habit.timerLength, timerProgress]);
+  }, [
+    isActiveTimer,
+    minutes,
+    seconds,
+    habit.timerLength,
+    timerProgress,
+    totalMilliseconds,
+  ]);
 
   if (isActiveTimer && !isRunning) {
     restart(getTimerExpiryTimestamp());
@@ -91,6 +103,12 @@ export function HabitItem({
   if (!isActiveTimer && isRunning) {
     pause();
   }
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      width: `${timerProgress.value * 100}%`,
+    };
+  });
 
   const renderContent = () => {
     if (isActiveTimer) {
@@ -156,17 +174,14 @@ export function HabitItem({
       activeOpacity={0.9}
       onLongPress={onEdit}
     >
-      {renderContent()}
+      <Animated.View style={[styles.timerWipe, animatedStyle]} />
+      <View style={styles.contentContainer}>{renderContent()}</View>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   habitItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
     marginBottom: 12,
     backgroundColor: colors.card,
     borderRadius: 16,
@@ -176,6 +191,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     overflow: 'hidden',
+  },
+  contentContainer: {
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   activeTimerHabitItem: {
     backgroundColor: colors.backgroundDarker,
@@ -242,5 +263,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  timerWipe: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    backgroundColor: colors.primary,
   },
 });
