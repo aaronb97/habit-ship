@@ -20,7 +20,7 @@ const TimerSelection: React.FC<TimerSelectionProps> = ({
   onTimerChange,
   initialTimer,
 }) => {
-  const [selectedTimer, setSelectedTimer] = useState<number | 'custom' | null>(
+  const [selectedTimer, setSelectedTimer] = useState<number | null>(
     initialTimer || null,
   );
 
@@ -29,6 +29,13 @@ const TimerSelection: React.FC<TimerSelectionProps> = ({
   }, [initialTimer]);
 
   const handlePress = (value: number | 'custom') => {
+    // If the pressed button is already selected, deselect it.
+    if (value !== 'custom' && value === selectedTimer) {
+      setSelectedTimer(null);
+      onTimerChange(0);
+      return;
+    }
+
     if (value === 'custom') {
       Alert.prompt(
         'Custom Timer',
