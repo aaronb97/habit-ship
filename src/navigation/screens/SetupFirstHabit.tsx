@@ -78,7 +78,10 @@ export function SetupFirstHabit() {
           onChangeText={setDescription}
         />
 
-        <Text style={styles.label}>Timer (optional)</Text>
+        <View style={styles.labelContainer}>
+          <Text style={styles.label}>Timer</Text>
+          <Text style={styles.subLabel}>(optional)</Text>
+        </View>
         <TimerSelection onTimerChange={setTimerLength} />
       </View>
     </View>
@@ -106,12 +109,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 32,
   },
+  labelContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
+  },
   label: {
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.large,
     color: colors.text,
-    marginBottom: 10,
-    marginTop: 16,
+  },
+  subLabel: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.medium,
+    color: colors.grey,
   },
   inputContainer: {
     width: '100%',

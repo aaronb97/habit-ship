@@ -100,7 +100,11 @@ export function CreateHabitModal({
             onChangeText={setDescription}
           />
 
-          <Text style={styles.label}>Timer (optional)</Text>
+          <View style={styles.labelContainer}>
+            <Text style={styles.label}>Timer</Text>
+            <Text style={styles.subLabel}>(optional) </Text>
+          </View>
+
           <TimerSelection onTimerChange={setTimerLength} />
         </View>
       </View>
@@ -137,11 +141,21 @@ const styles = StyleSheet.create({
   headerButtonDisabled: {
     color: colors.grey,
   },
+  labelContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
+  },
   label: {
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.large,
     color: colors.text,
-    marginBottom: 10,
+  },
+  subLabel: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.medium,
+    color: colors.grey,
   },
   modalContent: {
     padding: 20,
