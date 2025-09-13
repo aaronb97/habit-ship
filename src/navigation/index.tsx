@@ -1,54 +1,10 @@
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { HeaderButton, Text } from '@react-navigation/elements';
 import { createStaticNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Image } from 'react-native';
-import bell from '../assets/bell.png';
-import newspaper from '../assets/newspaper.png';
 import { useIsSetupFinished, useIsSetupInProgress } from '../utils/store';
 import { Home } from './screens/Home';
 import { NotFound } from './screens/NotFound';
-import { Profile } from './screens/Profile';
-import { Settings } from './screens/Settings';
 import { SetupFirstHabit } from './screens/SetupFirstHabit';
 import { SetupFirstMountain } from './screens/SetupFirstMountain';
-import { Updates } from './screens/Updates';
-
-const HomeTabs = createBottomTabNavigator({
-  screens: {
-    Home: {
-      screen: Home,
-      options: {
-        title: 'Feed',
-        tabBarIcon: ({ color, size }) => (
-          <Image
-            source={newspaper}
-            tintColor={color}
-            style={{
-              width: size,
-              height: size,
-            }}
-          />
-        ),
-      },
-    },
-    Updates: {
-      screen: Updates,
-      options: {
-        tabBarIcon: ({ color, size }) => (
-          <Image
-            source={bell}
-            tintColor={color}
-            style={{
-              width: size,
-              height: size,
-            }}
-          />
-        ),
-      },
-    },
-  },
-});
 
 const RootStack = createNativeStackNavigator({
   screens: {
@@ -60,38 +16,13 @@ const RootStack = createNativeStackNavigator({
       screen: SetupFirstMountain,
       if: useIsSetupInProgress,
     },
-    HomeTabs: {
-      screen: HomeTabs,
+    Home: {
+      screen: Home,
       if: useIsSetupFinished,
       options: {
         title: 'Home',
         headerShown: false,
       },
-    },
-    Profile: {
-      if: useIsSetupFinished,
-      screen: Profile,
-      linking: {
-        path: ':user(@[a-zA-Z0-9-_]+)',
-        parse: {
-          user: (value) => value.replace(/^@/, ''),
-        },
-        stringify: {
-          user: (value) => `@${value}`,
-        },
-      },
-    },
-    Settings: {
-      if: useIsSetupFinished,
-      screen: Settings,
-      options: ({ navigation }) => ({
-        presentation: 'modal',
-        headerRight: () => (
-          <HeaderButton onPress={navigation.goBack}>
-            <Text>Close</Text>
-          </HeaderButton>
-        ),
-      }),
     },
     NotFound: {
       screen: NotFound,
@@ -116,9 +47,7 @@ export type RootStackParamList = {
       timerLength?: number;
     };
   };
-  HomeTabs: undefined;
-  Profile: undefined;
-  Settings: undefined;
+  Home: undefined;
   NotFound: undefined;
 };
 
