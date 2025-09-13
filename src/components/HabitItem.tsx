@@ -156,9 +156,12 @@ export function HabitItem({
       return (
         <View style={styles.timerContainer}>
           <View style={styles.invisibleButton} />
-          <Text style={styles.timerDisplay}>{`${minutes + hours * 60}:${seconds
-            .toString()
-            .padStart(2, '0')}`}</Text>
+          <View style={styles.timerDisplay}>
+            <Text style={styles.timerText}>{habit.title}</Text>
+            <Text style={styles.timerText}>{`${minutes + hours * 60}:${seconds
+              .toString()
+              .padStart(2, '0')}`}</Text>
+          </View>
           <TouchableOpacity style={styles.cancelButton} onPress={cancelTimer}>
             <MaterialIcons name="close" size={24} color={colors.white} />
           </TouchableOpacity>
@@ -303,10 +306,11 @@ const styles = StyleSheet.create({
   },
   timerDisplay: {
     flexGrow: 1,
+  },
+  timerText: {
     fontFamily: fonts.bold,
-    fontSize: fontSizes.xxlarge,
+    fontSize: fontSizes.large,
     color: colors.white,
-    flex: 1,
     textAlign: 'center',
   },
   cancelButton: {
