@@ -95,6 +95,7 @@ export const useStore = create<Store>()(
         set((state) => {
           state.habits.push({
             ...habit,
+            timerLength: habit.timerLength || undefined,
             id: state.idCount.toString() as HabitId,
             completions: [],
           });

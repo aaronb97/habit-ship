@@ -134,14 +134,14 @@ export function HabitItem({
     };
   });
 
-  const timerButton = (
+  const timerButton = habit.timerLength ? (
     <TouchableOpacity
       style={[styles.actionButton, { backgroundColor: colors.accent }]}
       onPress={onStartTimer}
     >
       <MaterialIcons name="timer" size={24} color={colors.white} />
     </TouchableOpacity>
-  );
+  ) : null;
 
   const renderContent = () => {
     if (isActiveTimer) {
@@ -186,7 +186,7 @@ export function HabitItem({
           ) : null}
         </View>
         <View style={styles.actionsContainer}>
-          {habit.timerLength ? timerButton : null}
+          {timerButton}
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.primary }]}
             onPress={onComplete}
