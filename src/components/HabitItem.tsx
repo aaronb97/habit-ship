@@ -8,7 +8,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { useTimer } from 'react-timer-hook';
-import { theme } from '../styles/theme';
+import { colors, fonts, fontSizes } from '../styles/theme';
 import { Habit, useStore } from '../utils/store';
 
 type HabitItemProps = {
@@ -136,10 +136,10 @@ export function HabitItem({
 
   const timerButton = (
     <TouchableOpacity
-      style={[styles.actionButton, { backgroundColor: theme.colors.accent }]}
+      style={[styles.actionButton, { backgroundColor: colors.accent }]}
       onPress={onStartTimer}
     >
-      <MaterialIcons name="timer" size={24} color={theme.colors.white} />
+      <MaterialIcons name="timer" size={24} color={colors.white} />
     </TouchableOpacity>
   );
 
@@ -152,7 +152,7 @@ export function HabitItem({
             .toString()
             .padStart(2, '0')}`}</Text>
           <TouchableOpacity style={styles.cancelButton} onPress={cancelTimer}>
-            <MaterialIcons name="close" size={24} color={theme.colors.white} />
+            <MaterialIcons name="close" size={24} color={colors.white} />
           </TouchableOpacity>
         </View>
       );
@@ -188,10 +188,10 @@ export function HabitItem({
         <View style={styles.actionsContainer}>
           {habit.timerLength ? timerButton : null}
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
+            style={[styles.actionButton, { backgroundColor: colors.primary }]}
             onPress={onComplete}
           >
-            <MaterialIcons name="check" size={24} color={theme.colors.white} />
+            <MaterialIcons name="check" size={24} color={colors.white} />
           </TouchableOpacity>
         </View>
       </>
@@ -217,7 +217,7 @@ export function HabitItem({
 const styles = StyleSheet.create({
   habitItem: {
     marginBottom: 12,
-    backgroundColor: theme.colors.card,
+    backgroundColor: colors.card,
     borderRadius: 16,
     overflow: 'hidden',
   },
@@ -228,10 +228,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   activeTimerHabitItem: {
-    backgroundColor: theme.colors.backgroundDarker,
+    backgroundColor: colors.backgroundDarker,
   },
   completedHabitItem: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
   },
   habitInfo: {
     flex: 1,
@@ -239,29 +239,29 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   habitTitle: {
-    fontFamily: theme.fonts.semiBold,
-    fontSize: theme.fontSizes.large,
-    color: theme.colors.text,
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.large,
+    color: colors.text,
   },
   completedHabitTitle: {
-    color: theme.colors.white,
+    color: colors.white,
   },
   lastCompletedText: {
-    fontFamily: theme.fonts.regular,
-    fontSize: theme.fontSizes.small,
-    color: theme.colors.grey,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.small,
+    color: colors.grey,
     marginTop: 4,
   },
   completedTodayText: {
-    fontFamily: theme.fonts.regular,
-    fontSize: theme.fontSizes.small,
-    color: theme.colors.white,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.small,
+    color: colors.white,
     marginTop: 4,
   },
   habitDescription: {
-    fontFamily: theme.fonts.regular,
-    fontSize: theme.fontSizes.medium,
-    color: theme.colors.grey,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.medium,
+    color: colors.grey,
   },
   actionsContainer: {
     flexDirection: 'row',
@@ -290,9 +290,9 @@ const styles = StyleSheet.create({
   },
   timerDisplay: {
     flexGrow: 1,
-    fontFamily: theme.fonts.bold,
-    fontSize: theme.fontSizes.xxlarge,
-    color: theme.colors.white,
+    fontFamily: fonts.bold,
+    fontSize: fontSizes.xxlarge,
+    color: colors.white,
     flex: 1,
     textAlign: 'center',
   },
@@ -314,6 +314,6 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     bottom: 0,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: colors.primary,
   },
 });

@@ -12,7 +12,7 @@ import { EditHabitModal } from '../../components/EditHabitModal';
 import { HabitItem } from '../../components/HabitItem';
 import { ProgressBar } from '../../components/ProgressBar';
 import { mountains } from '../../mountains';
-import { theme } from '../../styles/theme';
+import { colors, fonts, fontSizes } from '../../styles/theme';
 import { Habit, HabitId, useStore } from '../../utils/store';
 
 function HikeDisplay() {
@@ -51,7 +51,7 @@ function HikeDisplay() {
               .toLocaleString()} / ${mountain.height.toLocaleString()} ft`}
           </Text>
         </View>
-        <ProgressBar progress={heightPercentage} color={theme.colors.primary} />
+        <ProgressBar progress={heightPercentage} color={colors.primary} />
       </View>
 
       <View style={styles.progressContainer}>
@@ -61,7 +61,7 @@ function HikeDisplay() {
             {`${(energyPercentage * 100).toFixed(0)}%`}
           </Text>
         </View>
-        <ProgressBar progress={energyPercentage} color={theme.colors.accent} />
+        <ProgressBar progress={energyPercentage} color={colors.accent} />
       </View>
     </View>
   );
@@ -145,13 +145,13 @@ export function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
   listContentContainer: {
     padding: 20,
   },
   hikeDisplayContainer: {
-    backgroundColor: theme.colors.card,
+    backgroundColor: colors.card,
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
@@ -162,15 +162,15 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   mountainTitle: {
-    fontFamily: theme.fonts.bold,
-    fontSize: theme.fontSizes.xlarge,
-    color: theme.colors.text,
+    fontFamily: fonts.bold,
+    fontSize: fontSizes.xlarge,
+    color: colors.text,
     textAlign: 'center',
   },
   mountainSubtitle: {
-    fontFamily: theme.fonts.regular,
-    fontSize: theme.fontSizes.medium,
-    color: theme.colors.grey,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.medium,
+    color: colors.grey,
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -184,14 +184,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   progressLabel: {
-    fontFamily: theme.fonts.semiBold,
-    fontSize: theme.fontSizes.medium,
-    color: theme.colors.text,
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.medium,
+    color: colors.text,
   },
   progressValue: {
-    fontFamily: theme.fonts.medium,
-    fontSize: theme.fontSizes.medium,
-    color: theme.colors.grey,
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.medium,
+    color: colors.grey,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -201,22 +201,22 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontFamily: theme.fonts.bold,
-    fontSize: theme.fontSizes.large,
-    color: theme.colors.text,
+    fontFamily: fonts.bold,
+    fontSize: fontSizes.large,
+    color: colors.text,
   },
   newHabitButtonText: {
-    fontFamily: theme.fonts.semiBold,
-    fontSize: theme.fontSizes.medium,
-    color: theme.colors.primaryText,
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.medium,
+    color: colors.primaryText,
   },
   revertButton: {
     marginTop: 20,
     alignItems: 'center',
   },
   revertButtonText: {
-    fontFamily: theme.fonts.regular,
-    fontSize: theme.fontSizes.medium,
-    color: theme.colors.grey,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.medium,
+    color: colors.grey,
   },
 });

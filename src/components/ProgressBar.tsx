@@ -5,7 +5,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { theme } from '../styles/theme';
+import theme from '../styles/theme';
 
 interface ProgressBarProps {
   progress: number; // 0 to 1

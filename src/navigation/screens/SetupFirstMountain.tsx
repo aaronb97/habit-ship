@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { RootStackParamList } from '..';
 import { mountains } from '../../mountains';
-import { theme } from '../../styles/theme';
+import { colors, fonts, fontSizes } from '../../styles/theme';
 import { useStore } from '../../utils/store';
 
 export function SetupFirstMountain() {
@@ -98,21 +98,21 @@ export function SetupFirstMountain() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
     paddingHorizontal: 20,
     paddingTop: 20,
   },
   title: {
-    fontFamily: theme.fonts.bold,
-    fontSize: theme.fontSizes.xxlarge,
-    color: theme.colors.text,
+    fontFamily: fonts.bold,
+    fontSize: fontSizes.xxlarge,
+    color: colors.text,
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
-    fontFamily: theme.fonts.regular,
-    fontSize: theme.fontSizes.medium,
-    color: theme.colors.grey,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.medium,
+    color: colors.grey,
     textAlign: 'center',
     marginBottom: 24,
   },
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   mountainBox: {
-    backgroundColor: theme.colors.card,
+    backgroundColor: colors.card,
     padding: 20,
     marginVertical: 8,
     borderRadius: 16,
@@ -136,28 +136,28 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   selectedMountainBox: {
-    borderColor: theme.colors.primary,
+    borderColor: colors.primary,
   },
   mountainName: {
-    fontFamily: theme.fonts.semiBold,
-    fontSize: theme.fontSizes.large,
-    color: theme.colors.text,
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.large,
+    color: colors.text,
     marginBottom: 12,
     textAlign: 'center',
   },
   mountainInfo: {
-    fontFamily: theme.fonts.regular,
-    fontSize: theme.fontSizes.medium,
-    color: theme.colors.text,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.medium,
+    color: colors.text,
     marginBottom: 4,
   },
   mountainInfoLabel: {
-    fontFamily: theme.fonts.medium,
+    fontFamily: fonts.medium,
   },
   mountainDescription: {
-    fontFamily: theme.fonts.regular,
-    fontSize: theme.fontSizes.medium,
-    color: theme.colors.grey,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.medium,
+    color: colors.grey,
     marginTop: 8,
     textAlign: 'center',
   },
@@ -165,8 +165,8 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   headerButtonText: {
-    fontFamily: theme.fonts.semiBold,
-    fontSize: theme.fontSizes.medium,
-    color: theme.colors.primaryText,
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.medium,
+    color: colors.primaryText,
   },
 });
