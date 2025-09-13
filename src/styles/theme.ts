@@ -19,11 +19,11 @@ export const fonts = {
 };
 
 export const fontSizes = {
-  small: 12,
-  medium: 16,
-  large: 20,
-  xlarge: 24,
-  xxlarge: 32,
+  small: 10,
+  medium: 14,
+  large: 18,
+  xlarge: 20,
+  xxlarge: 28,
 };
 
 const theme = {
