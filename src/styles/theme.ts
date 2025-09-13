@@ -5,7 +5,7 @@ export const colors = {
   text: '#424242', // Dark Gray
   primary: '#A5D6A7', // Medium Green
   primaryText: '#76c478', // Slightly darker green
-  accent: '#2196F3', // Blue
+  accent: '#7fbdf0', // Blue
   white: '#FFFFFF',
   black: '#000000',
   grey: '#9E9E9E',
