@@ -10,10 +10,8 @@ module.exports = {
     node: true,
   },
   rules: {
-    '@stylistic/jsx-newline': [
-      'error',
-      { prevent: false, allowMultilines: false },
-    ],
+    'sort-imports': ['off'],
+    'import/order': ['off'],
   },
   settings: {
     'import/ignore': ['react-native'],

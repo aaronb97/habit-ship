@@ -1,12 +1,13 @@
-import { Text } from '@react-navigation/elements';
 import { useState } from 'react';
 import {
   Modal,
   StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import theme from '../styles/theme';
 
 interface CreateHabitModalProps {
   visible: boolean;
@@ -27,14 +28,17 @@ export function CreateHabitModal({
   const [description, setDescription] = useState('');
   const [timerLength, setTimerLength] = useState('');
 
+  const isFormValid = title.trim() !== '';
+
   const handleCreate = () => {
-    if (title.trim()) {
+    if (isFormValid) {
       onCreate({
         title,
         description,
         timerLength: timerLength ? parseInt(timerLength, 10) : undefined,
       });
 
+      // Clear state and close modal
       setTitle('');
       setDescription('');
       setTimerLength('');
@@ -42,45 +46,63 @@ export function CreateHabitModal({
     }
   };
 
+  const handleClose = () => {
+    // Clear state before closing
+    setTitle('');
+    setDescription('');
+    setTimerLength('');
+    onClose();
+  };
+
   return (
     <Modal
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
       <View style={styles.modalContainer}>
         <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={onClose}>
-            <Text style={styles.modalCloseButton}>Cancel</Text>
+          <TouchableOpacity onPress={handleClose}>
+            <Text style={styles.headerButtonText}>Cancel</Text>
           </TouchableOpacity>
 
-          <Text style={styles.modalTitle}>Create New Habit</Text>
+          <Text style={styles.modalTitle}>New Habit</Text>
 
-          <TouchableOpacity onPress={handleCreate}>
-            <Text style={styles.modalSaveButton}>Create</Text>
+          <TouchableOpacity disabled={!isFormValid} onPress={handleCreate}>
+            <Text
+              style={[
+                styles.headerButtonText,
+                styles.headerButtonPrimary,
+                !isFormValid && styles.headerButtonDisabled,
+              ]}
+            >
+              Create
+            </Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.modalContent}>
           <TextInput
             style={styles.input}
-            placeholder="Habit Title"
+            placeholder="Habit Title (e.g., Morning Run)"
+            placeholderTextColor={theme.colors.grey}
             value={title}
             onChangeText={setTitle}
           />
 
           <TextInput
-            multiline
             style={styles.input}
-            placeholder="Description"
+            placeholder="Description (optional)"
+            placeholderTextColor={theme.colors.grey}
             value={description}
             onChangeText={setDescription}
           />
 
           <TextInput
             style={styles.input}
-            placeholder="Timer Length (minutes)"
+            placeholder="Timer in Minutes (optional)"
+            placeholderTextColor={theme.colors.grey}
             value={timerLength}
             keyboardType="numeric"
             onChangeText={setTimerLength}
@@ -94,7 +116,7 @@ export function CreateHabitModal({
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -102,31 +124,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.colors.lightGrey,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.large,
+    color: theme.colors.text,
   },
-  modalCloseButton: {
-    fontSize: 16,
-    color: '#007AFF',
+  headerButtonText: {
+    fontFamily: theme.fonts.regular,
+    fontSize: theme.fontSizes.medium,
+    color: theme.colors.primary,
   },
-  modalSaveButton: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: 'bold',
+  headerButtonPrimary: {
+    fontFamily: theme.fonts.semiBold,
+  },
+  headerButtonDisabled: {
+    color: theme.colors.grey,
   },
   modalContent: {
-    flex: 1,
     padding: 20,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: theme.colors.card,
+    fontFamily: theme.fonts.regular,
+    fontSize: theme.fontSizes.medium,
+    padding: 16,
+    borderRadius: 12,
     marginBottom: 16,
-    fontSize: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
 });

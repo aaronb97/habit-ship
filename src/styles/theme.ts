@@ -1,0 +1,34 @@
+export const colors = {
+  background: '#E8F5E9', // Light Green
+  card: '#FFFFFF', // White
+  text: '#424242', // Dark Gray
+  primary: '#A5D6A7', // Medium Green
+  accent: '#FFC107', // Amber
+  white: '#FFFFFF',
+  black: '#000000',
+  grey: '#9E9E9E',
+  lightGrey: '#F5F5F5',
+};
+
+export const fonts = {
+  regular: 'Poppins_400Regular',
+  medium: 'Poppins_500Medium',
+  semiBold: 'Poppins_600SemiBold',
+  bold: 'Poppins_700Bold',
+};
+
+export const fontSizes = {
+  small: 12,
+  medium: 16,
+  large: 20,
+  xlarge: 24,
+  xxlarge: 32,
+};
+
+const theme = {
+  colors,
+  fonts,
+  fontSizes,
+};
+
+export default theme;

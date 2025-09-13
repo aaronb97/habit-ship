@@ -1,12 +1,13 @@
-import { Text } from '@react-navigation/elements';
 import { useEffect, useState } from 'react';
 import {
   Modal,
   StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import theme from '../styles/theme';
 import { Habit, HabitId } from '../utils/store';
 
 interface EditHabitModalProps {
@@ -18,24 +19,27 @@ interface EditHabitModalProps {
   ) => void;
 }
 
-export function EditHabitModal({ habit, onClose, onSave }: EditHabitModalProps) {
-  const [editTitle, setEditTitle] = useState(habit?.title || '');
-  const [editDescription, setEditDescription] = useState(
-    habit?.description || '',
-  );
+export function EditHabitModal({
+  habit,
+  onClose,
+  onSave,
+}: EditHabitModalProps) {
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editTimerLength, setEditTimerLength] = useState('');
 
-  const [editTimerLength, setEditTimerLength] = useState(
-    habit?.timerLength?.toString() || '',
-  );
+  const isFormValid = editTitle.trim() !== '';
 
   useEffect(() => {
-    setEditTitle(habit?.title || '');
-    setEditDescription(habit?.description || '');
-    setEditTimerLength(habit?.timerLength?.toString() || '');
+    if (habit) {
+      setEditTitle(habit.title || '');
+      setEditDescription(habit.description || '');
+      setEditTimerLength(habit.timerLength?.toString() || '');
+    }
   }, [habit]);
 
   const handleSave = () => {
-    if (habit) {
+    if (habit && isFormValid) {
       onSave(habit.id, {
         title: editTitle,
         description: editDescription,
@@ -46,30 +50,31 @@ export function EditHabitModal({ habit, onClose, onSave }: EditHabitModalProps) 
     }
   };
 
-  const handleClose = () => {
-    setEditTitle('');
-    setEditDescription('');
-    setEditTimerLength('');
-    onClose();
-  };
-
   return (
     <Modal
       visible={habit !== null}
       animationType="slide"
       presentationStyle="pageSheet"
-      onRequestClose={handleClose}
+      onRequestClose={onClose}
     >
       <View style={styles.modalContainer}>
         <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={handleClose}>
-            <Text style={styles.modalCloseButton}>Cancel</Text>
+          <TouchableOpacity onPress={onClose}>
+            <Text style={styles.headerButtonText}>Cancel</Text>
           </TouchableOpacity>
 
           <Text style={styles.modalTitle}>Edit Habit</Text>
 
-          <TouchableOpacity onPress={handleSave}>
-            <Text style={styles.modalSaveButton}>Save</Text>
+          <TouchableOpacity disabled={!isFormValid} onPress={handleSave}>
+            <Text
+              style={[
+                styles.headerButtonText,
+                styles.headerButtonPrimary,
+                !isFormValid && styles.headerButtonDisabled,
+              ]}
+            >
+              Save
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -77,21 +82,23 @@ export function EditHabitModal({ habit, onClose, onSave }: EditHabitModalProps) 
           <TextInput
             style={styles.input}
             placeholder="Habit Title"
+            placeholderTextColor={theme.colors.grey}
             value={editTitle}
             onChangeText={setEditTitle}
           />
 
           <TextInput
-            multiline
             style={styles.input}
-            placeholder="Description"
+            placeholder="Description (optional)"
+            placeholderTextColor={theme.colors.grey}
             value={editDescription}
             onChangeText={setEditDescription}
           />
 
           <TextInput
             style={styles.input}
-            placeholder="Timer Length (minutes)"
+            placeholder="Timer in Minutes (optional)"
+            placeholderTextColor={theme.colors.grey}
             value={editTimerLength}
             keyboardType="numeric"
             onChangeText={setEditTimerLength}
@@ -105,7 +112,7 @@ export function EditHabitModal({ habit, onClose, onSave }: EditHabitModalProps) 
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -113,31 +120,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.colors.lightGrey,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.large,
+    color: theme.colors.text,
   },
-  modalCloseButton: {
-    fontSize: 16,
-    color: '#007AFF',
+  headerButtonText: {
+    fontFamily: theme.fonts.regular,
+    fontSize: theme.fontSizes.medium,
+    color: theme.colors.primary,
   },
-  modalSaveButton: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: 'bold',
+  headerButtonPrimary: {
+    fontFamily: theme.fonts.semiBold,
+  },
+  headerButtonDisabled: {
+    color: theme.colors.grey,
   },
   modalContent: {
-    flex: 1,
     padding: 20,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: theme.colors.card,
+    fontFamily: theme.fonts.regular,
+    fontSize: theme.fontSizes.medium,
+    padding: 16,
+    borderRadius: 12,
     marginBottom: 16,
-    fontSize: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
 });

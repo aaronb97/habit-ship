@@ -1,6 +1,13 @@
 import { useNavigation } from '@react-navigation/native';
-import { useEffect, useState } from 'react';
-import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import theme from '../../styles/theme';
 
 export function SetupFirstHabit() {
   const navigation = useNavigation();
@@ -10,24 +17,34 @@ export function SetupFirstHabit() {
 
   const isFormComplete = title.trim() !== '';
 
+  const handleNext = useCallback(() => {
+    const timer = parseInt(timerLength, 10) || 0;
+    navigation.navigate('SetupFirstMountain', {
+      habit: {
+        title,
+        description,
+        timerLength: timer,
+      },
+    });
+  }, [navigation, title, description, timerLength]);
+
   useEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <Button
+        <TouchableOpacity
           disabled={!isFormComplete}
-          title="Next"
-          onPress={() => {
-            const timer = parseInt(timerLength, 10) || 0;
-
-            navigation.navigate('SetupFirstMountain', {
-              habit: {
-                title,
-                description,
-                timerLength: timer,
-              },
-            });
-          }}
-        />
+          style={styles.headerButton}
+          onPress={handleNext}
+        >
+          <Text
+            style={[
+              styles.headerButtonText,
+              !isFormComplete && styles.headerButtonDisabledText,
+            ]}
+          >
+            Next
+          </Text>
+        </TouchableOpacity>
       ),
     });
 
@@ -36,35 +53,40 @@ export function SetupFirstHabit() {
         headerRight: undefined,
       });
     };
-  }, [description, isFormComplete, navigation, timerLength, title]);
+  }, [navigation, isFormComplete, handleNext]);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.paragraph}>
-        Begin by setting up your first habit to track.
-      </Text>
+      <Text style={styles.title}>Create Your First Habit</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Habit Title"
-        value={title}
-        onChangeText={setTitle}
-      />
+      <Text style={styles.subtitle}>What new peak will you conquer?</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Description"
-        value={description}
-        onChangeText={setDescription}
-      />
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Habit Title (e.g., Morning Run)"
+          placeholderTextColor={theme.colors.grey}
+          value={title}
+          onChangeText={setTitle}
+        />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Timer Length (minutes)"
-        value={timerLength}
-        keyboardType="numeric"
-        onChangeText={setTimerLength}
-      />
+        <TextInput
+          style={styles.input}
+          placeholder="Description (optional)"
+          placeholderTextColor={theme.colors.grey}
+          value={description}
+          onChangeText={setDescription}
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder="Timer in Minutes (optional)"
+          placeholderTextColor={theme.colors.grey}
+          value={timerLength}
+          keyboardType="numeric"
+          onChangeText={setTimerLength}
+        />
+      </View>
     </View>
   );
 }
@@ -72,20 +94,52 @@ export function SetupFirstHabit() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    padding: 20,
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
-  paragraph: {
-    fontSize: 16,
-    marginBottom: 20,
+  title: {
+    fontFamily: theme.fonts.bold,
+    fontSize: theme.fontSizes.xxlarge,
+    color: theme.colors.text,
     textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontFamily: theme.fonts.regular,
+    fontSize: theme.fontSizes.medium,
+    color: theme.colors.grey,
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  inputContainer: {
+    width: '100%',
   },
   input: {
-    width: '80%',
-    borderColor: '#ccc',
-    borderWidth: 1,
-    padding: 10,
-    marginBottom: 10,
-    borderRadius: 5,
+    backgroundColor: theme.colors.card,
+    fontFamily: theme.fonts.regular,
+    fontSize: theme.fontSizes.medium,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  headerButton: {
+    marginRight: 16,
+  },
+  headerButtonText: {
+    fontFamily: theme.fonts.semiBold,
+    fontSize: theme.fontSizes.medium,
+    color: theme.colors.primary,
+  },
+  headerButtonDisabledText: {
+    color: theme.colors.grey,
   },
 });
