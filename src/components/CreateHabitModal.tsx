@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
+import TimerSelection from './TimerSelection';
 
 interface CreateHabitModalProps {
   visible: boolean;
@@ -26,7 +27,7 @@ export function CreateHabitModal({
 }: CreateHabitModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [timerLength, setTimerLength] = useState('');
+  const [timerLength, setTimerLength] = useState(0);
 
   const isFormValid = title.trim() !== '';
 
@@ -35,13 +36,13 @@ export function CreateHabitModal({
       onCreate({
         title,
         description,
-        timerLength: timerLength ? parseInt(timerLength, 10) : undefined,
+        timerLength: timerLength > 0 ? timerLength : undefined,
       });
 
       // Clear state and close modal
       setTitle('');
       setDescription('');
-      setTimerLength('');
+      setTimerLength(0);
       onClose();
     }
   };
@@ -50,7 +51,7 @@ export function CreateHabitModal({
     // Clear state before closing
     setTitle('');
     setDescription('');
-    setTimerLength('');
+    setTimerLength(0);
     onClose();
   };
 
@@ -99,14 +100,8 @@ export function CreateHabitModal({
             onChangeText={setDescription}
           />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Timer in Minutes (optional)"
-            placeholderTextColor={colors.grey}
-            value={timerLength}
-            keyboardType="numeric"
-            onChangeText={setTimerLength}
-          />
+          <Text style={styles.label}>Timer (optional)</Text>
+          <TimerSelection onTimerChange={setTimerLength} />
         </View>
       </View>
     </Modal>
@@ -141,6 +136,12 @@ const styles = StyleSheet.create({
   },
   headerButtonDisabled: {
     color: colors.grey,
+  },
+  label: {
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.large,
+    color: colors.text,
+    marginBottom: 10,
   },
   modalContent: {
     padding: 20,

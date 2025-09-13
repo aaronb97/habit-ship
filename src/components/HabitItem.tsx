@@ -90,15 +90,22 @@ export function HabitItem({
     );
   }
 
-  const { minutes, seconds, isRunning, pause, restart, totalMilliseconds } =
-    useTimer({
-      expiryTimestamp: getTimerExpiryTimestamp(),
-      autoStart: false,
-      onExpire: () => {
-        cancelTimer();
-        presentAlert();
-      },
-    });
+  const {
+    minutes,
+    seconds,
+    isRunning,
+    pause,
+    restart,
+    totalMilliseconds,
+    hours,
+  } = useTimer({
+    expiryTimestamp: getTimerExpiryTimestamp(),
+    autoStart: false,
+    onExpire: () => {
+      cancelTimer();
+      presentAlert();
+    },
+  });
 
   useEffect(() => {
     if (isActiveTimer) {
@@ -148,7 +155,7 @@ export function HabitItem({
       return (
         <View style={styles.timerContainer}>
           <View style={styles.invisibleButton} />
-          <Text style={styles.timerDisplay}>{`${minutes}:${seconds
+          <Text style={styles.timerDisplay}>{`${minutes + hours * 60}:${seconds
             .toString()
             .padStart(2, '0')}`}</Text>
           <TouchableOpacity style={styles.cancelButton} onPress={cancelTimer}>

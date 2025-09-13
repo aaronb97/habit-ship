@@ -7,23 +7,23 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import TimerSelection from '../../components/TimerSelection';
 import { colors, fonts, fontSizes } from '../../styles/theme';
 
 export function SetupFirstHabit() {
   const navigation = useNavigation();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [timerLength, setTimerLength] = useState('');
+  const [timerLength, setTimerLength] = useState(0);
 
   const isFormComplete = title.trim() !== '';
 
   const handleNext = useCallback(() => {
-    const timer = parseInt(timerLength, 10) || 0;
     navigation.navigate('SetupFirstMountain', {
       habit: {
         title,
         description,
-        timerLength: timer,
+        timerLength,
       },
     });
   }, [navigation, title, description, timerLength]);
@@ -78,14 +78,8 @@ export function SetupFirstHabit() {
           onChangeText={setDescription}
         />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Timer in Minutes (optional)"
-          placeholderTextColor={colors.grey}
-          value={timerLength}
-          keyboardType="numeric"
-          onChangeText={setTimerLength}
-        />
+        <Text style={styles.label}>Timer (optional)</Text>
+        <TimerSelection onTimerChange={setTimerLength} />
       </View>
     </View>
   );
@@ -111,6 +105,13 @@ const styles = StyleSheet.create({
     color: colors.grey,
     textAlign: 'center',
     marginBottom: 32,
+  },
+  label: {
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.large,
+    color: colors.text,
+    marginBottom: 10,
+    marginTop: 16,
   },
   inputContainer: {
     width: '100%',
