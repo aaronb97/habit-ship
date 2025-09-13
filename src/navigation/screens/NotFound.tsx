@@ -6,7 +6,7 @@ export function NotFound() {
     <View style={styles.container}>
       <Text>404</Text>
 
-      <Button screen="HomeTabs">Go to Home</Button>
+      <Button screen="Home">Go to Home</Button>
     </View>
   );
 }
