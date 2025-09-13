@@ -11,6 +11,7 @@ import Animated, {
   useSharedValue,
   withTiming,
   Easing,
+  runOnJS,
 } from 'react-native-reanimated';
 import { useTimer } from 'react-timer-hook';
 import { colors, fonts, fontSizes } from '../styles/theme';
@@ -66,13 +67,31 @@ export function HabitItem({
 }: HabitItemProps) {
   const isCompleted = isHabitCompletedToday(habit);
   const lastCompletedText = formatLastCompleted(habit.completions);
-  const { activeTimer, cancelTimer, removeHabit } = useStore();
+  const {
+    activeTimer,
+    cancelTimer,
+    removeHabit,
+    swipedHabitId,
+    setSwipedHabit,
+  } = useStore();
+
   const isActiveTimer = activeTimer?.habitId === habit.id;
   const translateX = useSharedValue(0);
+  const isThisHabitSwiped = swipedHabitId === habit.id;
 
   const resetSwipe = () => {
     translateX.value = withTiming(0);
+    setSwipedHabit(undefined);
   };
+
+  // Sync animation with global swipe state
+  useEffect(() => {
+    if (isThisHabitSwiped) {
+      translateX.value = withTiming(SWIPE_THRESHOLD);
+    } else {
+      translateX.value = withTiming(0);
+    }
+  }, [isThisHabitSwiped, translateX]);
 
   const timerProgress = useSharedValue(0);
 
@@ -170,8 +189,10 @@ export function HabitItem({
     .onEnd(() => {
       if (translateX.value < SWIPE_THRESHOLD) {
         translateX.value = withTiming(SWIPE_THRESHOLD);
+        runOnJS(setSwipedHabit)(habit.id);
       } else {
         translateX.value = withTiming(0);
+        runOnJS(setSwipedHabit)(undefined);
       }
     });
 

@@ -40,6 +40,7 @@ type Store = {
     habitId: HabitId;
     startTime: string;
   };
+  swipedHabitId?: HabitId;
 
   setIsSetupFinished: (value: boolean) => void;
   setHike: (hike: Hike) => void;
@@ -69,6 +70,10 @@ type Store = {
 
   cancelTimer: () => void;
 
+  setSwipedHabit: (habitId?: HabitId) => void;
+
+  resetAllSwipes: () => void;
+
   clearData: () => void;
 };
 
@@ -78,6 +83,7 @@ const initialData = {
   hike: undefined,
   completedMountains: undefined,
   idCount: 0,
+  swipedHabitId: undefined,
 } satisfies Partial<Store>;
 
 export const useStore = create<Store>()(
@@ -219,6 +225,18 @@ export const useStore = create<Store>()(
       cancelTimer: () => {
         set((state) => {
           state.activeTimer = undefined;
+        });
+      },
+
+      setSwipedHabit: (habitId?: HabitId) => {
+        set((state) => {
+          state.swipedHabitId = habitId;
+        });
+      },
+
+      resetAllSwipes: () => {
+        set((state) => {
+          state.swipedHabitId = undefined;
         });
       },
 

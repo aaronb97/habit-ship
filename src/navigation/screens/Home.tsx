@@ -68,7 +68,7 @@ function HikeDisplay() {
 }
 
 export function Home() {
-  const { habits, completeHabit, editHabit, addHabit, startTimer, clearData } =
+  const { habits, completeHabit, editHabit, addHabit, startTimer, clearData, resetAllSwipes } =
     useStore();
 
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
@@ -93,39 +93,45 @@ export function Home() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <FlatList
-        data={habits}
-        renderItem={({ item }) => (
-          <HabitItem
-            habit={item}
-            onComplete={() => completeHabit(item.id)}
-            onEdit={() => setEditingHabit(item)}
-            onStartTimer={() => startTimer(item.id)}
-          />
-        )}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={
-          <>
-            <HikeDisplay />
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Daily Habits</Text>
-              <TouchableOpacity onPress={() => setShowCreateModal(true)}>
-                <Text style={styles.newHabitButtonText}>+ New Habit</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        }
-        ListFooterComponent={
-          <TouchableOpacity
-            style={styles.revertButton}
-            onPress={() => clearData()}
-          >
-            <Text style={styles.revertButtonText}>Revert Setup</Text>
-          </TouchableOpacity>
-        }
-        contentContainerStyle={styles.listContentContainer}
-        showsVerticalScrollIndicator={false}
-      />
+      <TouchableOpacity 
+        style={styles.backgroundTouchable}
+        activeOpacity={1}
+        onPress={resetAllSwipes}
+      >
+        <FlatList
+          data={habits}
+          renderItem={({ item }) => (
+            <HabitItem
+              habit={item}
+              onComplete={() => completeHabit(item.id)}
+              onEdit={() => setEditingHabit(item)}
+              onStartTimer={() => startTimer(item.id)}
+            />
+          )}
+          keyExtractor={(item) => item.id}
+          ListHeaderComponent={
+            <>
+              <HikeDisplay />
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Daily Habits</Text>
+                <TouchableOpacity onPress={() => setShowCreateModal(true)}>
+                  <Text style={styles.newHabitButtonText}>+ New Habit</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          }
+          ListFooterComponent={
+            <TouchableOpacity
+              style={styles.revertButton}
+              onPress={() => clearData()}
+            >
+              <Text style={styles.revertButtonText}>Revert Setup</Text>
+            </TouchableOpacity>
+          }
+          contentContainerStyle={styles.listContentContainer}
+          showsVerticalScrollIndicator={false}
+        />
+      </TouchableOpacity>
 
       <EditHabitModal
         habit={editingHabit}
@@ -146,6 +152,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  backgroundTouchable: {
+    flex: 1,
   },
   listContentContainer: {
     padding: 20,
