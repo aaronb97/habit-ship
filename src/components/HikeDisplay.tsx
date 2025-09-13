@@ -70,11 +70,24 @@ export function HikeDisplay({ onMountainPress }: HikeDisplayProps) {
         </View>
         <ProgressBar progress={energyPercentage} color={colors.accent} />
       </View>
+
+      {hike.energy === 0 && (
+        <Text style={styles.outOfEnergyText}>
+          Complete a habit in order to gain energy!
+        </Text>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  outOfEnergyText: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.medium,
+    color: colors.grey,
+    marginTop: 8,
+    textAlign: 'center',
+  },
   hikeDisplayContainer: {
     backgroundColor: colors.card,
     borderRadius: 16,
