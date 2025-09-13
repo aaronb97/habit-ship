@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import theme from '../styles/theme';
+import { colors, fonts, fontSizes } from '../styles/theme';
 
 interface CreateHabitModalProps {
   visible: boolean;
@@ -86,7 +86,7 @@ export function CreateHabitModal({
           <TextInput
             style={styles.input}
             placeholder="Habit Title (e.g., Morning Run)"
-            placeholderTextColor={theme.colors.grey}
+            placeholderTextColor={colors.grey}
             value={title}
             onChangeText={setTitle}
           />
@@ -94,7 +94,7 @@ export function CreateHabitModal({
           <TextInput
             style={styles.input}
             placeholder="Description (optional)"
-            placeholderTextColor={theme.colors.grey}
+            placeholderTextColor={colors.grey}
             value={description}
             onChangeText={setDescription}
           />
@@ -102,7 +102,7 @@ export function CreateHabitModal({
           <TextInput
             style={styles.input}
             placeholder="Timer in Minutes (optional)"
-            placeholderTextColor={theme.colors.grey}
+            placeholderTextColor={colors.grey}
             value={timerLength}
             keyboardType="numeric"
             onChangeText={setTimerLength}
@@ -116,7 +116,7 @@ export function CreateHabitModal({
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -124,31 +124,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.lightGrey,
+    borderBottomColor: colors.lightGrey,
   },
   modalTitle: {
-    fontFamily: theme.fonts.semiBold,
-    fontSize: theme.fontSizes.large,
-    color: theme.colors.text,
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.large,
+    color: colors.text,
   },
   headerButtonText: {
-    fontFamily: theme.fonts.regular,
-    fontSize: theme.fontSizes.medium,
-    color: theme.colors.primaryText,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.medium,
+    color: colors.primaryText,
   },
   headerButtonPrimary: {
-    fontFamily: theme.fonts.semiBold,
+    fontFamily: fonts.semiBold,
   },
   headerButtonDisabled: {
-    color: theme.colors.grey,
+    color: colors.grey,
   },
   modalContent: {
     padding: 20,
   },
   input: {
-    backgroundColor: theme.colors.card,
-    fontFamily: theme.fonts.regular,
-    fontSize: theme.fontSizes.medium,
+    backgroundColor: colors.card,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.medium,
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,

@@ -12,7 +12,7 @@ import { createURL } from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
 import { useCallback } from 'react';
 import { Navigation } from './navigation';
-import theme from './styles/theme';
+import { colors } from './styles/theme';
 
 void Asset.loadAsync([...NavigationAssets]);
 
@@ -24,10 +24,10 @@ const customTheme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    background: theme.colors.background,
-    card: theme.colors.card,
-    text: theme.colors.text,
-    primary: theme.colors.primary,
+    background: colors.background,
+    card: colors.card,
+    text: colors.text,
+    primary: colors.primary,
   },
 };
 

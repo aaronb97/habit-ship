@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import theme from '../../styles/theme';
+import { colors, fonts, fontSizes } from '../../styles/theme';
 
 export function SetupFirstHabit() {
   const navigation = useNavigation();
@@ -65,7 +65,7 @@ export function SetupFirstHabit() {
         <TextInput
           style={styles.input}
           placeholder="Habit Title (e.g., Morning Run)"
-          placeholderTextColor={theme.colors.grey}
+          placeholderTextColor={colors.grey}
           value={title}
           onChangeText={setTitle}
         />
@@ -73,7 +73,7 @@ export function SetupFirstHabit() {
         <TextInput
           style={styles.input}
           placeholder="Description (optional)"
-          placeholderTextColor={theme.colors.grey}
+          placeholderTextColor={colors.grey}
           value={description}
           onChangeText={setDescription}
         />
@@ -81,7 +81,7 @@ export function SetupFirstHabit() {
         <TextInput
           style={styles.input}
           placeholder="Timer in Minutes (optional)"
-          placeholderTextColor={theme.colors.grey}
+          placeholderTextColor={colors.grey}
           value={timerLength}
           keyboardType="numeric"
           onChangeText={setTimerLength}
@@ -94,21 +94,21 @@ export function SetupFirstHabit() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
     paddingHorizontal: 20,
     paddingTop: 20,
   },
   title: {
-    fontFamily: theme.fonts.bold,
-    fontSize: theme.fontSizes.xxlarge,
-    color: theme.colors.text,
+    fontFamily: fonts.bold,
+    fontSize: fontSizes.xxlarge,
+    color: colors.text,
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
-    fontFamily: theme.fonts.regular,
-    fontSize: theme.fontSizes.medium,
-    color: theme.colors.grey,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.medium,
+    color: colors.grey,
     textAlign: 'center',
     marginBottom: 32,
   },
@@ -116,9 +116,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   input: {
-    backgroundColor: theme.colors.card,
-    fontFamily: theme.fonts.regular,
-    fontSize: theme.fontSizes.medium,
+    backgroundColor: colors.card,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.medium,
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
@@ -135,11 +135,11 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   headerButtonText: {
-    fontFamily: theme.fonts.semiBold,
-    fontSize: theme.fontSizes.medium,
-    color: theme.colors.primaryText,
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.medium,
+    color: colors.primaryText,
   },
   headerButtonDisabledText: {
-    color: theme.colors.grey,
+    color: colors.grey,
   },
 });

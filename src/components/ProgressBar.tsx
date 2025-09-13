@@ -5,7 +5,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import theme from '../styles/theme';
+import { colors } from '../styles/theme';
 
 interface ProgressBarProps {
   progress: number; // 0 to 1
@@ -15,7 +15,7 @@ interface ProgressBarProps {
 
 export function ProgressBar({
   progress,
-  color = theme.colors.primary,
+  color = colors.primary,
   height = 12,
 }: ProgressBarProps) {
   const animatedWidth = useSharedValue(0);
@@ -34,7 +34,7 @@ export function ProgressBar({
     <View
       style={[
         styles.container,
-        { height, backgroundColor: theme.colors.lightGrey },
+        { height, backgroundColor: colors.lightGrey },
       ]}
     >
       <Animated.View
