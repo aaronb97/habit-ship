@@ -20,6 +20,7 @@ export const fonts = {
 };
 
 export const fontSizes = {
+  xsmall: 8,
   small: 10,
   medium: 14,
   large: 18,

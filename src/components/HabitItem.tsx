@@ -146,7 +146,8 @@ export function HabitItem({
       style={[styles.actionButton, { backgroundColor: colors.accent }]}
       onPress={onStartTimer}
     >
-      <MaterialIcons name="timer" size={24} color={colors.white} />
+      <MaterialIcons name="timer" size={20} color={colors.white} />
+      <Text style={styles.actionButtonText}>{`${habit.timerLength} min`}</Text>
     </TouchableOpacity>
   ) : null;
 
@@ -287,6 +288,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 6,
     elevation: 5,
+  },
+  actionButtonText: {
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.xsmall,
+    color: colors.white,
   },
   timerContainer: {
     flex: 1,
