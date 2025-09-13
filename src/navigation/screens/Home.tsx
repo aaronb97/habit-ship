@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   FlatList,
   StyleSheet,
@@ -10,62 +10,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CreateHabitModal } from '../../components/CreateHabitModal';
 import { EditHabitModal } from '../../components/EditHabitModal';
 import { HabitItem } from '../../components/HabitItem';
-import { ProgressBar } from '../../components/ProgressBar';
-import { mountains } from '../../mountains';
+import { HikeDisplay } from '../../components/HikeDisplay';
+import { MountainSelectionModal } from '../../components/MountainSelectionModal';
 import { colors, fonts, fontSizes } from '../../styles/theme';
 import { Habit, HabitId, useStore } from '../../utils/store';
-
-function HikeDisplay() {
-  const { hike, expendEnergy, clearData } = useStore();
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      expendEnergy();
-    }, 1000); // Updated to every second for smoother energy decay
-
-    return () => clearInterval(interval);
-  }, [expendEnergy]);
-
-  const mountain = mountains.find((m) => m.name === hike?.mountainName);
-
-  if (!mountain) {
-    console.error('Encountered invalid mountain, resetting data');
-    clearData();
-    return null;
-  }
-
-  const heightPercentage = (hike?.height || 0) / mountain.height;
-  const energyPercentage = (hike?.energy || 0) / 100;
-
-  return (
-    <View style={styles.hikeDisplayContainer}>
-      <Text style={styles.mountainTitle}>{hike?.mountainName}</Text>
-      <Text style={styles.mountainSubtitle}>{mountain.location}</Text>
-
-      <View style={styles.progressContainer}>
-        <View style={styles.progressRow}>
-          <Text style={styles.progressLabel}>Progress</Text>
-          <Text style={styles.progressValue}>
-            {`${hike?.height
-              .toFixed(1)
-              .toLocaleString()} / ${mountain.height.toLocaleString()} ft`}
-          </Text>
-        </View>
-        <ProgressBar progress={heightPercentage} color={colors.primary} />
-      </View>
-
-      <View style={styles.progressContainer}>
-        <View style={styles.progressRow}>
-          <Text style={styles.progressLabel}>Energy</Text>
-          <Text style={styles.progressValue}>
-            {`${(energyPercentage * 100).toFixed(0)}%`}
-          </Text>
-        </View>
-        <ProgressBar progress={energyPercentage} color={colors.accent} />
-      </View>
-    </View>
-  );
-}
 
 export function Home() {
   const { habits, completeHabit, editHabit, addHabit, startTimer, clearData, resetAllSwipes } =
@@ -73,6 +21,7 @@ export function Home() {
 
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showMountainModal, setShowMountainModal] = useState(false);
 
   const handleCreate = (habit: {
     title: string;
@@ -111,7 +60,7 @@ export function Home() {
           keyExtractor={(item) => item.id}
           ListHeaderComponent={
             <>
-              <HikeDisplay />
+              <HikeDisplay onMountainPress={() => setShowMountainModal(true)} />
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Daily Habits</Text>
                 <TouchableOpacity onPress={() => setShowCreateModal(true)}>
@@ -143,6 +92,11 @@ export function Home() {
         visible={showCreateModal}
         onCreate={handleCreate}
         onClose={() => setShowCreateModal(false)}
+      />
+
+      <MountainSelectionModal
+        visible={showMountainModal}
+        onClose={() => setShowMountainModal(false)}
       />
     </SafeAreaView>
   );

@@ -10,6 +10,7 @@ export const colors = {
   black: '#000000',
   grey: '#9E9E9E',
   lightGrey: '#F5F5F5',
+  border: '#E0E0E0', // Light border color
   danger: '#EF5350',
 };
 

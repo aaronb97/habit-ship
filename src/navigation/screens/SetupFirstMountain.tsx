@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { MountainListItem } from '../../components/MountainListItem';
 import { RootStackParamList } from '..';
 import { mountains } from '../../mountains';
 import { colors, fonts, fontSizes } from '../../styles/theme';
@@ -49,12 +50,6 @@ export function SetupFirstMountain() {
     };
   }, [navigation, handleFinish]);
 
-  function getHeightString(height: number) {
-    return `${height.toLocaleString(undefined, {
-      maximumFractionDigits: 0,
-    })} ft`;
-  }
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Your First Adventure</Text>
@@ -65,30 +60,12 @@ export function SetupFirstMountain() {
 
       <ScrollView style={styles.scrollView}>
         {mountains.map((mountain) => (
-          <TouchableOpacity
+          <MountainListItem
             key={mountain.name}
-            style={[
-              styles.mountainBox,
-              selectedMountain === mountain.name && styles.selectedMountainBox,
-            ]}
+            mountain={mountain}
+            isSelected={selectedMountain === mountain.name}
             onPress={() => setSelectedMountain(mountain.name)}
-          >
-            <Text style={styles.mountainName}>{mountain.name}</Text>
-
-            <Text style={styles.mountainInfo}>
-              <Text style={styles.mountainInfoLabel}>Location:</Text>{' '}
-              {mountain.location}
-            </Text>
-
-            <Text style={styles.mountainInfo}>
-              <Text style={styles.mountainInfoLabel}>Height:</Text>{' '}
-              {getHeightString(mountain.height)}
-            </Text>
-
-            <Text style={styles.mountainDescription}>
-              {mountain.description}
-            </Text>
-          </TouchableOpacity>
+          />
         ))}
       </ScrollView>
     </View>
@@ -118,48 +95,6 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     width: '100%',
-  },
-  mountainBox: {
-    backgroundColor: colors.card,
-    padding: 20,
-    marginVertical: 8,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  selectedMountainBox: {
-    borderColor: colors.primary,
-  },
-  mountainName: {
-    fontFamily: fonts.semiBold,
-    fontSize: fontSizes.large,
-    color: colors.text,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  mountainInfo: {
-    fontFamily: fonts.regular,
-    fontSize: fontSizes.medium,
-    color: colors.text,
-    marginBottom: 4,
-  },
-  mountainInfoLabel: {
-    fontFamily: fonts.medium,
-  },
-  mountainDescription: {
-    fontFamily: fonts.regular,
-    fontSize: fontSizes.medium,
-    color: colors.grey,
-    marginTop: 8,
-    textAlign: 'center',
   },
   headerButton: {
     marginRight: 16,
