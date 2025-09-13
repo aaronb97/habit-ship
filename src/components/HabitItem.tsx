@@ -56,7 +56,7 @@ const isHabitCompletedToday = (habit: Habit) => {
   return lastCompletion.toDateString() === today.toDateString();
 };
 
-const SWIPE_THRESHOLD = -60;
+const SWIPE_THRESHOLD = -110;
 
 export function HabitItem({
   habit,
@@ -149,8 +149,6 @@ export function HabitItem({
         Math.max(SWIPE_THRESHOLD * 1.1, event.translationX),
         0,
       );
-
-      console.log(translateX.value);
     })
     .onEnd(() => {
       if (translateX.value < SWIPE_THRESHOLD) {
@@ -245,13 +243,25 @@ export function HabitItem({
   return (
     <GestureHandlerRootView>
       <View style={styles.container}>
-        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-          <MaterialIcons name="delete" size={24} color={colors.white} />
-        </TouchableOpacity>
+        <View style={styles.buttonsContainer}>
+          <TouchableOpacity
+            style={[styles.swipeButton, styles.editButton]}
+            onPress={onEdit}
+          >
+            <MaterialIcons name="edit" size={24} color={colors.white} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.swipeButton, styles.deleteButton]}
+            onPress={handleDelete}
+          >
+            <MaterialIcons name="delete" size={24} color={colors.white} />
+          </TouchableOpacity>
+        </View>
         <GestureDetector gesture={panGesture}>
           <Animated.View style={[styles.animatedContainer, animatedStyle]}>
             <TouchableOpacity
               activeOpacity={1}
+              delayLongPress={200}
               style={[
                 styles.habitItem,
                 isCompleted && styles.completedHabitItem,
@@ -278,15 +288,26 @@ const styles = StyleSheet.create({
   animatedContainer: {
     width: '100%',
   },
-  deleteButton: {
-    backgroundColor: colors.danger,
-    justifyContent: 'center',
-    alignItems: 'center',
+  buttonsContainer: {
     position: 'absolute',
     right: 0,
+    height: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  swipeButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
     width: 48,
     height: 48,
     borderRadius: 16,
+  },
+  editButton: {
+    backgroundColor: colors.accent,
+    marginRight: 8,
+  },
+  deleteButton: {
+    backgroundColor: colors.danger,
   },
   habitItem: {
     backgroundColor: colors.card,
