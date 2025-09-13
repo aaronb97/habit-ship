@@ -1,12 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useEffect } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
+import { useSharedValue, withTiming, Easing } from 'react-native-reanimated';
 import { useTimer } from 'react-timer-hook';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { Habit, useStore } from '../utils/store';
@@ -97,16 +92,11 @@ export function HabitItem({
     pause();
   }
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      width: `${timerProgress.value * 100}%`,
-    };
-  });
-
   const renderContent = () => {
     if (isActiveTimer) {
       return (
         <View style={styles.timerContainer}>
+          <View style={styles.invisibleButton} />
           <Text style={styles.timerDisplay}>{`${minutes}:${seconds
             .toString()
             .padStart(2, '0')}`}</Text>
@@ -166,15 +156,6 @@ export function HabitItem({
       activeOpacity={0.9}
       onLongPress={onEdit}
     >
-      {isActiveTimer && (
-        <Animated.View
-          style={[
-            styles.timerOverlay,
-            animatedStyle,
-            { backgroundColor: colors.primary },
-          ]}
-        />
-      )}
       {renderContent()}
     </TouchableOpacity>
   );
@@ -242,6 +223,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   timerDisplay: {
+    flexGrow: 1,
     fontFamily: fonts.bold,
     fontSize: fontSizes.xxlarge,
     color: colors.white,
@@ -249,18 +231,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   cancelButton: {
+    width: 40,
     padding: 8,
+  },
+  invisibleButton: {
+    width: 40,
   },
   completedContainer: {
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  timerOverlay: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
   },
 });
