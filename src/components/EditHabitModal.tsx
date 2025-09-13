@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
+import TimerSelection from './TimerSelection';
 import { Habit, HabitId } from '../utils/store';
 
 interface EditHabitModalProps {
@@ -26,7 +27,7 @@ export function EditHabitModal({
 }: EditHabitModalProps) {
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
-  const [editTimerLength, setEditTimerLength] = useState('');
+  const [editTimerLength, setEditTimerLength] = useState(0);
 
   const isFormValid = editTitle.trim() !== '';
 
@@ -34,7 +35,7 @@ export function EditHabitModal({
     if (habit) {
       setEditTitle(habit.title || '');
       setEditDescription(habit.description || '');
-      setEditTimerLength(habit.timerLength?.toString() || '');
+      setEditTimerLength(habit.timerLength || 0);
     }
   }, [habit]);
 
@@ -43,9 +44,7 @@ export function EditHabitModal({
       onSave(habit.id, {
         title: editTitle,
         description: editDescription,
-        timerLength: editTimerLength
-          ? parseInt(editTimerLength, 10)
-          : undefined,
+        timerLength: editTimerLength > 0 ? editTimerLength : undefined,
       });
     }
   };
@@ -95,13 +94,10 @@ export function EditHabitModal({
             onChangeText={setEditDescription}
           />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Timer in Minutes (optional)"
-            placeholderTextColor={colors.grey}
-            value={editTimerLength}
-            keyboardType="numeric"
-            onChangeText={setEditTimerLength}
+          <Text style={styles.label}>Timer (optional)</Text>
+          <TimerSelection
+            initialTimer={editTimerLength}
+            onTimerChange={setEditTimerLength}
           />
         </View>
       </View>
@@ -137,6 +133,12 @@ const styles = StyleSheet.create({
   },
   headerButtonDisabled: {
     color: colors.grey,
+  },
+  label: {
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.large,
+    color: colors.text,
+    marginBottom: 10,
   },
   modalContent: {
     padding: 20,

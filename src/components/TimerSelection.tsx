@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
 
@@ -13,12 +13,20 @@ const timerOptions: { label: string; value: number | 'custom' }[] = [
 
 interface TimerSelectionProps {
   onTimerChange: (minutes: number) => void;
+  initialTimer?: number;
 }
 
-const TimerSelection: React.FC<TimerSelectionProps> = ({ onTimerChange }) => {
+const TimerSelection: React.FC<TimerSelectionProps> = ({
+  onTimerChange,
+  initialTimer,
+}) => {
   const [selectedTimer, setSelectedTimer] = useState<number | 'custom' | null>(
-    null,
+    initialTimer || null,
   );
+
+  useEffect(() => {
+    setSelectedTimer(initialTimer || null);
+  }, [initialTimer]);
 
   const handlePress = (value: number | 'custom') => {
     if (value === 'custom') {
