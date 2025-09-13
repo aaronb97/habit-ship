@@ -4,7 +4,7 @@ export const colors = {
   card: '#FFFFFF', // White
   text: '#424242', // Dark Gray
   primary: '#A5D6A7', // Medium Green
-  accent: '#FFC107', // Amber
+  accent: '#2196F3', // Blue
   white: '#FFFFFF',
   black: '#000000',
   grey: '#9E9E9E',

@@ -18,6 +18,26 @@ type HabitItemProps = {
   onStartTimer: () => void;
 };
 
+const formatLastCompleted = (completions: string[]) => {
+  if (completions.length === 0) return null;
+
+  const lastCompletion = new Date(completions[completions.length - 1]);
+  const today = new Date();
+
+  if (lastCompletion.toDateString() === today.toDateString()) {
+    return '';
+  }
+
+  const diffTime = Math.abs(today.getTime() - lastCompletion.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 1) {
+    return 'Last completed: yesterday';
+  }
+
+  return `Last completed: ${diffDays} days ago`;
+};
+
 const isHabitCompletedToday = (habit: Habit) => {
   if (habit.completions.length === 0) return false;
   const lastCompletion = new Date(
@@ -35,6 +55,7 @@ export function HabitItem({
   onStartTimer,
 }: HabitItemProps) {
   const isCompleted = isHabitCompletedToday(habit);
+  const lastCompletedText = formatLastCompleted(habit.completions);
   const { activeTimer, cancelTimer } = useStore();
   const isActiveTimer = activeTimer?.habitId === habit.id;
 
@@ -128,10 +149,15 @@ export function HabitItem({
     if (isCompleted) {
       return (
         <View style={styles.completedContainer}>
-          <Text style={[styles.habitTitle, styles.completedHabitTitle]}>
-            {habit.title}
-          </Text>
-          <MaterialIcons name="check-circle" size={32} color={colors.white} />
+          <View>
+            <Text style={[styles.habitTitle, styles.completedHabitTitle]}>
+              {habit.title}
+            </Text>
+            {lastCompletedText ? (
+              <Text style={styles.lastCompletedText}>{lastCompletedText}</Text>
+            ) : null}
+          </View>
+          <MaterialIcons name="check-circle" size={28} color={colors.white} />
         </View>
       );
     }
@@ -143,6 +169,9 @@ export function HabitItem({
           {habit.description ? (
             <Text style={styles.habitDescription}>{habit.description}</Text>
           ) : null}
+          {lastCompletedText ? (
+            <Text style={styles.lastCompletedText}>{lastCompletedText}</Text>
+          ) : null}
         </View>
         <View style={styles.actionsContainer}>
           {habit.timerLength ? (
@@ -150,7 +179,7 @@ export function HabitItem({
               style={[styles.actionButton, { backgroundColor: colors.accent }]}
               onPress={onStartTimer}
             >
-              <MaterialIcons name="play-arrow" size={24} color={colors.white} />
+              <MaterialIcons name="timer" size={24} color={colors.white} />
             </TouchableOpacity>
           ) : null}
           <TouchableOpacity
@@ -166,12 +195,12 @@ export function HabitItem({
 
   return (
     <TouchableOpacity
+      activeOpacity={0.9}
       style={[
         styles.habitItem,
         isCompleted && styles.completedHabitItem,
         isActiveTimer && styles.activeTimerHabitItem,
       ]}
-      activeOpacity={0.9}
       onLongPress={onEdit}
     >
       <Animated.View style={[styles.timerWipe, animatedStyle]} />
@@ -185,11 +214,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: colors.card,
     borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
     overflow: 'hidden',
   },
   contentContainer: {
@@ -213,10 +237,15 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.large,
     color: colors.text,
-    marginBottom: 4,
   },
   completedHabitTitle: {
     color: colors.white,
+  },
+  lastCompletedText: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.small,
+    color: colors.lightGrey,
+    marginTop: 4,
   },
   habitDescription: {
     fontFamily: fonts.regular,
@@ -232,9 +261,14 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 5,
   },
   timerContainer: {
     flex: 1,
