@@ -10,12 +10,14 @@ import { colors } from '../styles/theme';
 interface ProgressBarProps {
   progress: number; // 0 to 1
   color?: string;
+  backgroundColor?: string;
   height?: number;
 }
 
 export function ProgressBar({
   progress,
   color = colors.primary,
+  backgroundColor = colors.lightGrey,
   height = 12,
 }: ProgressBarProps) {
   const animatedWidth = useSharedValue(0);
@@ -31,12 +33,7 @@ export function ProgressBar({
   });
 
   return (
-    <View
-      style={[
-        styles.container,
-        { height, backgroundColor: colors.lightGrey },
-      ]}
-    >
+    <View style={[styles.container, { height, backgroundColor }]}>
       <Animated.View
         style={[styles.progressBar, { backgroundColor: color }, animatedStyle]}
       />

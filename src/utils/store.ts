@@ -4,6 +4,13 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { mountains } from '../mountains';
+import {
+  UserLevel,
+  XPGain,
+  XP_REWARDS,
+  calculateLevel,
+  getCurrentLevelXP,
+} from '../types';
 import { Meter } from './units';
 
 export type HabitId = string & { __habitId: true };
@@ -36,6 +43,8 @@ type Store = {
   habits: Habit[];
   hike?: Hike;
   completedMountains?: string[];
+  userLevel: UserLevel;
+  xpHistory: XPGain[];
   idCount: number;
   activeTimer?: {
     habitId: HabitId;
@@ -75,6 +84,11 @@ type Store = {
 
   resetAllSwipes: () => void;
 
+  addXP: (
+    amount: number,
+    source: 'habit_completion' | 'mountain_completion',
+  ) => void;
+
   clearData: () => void;
 };
 
@@ -83,6 +97,12 @@ const initialData = {
   habits: [],
   hike: undefined,
   completedMountains: undefined,
+  userLevel: {
+    level: 1,
+    currentXP: 0,
+    totalXP: 0,
+  },
+  xpHistory: [],
   idCount: 0,
   swipedHabitId: undefined,
 } satisfies Partial<Store>;
@@ -133,6 +153,20 @@ export const useStore = create<Store>()(
           if (state.hike.energy > 100) {
             state.hike.energy = 100;
           }
+
+          // Award XP for habit completion
+          const xpGain: XPGain = {
+            amount: XP_REWARDS.HABIT_COMPLETION,
+            source: 'habit_completion',
+            timestamp: new Date().toISOString(),
+          };
+
+          state.xpHistory.push(xpGain);
+          state.userLevel.totalXP += xpGain.amount;
+          state.userLevel.level = calculateLevel(state.userLevel.totalXP);
+          state.userLevel.currentXP = getCurrentLevelXP(
+            state.userLevel.totalXP,
+          );
         });
       },
 
@@ -147,6 +181,20 @@ export const useStore = create<Store>()(
           }
 
           state.completedMountains.push(mountainName);
+
+          // Award XP for mountain completion
+          const xpGain: XPGain = {
+            amount: XP_REWARDS.MOUNTAIN_COMPLETION,
+            source: 'mountain_completion',
+            timestamp: new Date().toISOString(),
+          };
+
+          state.xpHistory.push(xpGain);
+          state.userLevel.totalXP += xpGain.amount;
+          state.userLevel.level = calculateLevel(state.userLevel.totalXP);
+          state.userLevel.currentXP = getCurrentLevelXP(
+            state.userLevel.totalXP,
+          );
         });
       },
 
@@ -245,6 +293,26 @@ export const useStore = create<Store>()(
         });
       },
 
+      addXP: (
+        amount: number,
+        source: 'habit_completion' | 'mountain_completion',
+      ) => {
+        set((state) => {
+          const xpGain: XPGain = {
+            amount,
+            source,
+            timestamp: new Date().toISOString(),
+          };
+
+          state.xpHistory.push(xpGain);
+          state.userLevel.totalXP += amount;
+          state.userLevel.level = calculateLevel(state.userLevel.totalXP);
+          state.userLevel.currentXP = getCurrentLevelXP(
+            state.userLevel.totalXP,
+          );
+        });
+      },
+
       clearData: () => {
         set((state) => {
           Object.assign(state, initialData);
@@ -260,3 +328,4 @@ export const useStore = create<Store>()(
 
 export const useIsSetupFinished = () => useStore().isSetupFinished;
 export const useIsSetupInProgress = () => !useStore().isSetupFinished;
+export const useUserLevel = () => useStore().userLevel;

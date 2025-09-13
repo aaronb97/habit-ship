@@ -17,6 +17,7 @@ const RootStack = createNativeStackNavigator({
       color: colors.primaryText,
     },
   },
+  initialRouteName: 'Home',
   screens: {
     SetupFirstHabit: {
       screen: SetupFirstHabit,

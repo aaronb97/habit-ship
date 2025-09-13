@@ -11,13 +11,21 @@ import { CreateHabitModal } from '../../components/CreateHabitModal';
 import { EditHabitModal } from '../../components/EditHabitModal';
 import { HabitItem } from '../../components/HabitItem';
 import { HikeDisplay } from '../../components/HikeDisplay';
+import { LevelProgressBar } from '../../components/LevelProgressBar';
 import { MountainSelectionModal } from '../../components/MountainSelectionModal';
 import { colors, fonts, fontSizes } from '../../styles/theme';
 import { Habit, HabitId, useStore } from '../../utils/store';
 
 export function Home() {
-  const { habits, completeHabit, editHabit, addHabit, startTimer, clearData, resetAllSwipes } =
-    useStore();
+  const {
+    habits,
+    completeHabit,
+    editHabit,
+    addHabit,
+    startTimer,
+    clearData,
+    resetAllSwipes,
+  } = useStore();
 
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -42,7 +50,10 @@ export function Home() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <TouchableOpacity 
+      <View style={styles.header}>
+        <LevelProgressBar />
+      </View>
+      <TouchableOpacity
         style={styles.backgroundTouchable}
         activeOpacity={1}
         onPress={resetAllSwipes}
@@ -106,6 +117,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    alignItems: 'flex-end',
+    marginBottom: -16,
   },
   backgroundTouchable: {
     flex: 1,

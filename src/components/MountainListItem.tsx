@@ -1,7 +1,8 @@
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { Meter, metersToFeet } from '../utils/units';
 import { Mountain } from '../mountains';
+import { useUserLevel } from '../utils/store';
 
 interface MountainListItemProps {
   mountain: Mountain;
@@ -14,6 +15,9 @@ export function MountainListItem({
   isSelected,
   onPress,
 }: MountainListItemProps) {
+  const userLevel = useUserLevel();
+  const isLocked = userLevel.level < mountain.minLevel;
+
   function getHeightString(height: Meter) {
     return `${metersToFeet(height).toLocaleString(undefined, {
       maximumFractionDigits: 0,
@@ -22,22 +26,43 @@ export function MountainListItem({
 
   return (
     <TouchableOpacity
-      style={[styles.mountainBox, isSelected && styles.selectedMountainBox]}
-      onPress={onPress}
+      style={[
+        styles.mountainBox, 
+        isSelected && styles.selectedMountainBox,
+        isLocked && styles.lockedMountainBox
+      ]}
+      disabled={isLocked}
+      onPress={isLocked ? undefined : onPress}
     >
-      <Text style={styles.mountainName}>{mountain.name}</Text>
+      <Text style={[styles.mountainName, isLocked && styles.lockedText]}>
+        {mountain.name}
+      </Text>
 
-      <Text style={styles.mountainInfo}>
+      <Text style={[styles.mountainInfo, isLocked && styles.lockedText]}>
         <Text style={styles.mountainInfoLabel}>Location:</Text>{' '}
         {mountain.location}
       </Text>
 
-      <Text style={styles.mountainInfo}>
+      <Text style={[styles.mountainInfo, isLocked && styles.lockedText]}>
         <Text style={styles.mountainInfoLabel}>Height:</Text>{' '}
         {getHeightString(mountain.height)}
       </Text>
 
-      <Text style={styles.mountainDescription}>{mountain.description}</Text>
+      <Text style={[styles.mountainInfo, isLocked && styles.lockedText]}>
+        <Text style={styles.mountainInfoLabel}>Min Level:</Text>{' '}
+        {mountain.minLevel}
+      </Text>
+
+      <Text style={[styles.mountainDescription, isLocked && styles.lockedText]}>
+        {mountain.description}
+      </Text>
+
+      {isLocked && (
+        <View style={styles.lockOverlay}>
+          <Text style={styles.lockIcon}>🔒</Text>
+          <Text style={styles.lockText}>Level {mountain.minLevel} Required</Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
@@ -62,6 +87,10 @@ const styles = StyleSheet.create({
   selectedMountainBox: {
     borderColor: colors.primary,
   },
+  lockedMountainBox: {
+    backgroundColor: colors.lightGrey,
+    opacity: 0.6,
+  },
   mountainName: {
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.large,
@@ -83,6 +112,30 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.medium,
     color: colors.grey,
     marginTop: 8,
+    textAlign: 'center',
+  },
+  lockedText: {
+    color: colors.grey,
+  },
+  lockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lockIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  lockText: {
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.medium,
+    color: colors.white,
     textAlign: 'center',
   },
 });
