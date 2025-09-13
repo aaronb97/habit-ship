@@ -590,9 +590,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'visible',
   },
   animatedContainer: {
     width: '100%',
+    overflow: 'visible',
   },
   buttonsContainer: {
     position: 'absolute',
@@ -618,7 +620,7 @@ const styles = StyleSheet.create({
   habitItem: {
     backgroundColor: colors.card,
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: 'visible',
     height: 64,
     display: 'flex',
     flexDirection: 'row',
@@ -632,6 +634,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     zIndex: 2,
     position: 'relative',
+    overflow: 'visible',
   },
   activeTimerHabitItem: {
     backgroundColor: colors.backgroundDarker,
@@ -747,6 +750,7 @@ const styles = StyleSheet.create({
     left: 0,
     bottom: 0,
     backgroundColor: colors.primary,
+    borderRadius: 16,
   },
   completionWipe: {
     position: 'absolute',
@@ -755,6 +759,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: colors.primary,
     zIndex: 1,
+    borderRadius: 16,
   },
   xpParticle: {
     position: 'absolute',
