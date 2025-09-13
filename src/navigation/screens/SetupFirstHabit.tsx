@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   headerButtonText: {
     fontFamily: theme.fonts.semiBold,
     fontSize: theme.fontSizes.medium,
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   },
   headerButtonDisabledText: {
     color: theme.colors.grey,

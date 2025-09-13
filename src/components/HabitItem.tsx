@@ -25,7 +25,10 @@ const formatLastCompleted = (completions: string[]) => {
   const today = new Date();
 
   if (lastCompletion.toDateString() === today.toDateString()) {
-    return '';
+    return `Completed today at ${lastCompletion.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`;
   }
 
   const diffTime = Math.abs(today.getTime() - lastCompletion.getTime());
@@ -131,6 +134,15 @@ export function HabitItem({
     };
   });
 
+  const timerButton = (
+    <TouchableOpacity
+      style={[styles.actionButton, { backgroundColor: colors.accent }]}
+      onPress={onStartTimer}
+    >
+      <MaterialIcons name="timer" size={24} color={colors.white} />
+    </TouchableOpacity>
+  );
+
   const renderContent = () => {
     if (isActiveTimer) {
       return (
@@ -154,10 +166,10 @@ export function HabitItem({
               {habit.title}
             </Text>
             {lastCompletedText ? (
-              <Text style={styles.lastCompletedText}>{lastCompletedText}</Text>
+              <Text style={styles.completedTodayText}>{lastCompletedText}</Text>
             ) : null}
           </View>
-          <MaterialIcons name="check-circle" size={28} color={colors.white} />
+          {timerButton}
         </View>
       );
     }
@@ -174,14 +186,7 @@ export function HabitItem({
           ) : null}
         </View>
         <View style={styles.actionsContainer}>
-          {habit.timerLength ? (
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.accent }]}
-              onPress={onStartTimer}
-            >
-              <MaterialIcons name="timer" size={24} color={colors.white} />
-            </TouchableOpacity>
-          ) : null}
+          {habit.timerLength ? timerButton : null}
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.primary }]}
             onPress={onComplete}
@@ -244,7 +249,13 @@ const styles = StyleSheet.create({
   lastCompletedText: {
     fontFamily: fonts.regular,
     fontSize: fontSizes.small,
-    color: colors.lightGrey,
+    color: colors.grey,
+    marginTop: 4,
+  },
+  completedTodayText: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.small,
+    color: colors.white,
     marginTop: 4,
   },
   habitDescription: {

@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   newHabitButtonText: {
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.medium,
-    color: colors.primary,
+    color: colors.primaryText,
   },
   revertButton: {
     marginTop: 20,

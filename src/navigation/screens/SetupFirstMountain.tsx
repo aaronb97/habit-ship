@@ -167,6 +167,6 @@ const styles = StyleSheet.create({
   headerButtonText: {
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.medium,
-    color: colors.primary,
+    color: colors.primaryText,
   },
 });
