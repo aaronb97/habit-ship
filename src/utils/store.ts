@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from 'react-native';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
@@ -198,6 +199,15 @@ export const useStore = create<Store>()(
 
       startTimer: (habitId: HabitId) => {
         set((state) => {
+          if (state.activeTimer) {
+            Alert.alert(
+              'Timer Already Active',
+              'Another timer is already running. Please stop it before starting a new one.',
+            );
+
+            return;
+          }
+
           state.activeTimer = {
             habitId,
             startTime: new Date().toISOString(),
