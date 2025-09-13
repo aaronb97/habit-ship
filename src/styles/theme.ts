@@ -10,6 +10,7 @@ export const colors = {
   black: '#000000',
   grey: '#9E9E9E',
   lightGrey: '#F5F5F5',
+  danger: '#EF5350',
 };
 
 export const fonts = {

@@ -1,6 +1,11 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useEffect } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -51,6 +56,8 @@ const isHabitCompletedToday = (habit: Habit) => {
   return lastCompletion.toDateString() === today.toDateString();
 };
 
+const SWIPE_THRESHOLD = -60;
+
 export function HabitItem({
   habit,
   onComplete,
@@ -59,8 +66,9 @@ export function HabitItem({
 }: HabitItemProps) {
   const isCompleted = isHabitCompletedToday(habit);
   const lastCompletedText = formatLastCompleted(habit.completions);
-  const { activeTimer, cancelTimer } = useStore();
+  const { activeTimer, cancelTimer, removeHabit } = useStore();
   const isActiveTimer = activeTimer?.habitId === habit.id;
+  const translateX = useSharedValue(0);
 
   const timerProgress = useSharedValue(0);
 
@@ -131,11 +139,36 @@ export function HabitItem({
     restart(getTimerExpiryTimestamp());
   }
 
+  const handleDelete = () => {
+    removeHabit(habit.id);
+  };
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      translateX.value = Math.min(
+        Math.max(SWIPE_THRESHOLD * 1.1, event.translationX),
+        0,
+      );
+
+      console.log(translateX.value);
+    })
+    .onEnd(() => {
+      if (translateX.value < SWIPE_THRESHOLD) {
+        translateX.value = withTiming(SWIPE_THRESHOLD);
+      } else {
+        translateX.value = withTiming(0);
+      }
+    });
+
   if (!isActiveTimer && isRunning) {
     pause();
   }
 
-  const animatedStyle = useAnimatedStyle(() => {
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  const animatedWipeStyle = useAnimatedStyle(() => {
     return {
       width: `${timerProgress.value * 100}%`,
     };
@@ -210,24 +243,52 @@ export function HabitItem({
   };
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      style={[
-        styles.habitItem,
-        isCompleted && styles.completedHabitItem,
-        isActiveTimer && styles.activeTimerHabitItem,
-      ]}
-      onLongPress={onEdit}
-    >
-      <Animated.View style={[styles.timerWipe, animatedStyle]} />
-      <View style={styles.contentContainer}>{renderContent()}</View>
-    </TouchableOpacity>
+    <GestureHandlerRootView>
+      <View style={styles.container}>
+        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+          <MaterialIcons name="delete" size={24} color={colors.white} />
+        </TouchableOpacity>
+        <GestureDetector gesture={panGesture}>
+          <Animated.View style={[styles.animatedContainer, animatedStyle]}>
+            <TouchableOpacity
+              activeOpacity={1}
+              style={[
+                styles.habitItem,
+                isCompleted && styles.completedHabitItem,
+                isActiveTimer && styles.activeTimerHabitItem,
+              ]}
+              onLongPress={onEdit}
+            >
+              <Animated.View style={[styles.timerWipe, animatedWipeStyle]} />
+              <View style={styles.contentContainer}>{renderContent()}</View>
+            </TouchableOpacity>
+          </Animated.View>
+        </GestureDetector>
+      </View>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
-  habitItem: {
+  container: {
     marginBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  animatedContainer: {
+    width: '100%',
+  },
+  deleteButton: {
+    backgroundColor: colors.danger,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    right: 0,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+  },
+  habitItem: {
     backgroundColor: colors.card,
     borderRadius: 16,
     overflow: 'hidden',

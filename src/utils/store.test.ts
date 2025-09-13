@@ -84,7 +84,7 @@ describe('store', () => {
     expect(result.current.habits[0].title).toBe('New Title');
   });
 
-  it('should remove a habit', () => {
+  it('should delete a habit', () => {
     const { result } = renderHook(() => useStore());
 
     act(() => {
