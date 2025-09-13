@@ -88,13 +88,13 @@ export function EditHabitModal({
 
           <TextInput
             style={styles.input}
-            placeholder="Description (optional)"
+            placeholder="Description"
             placeholderTextColor={colors.grey}
             value={editDescription}
             onChangeText={setEditDescription}
           />
 
-          <Text style={styles.label}>Timer (optional)</Text>
+          <Text style={styles.label}>Timer</Text>
           <TimerSelection
             initialTimer={editTimerLength}
             onTimerChange={setEditTimerLength}
