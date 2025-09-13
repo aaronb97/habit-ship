@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import {
   FlatList,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CreateHabitModal } from '../../components/CreateHabitModal';
 import { EditHabitModal } from '../../components/EditHabitModal';
 import { HabitItem } from '../../components/HabitItem';
@@ -46,7 +46,9 @@ function HikeDisplay() {
         <View style={styles.progressRow}>
           <Text style={styles.progressLabel}>Progress</Text>
           <Text style={styles.progressValue}>
-            {`${hike?.height.toLocaleString()} / ${mountain.height.toLocaleString()} ft`}
+            {`${hike?.height
+              .toFixed(1)
+              .toLocaleString()} / ${mountain.height.toLocaleString()} ft`}
           </Text>
         </View>
         <ProgressBar progress={heightPercentage} color={colors.primary} />

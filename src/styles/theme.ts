@@ -1,5 +1,6 @@
 export const colors = {
   background: '#E8F5E9', // Light Green
+  backgroundDarker: '#C5E4C1', // Darker Green
   card: '#FFFFFF', // White
   text: '#424242', // Dark Gray
   primary: '#A5D6A7', // Medium Green

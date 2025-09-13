@@ -1,5 +1,12 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { useEffect } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { useTimer } from 'react-timer-hook';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { Habit, useStore } from '../utils/store';
@@ -30,6 +37,8 @@ export function HabitItem({
   const isCompleted = isHabitCompletedToday(habit);
   const { activeTimer, cancelTimer } = useStore();
   const isActiveTimer = activeTimer?.habitId === habit.id;
+
+  const timerProgress = useSharedValue(0);
 
   const presentAlert = () => {
     if (isCompleted) {
@@ -66,6 +75,20 @@ export function HabitItem({
     },
   });
 
+  useEffect(() => {
+    if (isActiveTimer) {
+      const totalSeconds = habit.timerLength! * 60;
+      const elapsedSeconds = totalSeconds - (minutes * 60 + seconds);
+      const progress = elapsedSeconds / totalSeconds;
+      timerProgress.value = withTiming(progress, {
+        duration: 1000,
+        easing: Easing.linear,
+      });
+    } else {
+      timerProgress.value = 0;
+    }
+  }, [isActiveTimer, minutes, seconds, habit.timerLength, timerProgress]);
+
   if (isActiveTimer && !isRunning) {
     restart(getTimerExpiryTimestamp());
   }
@@ -74,61 +97,85 @@ export function HabitItem({
     pause();
   }
 
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      width: `${timerProgress.value * 100}%`,
+    };
+  });
+
+  const renderContent = () => {
+    if (isActiveTimer) {
+      return (
+        <View style={styles.timerContainer}>
+          <Text style={styles.timerDisplay}>{`${minutes}:${seconds
+            .toString()
+            .padStart(2, '0')}`}</Text>
+          <TouchableOpacity style={styles.cancelButton} onPress={cancelTimer}>
+            <MaterialIcons name="close" size={24} color={colors.white} />
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (isCompleted) {
+      return (
+        <View style={styles.completedContainer}>
+          <Text style={[styles.habitTitle, styles.completedHabitTitle]}>
+            {habit.title}
+          </Text>
+          <MaterialIcons name="check-circle" size={32} color={colors.white} />
+        </View>
+      );
+    }
+
+    return (
+      <>
+        <View style={styles.habitInfo}>
+          <Text style={styles.habitTitle}>{habit.title}</Text>
+          {habit.description ? (
+            <Text style={styles.habitDescription}>{habit.description}</Text>
+          ) : null}
+        </View>
+        <View style={styles.actionsContainer}>
+          {habit.timerLength ? (
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.accent }]}
+              onPress={onStartTimer}
+            >
+              <MaterialIcons name="play-arrow" size={24} color={colors.white} />
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.primary }]}
+            onPress={onComplete}
+          >
+            <MaterialIcons name="check" size={24} color={colors.white} />
+          </TouchableOpacity>
+        </View>
+      </>
+    );
+  };
+
   return (
     <TouchableOpacity
-      style={[styles.habitItem, isCompleted && styles.completedHabitItem]}
-      activeOpacity={0.7}
+      style={[
+        styles.habitItem,
+        isCompleted && styles.completedHabitItem,
+        isActiveTimer && styles.activeTimerHabitItem,
+      ]}
+      activeOpacity={0.9}
       onLongPress={onEdit}
     >
-      <View style={styles.habitInfo}>
-        <Text style={styles.habitTitle}>{habit.title}</Text>
-
-        {habit.description ? (
-          <Text style={styles.habitDescription}>{habit.description}</Text>
-        ) : null}
-      </View>
-
-      <View style={styles.actionsContainer}>
-        {isActiveTimer ? (
-          <View style={styles.timerContainer}>
-            <Text style={styles.timerDisplay}>{`${minutes}:${seconds
-              .toString()
-              .padStart(2, '0')}`}</Text>
-
-            <TouchableOpacity onPress={cancelTimer}>
-              <MaterialIcons name="close" size={24} color={colors.grey} />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <>
-            {habit.timerLength ? (
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={onStartTimer}
-              >
-                <MaterialIcons
-                  name="play-arrow"
-                  size={24}
-                  color={colors.accent}
-                />
-              </TouchableOpacity>
-            ) : null}
-
-            {!isCompleted ? (
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={onComplete}
-              >
-                <MaterialIcons
-                  name="check"
-                  size={24}
-                  color={colors.primary}
-                />
-              </TouchableOpacity>
-            ) : null}
-          </>
-        )}
-      </View>
+      {isActiveTimer && (
+        <Animated.View
+          style={[
+            styles.timerOverlay,
+            animatedStyle,
+            { backgroundColor: colors.primary },
+          ]}
+        />
+      )}
+      {renderContent()}
     </TouchableOpacity>
   );
 }
@@ -142,27 +189,32 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: colors.card,
     borderRadius: 16,
-    borderWidth: 2,
-    borderColor: 'transparent',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 3,
+    overflow: 'hidden',
+  },
+  activeTimerHabitItem: {
+    backgroundColor: colors.backgroundDarker,
   },
   completedHabitItem: {
-    backgroundColor: colors.lightGrey,
-    borderColor: colors.primary,
+    backgroundColor: colors.primary,
   },
   habitInfo: {
     flex: 1,
     marginRight: 16,
+    backgroundColor: 'transparent',
   },
   habitTitle: {
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.large,
     color: colors.text,
     marginBottom: 4,
+  },
+  completedHabitTitle: {
+    color: colors.white,
   },
   habitDescription: {
     fontFamily: fonts.regular,
@@ -172,31 +224,43 @@ const styles = StyleSheet.create({
   actionsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  timerContainer: {
-    alignItems: 'flex-end',
+    backgroundColor: 'transparent',
   },
   actionButton: {
-    marginLeft: 16,
+    marginLeft: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timerContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   timerDisplay: {
     fontFamily: fonts.bold,
-    fontSize: fontSizes.large,
-    color: colors.primary,
-    marginBottom: 4,
+    fontSize: fontSizes.xxlarge,
+    color: colors.white,
+    flex: 1,
+    textAlign: 'center',
   },
-  buttonText: {
-    fontFamily: fonts.semiBold,
-    fontSize: fontSizes.medium,
+  cancelButton: {
+    padding: 8,
   },
-  completeButtonText: {
-    color: colors.primary,
+  completedContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  timerButtonText: {
-    color: colors.accent,
-  },
-  cancelButtonText: {
-    color: colors.grey,
-    fontSize: fontSizes.small,
+  timerOverlay: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
   },
 });

@@ -20,8 +20,9 @@ const RootStack = createNativeStackNavigator({
       screen: Home,
       if: useIsSetupFinished,
       options: {
-        title: 'Home',
-        headerShown: false,
+        title: '',
+        headerTransparent: true,
+        headerShadowVisible: false,
       },
     },
     NotFound: {

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -13,10 +13,10 @@ interface ProgressBarProps {
   height?: number;
 }
 
-export function ProgressBar({ 
-  progress, 
-  color = theme.colors.primary, 
-  height = 12 
+export function ProgressBar({
+  progress,
+  color = theme.colors.primary,
+  height = 12,
 }: ProgressBarProps) {
   const animatedWidth = useSharedValue(0);
 
@@ -31,8 +31,15 @@ export function ProgressBar({
   });
 
   return (
-    <View style={[styles.container, { height, backgroundColor: theme.colors.lightGrey }]}>
-      <Animated.View style={[styles.progressBar, { backgroundColor: color }, animatedStyle]} />
+    <View
+      style={[
+        styles.container,
+        { height, backgroundColor: theme.colors.lightGrey },
+      ]}
+    >
+      <Animated.View
+        style={[styles.progressBar, { backgroundColor: color }, animatedStyle]}
+      />
     </View>
   );
 }
