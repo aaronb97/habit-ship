@@ -1,7 +1,8 @@
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ScrollView,
+  Animated,
+  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -21,6 +22,14 @@ export function SetupFirstMountain() {
   const params =
     useRoute<RouteProp<RootStackParamList, 'SetupFirstMountain'>>().params;
 
+  // Animation values
+  const titleOpacity = useState(new Animated.Value(0))[0];
+  const titleTranslateY = useState(new Animated.Value(30))[0];
+  const subtitleOpacity = useState(new Animated.Value(0))[0];
+  const subtitleTranslateY = useState(new Animated.Value(30))[0];
+  const listOpacity = useState(new Animated.Value(0))[0];
+  const listTranslateY = useState(new Animated.Value(30))[0];
+
   const { habit } = params;
 
   const handleFinish = useCallback(() => {
@@ -33,7 +42,15 @@ export function SetupFirstMountain() {
     });
 
     setIsSetupFinished(true);
-  }, [addHabit, habit, selectedMountain, setHike, setIsSetupFinished]);
+    navigation.navigate('WelcomeTransition');
+  }, [
+    addHabit,
+    habit,
+    selectedMountain,
+    setHike,
+    setIsSetupFinished,
+    navigation,
+  ]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -51,32 +68,121 @@ export function SetupFirstMountain() {
     };
   }, [navigation, handleFinish]);
 
+  useEffect(() => {
+    // Animate elements in sequence
+    const titleAnimation = Animated.parallel([
+      Animated.timing(titleOpacity, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(titleTranslateY, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]);
+
+    const subtitleAnimation = Animated.parallel([
+      Animated.timing(subtitleOpacity, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(subtitleTranslateY, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]);
+
+    const listAnimation = Animated.parallel([
+      Animated.timing(listOpacity, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(listTranslateY, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]);
+
+    // Sequence the animations
+    Animated.sequence([
+      titleAnimation,
+      Animated.delay(200),
+      subtitleAnimation,
+      Animated.delay(200),
+      listAnimation,
+    ]).start();
+  }, [
+    titleOpacity,
+    titleTranslateY,
+    subtitleOpacity,
+    subtitleTranslateY,
+    listOpacity,
+    listTranslateY,
+  ]);
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Your First Adventure</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <Animated.Text
+          style={[
+            styles.title,
+            {
+              opacity: titleOpacity,
+              transform: [{ translateY: titleTranslateY }],
+            },
+          ]}
+        >
+          Your First Adventure
+        </Animated.Text>
 
-      <Text style={styles.subtitle}>
-        Choose a mountain to begin your journey.
-      </Text>
+        <Animated.Text
+          style={[
+            styles.subtitle,
+            {
+              opacity: subtitleOpacity,
+              transform: [{ translateY: subtitleTranslateY }],
+            },
+          ]}
+        >
+          Choose a mountain to begin your journey.
+        </Animated.Text>
 
-      <ScrollView style={styles.scrollView}>
-        {mountains.map((mountain) => (
-          <MountainListItem
-            key={mountain.name}
-            mountain={mountain}
-            isSelected={selectedMountain === mountain.name}
-            onPress={() => setSelectedMountain(mountain.name)}
-          />
-        ))}
-      </ScrollView>
-    </View>
+        <Animated.ScrollView
+          style={[
+            styles.scrollView,
+            {
+              opacity: listOpacity,
+              transform: [{ translateY: listTranslateY }],
+            },
+          ]}
+        >
+          {mountains.map((mountain) => (
+            <MountainListItem
+              key={mountain.name}
+              mountain={mountain}
+              isSelected={selectedMountain === mountain.name}
+              onPress={() => setSelectedMountain(mountain.name)}
+            />
+          ))}
+        </Animated.ScrollView>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  container: {
+    flex: 1,
     paddingHorizontal: 20,
     paddingTop: 20,
   },
@@ -102,7 +208,7 @@ const styles = StyleSheet.create({
   },
   headerButtonText: {
     fontFamily: fonts.semiBold,
-    fontSize: fontSizes.medium,
+    fontSize: fontSizes.large,
     color: colors.primaryText,
   },
 });

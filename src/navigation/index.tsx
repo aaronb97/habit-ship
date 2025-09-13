@@ -1,20 +1,46 @@
 import { createStaticNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useIsSetupFinished, useIsSetupInProgress } from '../utils/store';
+import { colors, fonts } from '../styles/theme';
 import { Home } from './screens/Home';
 import { NotFound } from './screens/NotFound';
 import { SetupFirstHabit } from './screens/SetupFirstHabit';
 import { SetupFirstMountain } from './screens/SetupFirstMountain';
+import { WelcomeTransition } from './screens/WelcomeTransition';
 
 const RootStack = createNativeStackNavigator({
+  screenOptions: {
+    headerTintColor: colors.primaryText,
+    headerBackTitle: 'Back',
+    headerBackTitleStyle: {
+      fontFamily: fonts.regular,
+      color: colors.primaryText,
+    },
+  },
   screens: {
     SetupFirstHabit: {
       screen: SetupFirstHabit,
       if: useIsSetupInProgress,
+      options: {
+        title: '',
+        headerTransparent: true,
+        headerShadowVisible: false,
+      },
     },
     SetupFirstMountain: {
       screen: SetupFirstMountain,
       if: useIsSetupInProgress,
+      options: {
+        title: '',
+        headerTransparent: true,
+        headerShadowVisible: false,
+      },
+    },
+    WelcomeTransition: {
+      screen: WelcomeTransition,
+      options: {
+        headerShown: false,
+      },
     },
     Home: {
       screen: Home,
@@ -48,6 +74,7 @@ export type RootStackParamList = {
       timerLength?: number;
     };
   };
+  WelcomeTransition: undefined;
   Home: undefined;
   NotFound: undefined;
 };

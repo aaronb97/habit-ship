@@ -1,6 +1,8 @@
 import { useNavigation } from '@react-navigation/native';
 import { useCallback, useEffect, useState } from 'react';
 import {
+  Animated,
+  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
@@ -15,6 +17,14 @@ export function SetupFirstHabit() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [timerLength, setTimerLength] = useState(0);
+
+  // Animation values
+  const titleOpacity = useState(new Animated.Value(0))[0];
+  const titleTranslateY = useState(new Animated.Value(30))[0];
+  const subtitleOpacity = useState(new Animated.Value(0))[0];
+  const subtitleTranslateY = useState(new Animated.Value(30))[0];
+  const formOpacity = useState(new Animated.Value(0))[0];
+  const formTranslateY = useState(new Animated.Value(30))[0];
 
   const isFormComplete = title.trim() !== '';
 
@@ -55,43 +65,134 @@ export function SetupFirstHabit() {
     };
   }, [navigation, isFormComplete, handleNext]);
 
+  useEffect(() => {
+    // Animate elements in sequence
+    const titleAnimation = Animated.parallel([
+      Animated.timing(titleOpacity, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(titleTranslateY, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]);
+
+    const subtitleAnimation = Animated.parallel([
+      Animated.timing(subtitleOpacity, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(subtitleTranslateY, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]);
+
+    const formAnimation = Animated.parallel([
+      Animated.timing(formOpacity, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(formTranslateY, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]);
+
+    // Sequence the animations
+    Animated.sequence([
+      titleAnimation,
+      Animated.delay(200),
+      subtitleAnimation,
+      Animated.delay(200),
+      formAnimation,
+    ]).start();
+  }, [
+    titleOpacity,
+    titleTranslateY,
+    subtitleOpacity,
+    subtitleTranslateY,
+    formOpacity,
+    formTranslateY,
+  ]);
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Create Your First Habit</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <Animated.Text
+          style={[
+            styles.title,
+            {
+              opacity: titleOpacity,
+              transform: [{ translateY: titleTranslateY }],
+            },
+          ]}
+        >
+          Create Your First Habit
+        </Animated.Text>
 
-      <Text style={styles.subtitle}>What new peak will you conquer?</Text>
+        <Animated.Text
+          style={[
+            styles.subtitle,
+            {
+              opacity: subtitleOpacity,
+              transform: [{ translateY: subtitleTranslateY }],
+            },
+          ]}
+        >
+          What new peak will you conquer?
+        </Animated.Text>
 
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Habit Title (e.g., Morning Run)"
-          placeholderTextColor={colors.grey}
-          value={title}
-          onChangeText={setTitle}
-        />
+        <Animated.View
+          style={[
+            styles.inputContainer,
+            {
+              opacity: formOpacity,
+              transform: [{ translateY: formTranslateY }],
+            },
+          ]}
+        >
+          <TextInput
+            style={styles.input}
+            placeholder="Habit Title (e.g., Morning Run)"
+            placeholderTextColor={colors.grey}
+            value={title}
+            onChangeText={setTitle}
+          />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Description (optional)"
-          placeholderTextColor={colors.grey}
-          value={description}
-          onChangeText={setDescription}
-        />
+          <TextInput
+            style={styles.input}
+            placeholder="Description (optional)"
+            placeholderTextColor={colors.grey}
+            value={description}
+            onChangeText={setDescription}
+          />
 
-        <View style={styles.labelContainer}>
-          <Text style={styles.label}>Timer</Text>
-          <Text style={styles.subLabel}>(optional)</Text>
-        </View>
-        <TimerSelection onTimerChange={setTimerLength} />
+          <View style={styles.labelContainer}>
+            <Text style={styles.label}>Timer</Text>
+            <Text style={styles.subLabel}>(optional)</Text>
+          </View>
+          <TimerSelection onTimerChange={setTimerLength} />
+        </Animated.View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  container: {
+    flex: 1,
     paddingHorizontal: 20,
     paddingTop: 20,
   },
@@ -149,7 +250,7 @@ const styles = StyleSheet.create({
   },
   headerButtonText: {
     fontFamily: fonts.semiBold,
-    fontSize: fontSizes.medium,
+    fontSize: fontSizes.large,
     color: colors.primaryText,
   },
   headerButtonDisabledText: {
