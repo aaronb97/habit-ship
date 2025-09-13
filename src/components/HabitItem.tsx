@@ -70,6 +70,10 @@ export function HabitItem({
   const isActiveTimer = activeTimer?.habitId === habit.id;
   const translateX = useSharedValue(0);
 
+  const resetSwipe = () => {
+    translateX.value = withTiming(0);
+  };
+
   const timerProgress = useSharedValue(0);
 
   const presentAlert = () => {
@@ -143,6 +147,19 @@ export function HabitItem({
     removeHabit(habit.id);
   };
 
+  const handleEdit = () => {
+    onEdit();
+
+    setTimeout(() => {
+      resetSwipe();
+    }, 500);
+  };
+
+  const handleStartTimer = () => {
+    onStartTimer();
+    resetSwipe();
+  };
+
   const panGesture = Gesture.Pan()
     .onUpdate((event) => {
       translateX.value = Math.min(
@@ -175,7 +192,7 @@ export function HabitItem({
   const timerButton = habit.timerLength ? (
     <TouchableOpacity
       style={[styles.actionButton, { backgroundColor: colors.accent }]}
-      onPress={onStartTimer}
+      onPress={handleStartTimer}
     >
       <MaterialIcons name="timer" size={20} color={colors.white} />
       <Text style={styles.actionButtonText}>{`${habit.timerLength} min`}</Text>
@@ -246,7 +263,7 @@ export function HabitItem({
         <View style={styles.buttonsContainer}>
           <TouchableOpacity
             style={[styles.swipeButton, styles.editButton]}
-            onPress={onEdit}
+            onPress={handleEdit}
           >
             <MaterialIcons name="edit" size={24} color={colors.white} />
           </TouchableOpacity>
@@ -267,7 +284,7 @@ export function HabitItem({
                 isCompleted && styles.completedHabitItem,
                 isActiveTimer && styles.activeTimerHabitItem,
               ]}
-              onLongPress={onEdit}
+              onLongPress={handleEdit}
             >
               <Animated.View style={[styles.timerWipe, animatedWipeStyle]} />
               <View style={styles.contentContainer}>{renderContent()}</View>
