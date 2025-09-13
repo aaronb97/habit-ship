@@ -146,6 +146,7 @@ export function HabitItem({
   const xpParticleTranslateY = useSharedValue(0);
   const preWipeTextOpacity = useSharedValue(1);
   const postWipeTextOpacity = useSharedValue(0);
+  const timerButtonTranslateX = useSharedValue(0);
 
   const resetSwipe = () => {
     translateX.value = withTiming(0);
@@ -281,6 +282,17 @@ export function HabitItem({
       }),
     );
 
+    // Animate timer button from left to right during wipe
+    if (habit.timerLength) {
+      timerButtonTranslateX.value = withDelay(
+        300,
+        withTiming(54, {
+          duration: 300,
+          easing: Easing.out(Easing.quad),
+        }),
+      );
+    }
+
     // Fade in post-wipe text during wipe (start earlier for smoother transition)
     postWipeTextOpacity.value = withDelay(
       300,
@@ -303,6 +315,7 @@ export function HabitItem({
       xpParticleTranslateY.value = 0;
       preWipeTextOpacity.value = 1;
       postWipeTextOpacity.value = 0;
+      timerButtonTranslateX.value = 0;
     }, 800);
   };
 
@@ -370,14 +383,24 @@ export function HabitItem({
     };
   });
 
+  const timerButtonAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: timerButtonTranslateX.value }],
+    };
+  });
+
   const timerButton = habit.timerLength ? (
-    <TouchableOpacity
-      style={[styles.actionButton, { backgroundColor: colors.accent }]}
-      onPress={handleStartTimer}
-    >
-      <MaterialIcons name="timer" size={20} color={colors.white} />
-      <Text style={styles.actionButtonText}>{`${habit.timerLength} min`}</Text>
-    </TouchableOpacity>
+    <Animated.View style={timerButtonAnimatedStyle}>
+      <TouchableOpacity
+        style={[styles.actionButton, { backgroundColor: colors.accent }]}
+        onPress={handleStartTimer}
+      >
+        <MaterialIcons name="timer" size={20} color={colors.white} />
+        <Text
+          style={styles.actionButtonText}
+        >{`${habit.timerLength} min`}</Text>
+      </TouchableOpacity>
+    </Animated.View>
   ) : null;
 
   console.log(dailyStreak);
@@ -544,7 +567,6 @@ export function HabitItem({
                         )}`}
                       </Text>
                     </View>
-                    <View>{timerButton}</View>
                   </Animated.View>
                 )}
                 {showXPParticle && (
