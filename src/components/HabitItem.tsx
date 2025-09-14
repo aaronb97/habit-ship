@@ -27,81 +27,14 @@ type HabitItemProps = {
   onStartTimer: () => void;
 };
 
-const calculateDailyStreak = (completions: string[]): number => {
-  if (completions.length === 0) return 0;
+const formatCompletionCount = (count: number): string | null => {
+  if (count === 0) return null;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const completionDates = completions
-    .map((completion) => {
-      const date = new Date(completion);
-      date.setHours(0, 0, 0, 0);
-      return date;
-    })
-    .sort((a, b) => b.getTime() - a.getTime()); // Sort descending (most recent first)
-
-  // Remove duplicates (same day completions)
-  const uniqueDates = completionDates.filter(
-    (date, index) =>
-      index === 0 || date.getTime() !== completionDates[index - 1].getTime(),
-  );
-
-  if (uniqueDates.length === 0) return 0;
-
-  const mostRecentCompletion = uniqueDates[0];
-  const daysSinceLastCompletion = Math.floor(
-    (today.getTime() - mostRecentCompletion.getTime()) / (1000 * 60 * 60 * 24),
-  );
-
-  // Don't show streak if the most recent completion was more than 1 day ago
-  // (completing today wouldn't increase the streak)
-  if (daysSinceLastCompletion > 1) return 0;
-
-  let streak = 0;
-  let expectedDate = new Date(today);
-
-  // If the most recent completion was today, start from today
-  // If it was yesterday, start from yesterday
-  if (daysSinceLastCompletion === 0) {
-    expectedDate = new Date(today);
-  } else if (daysSinceLastCompletion === 1) {
-    expectedDate = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+  if (count === 1) {
+    return '1 completion';
   }
 
-  for (const completionDate of uniqueDates) {
-    if (completionDate.getTime() === expectedDate.getTime()) {
-      streak++;
-      expectedDate = new Date(expectedDate.getTime() - 24 * 60 * 60 * 1000); // Go back one day
-    } else {
-      break;
-    }
-  }
-
-  return streak;
-};
-
-const formatLastCompleted = (completions: string[]) => {
-  if (completions.length === 0) return null;
-
-  const lastCompletion = new Date(completions[completions.length - 1]);
-  const today = new Date();
-
-  if (lastCompletion.toDateString() === today.toDateString()) {
-    return `Completed today at ${lastCompletion.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    })}`;
-  }
-
-  const diffTime = Math.abs(today.getTime() - lastCompletion.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 1) {
-    return 'Last completed: yesterday';
-  }
-
-  return `Last completed: ${diffDays} days ago`;
+  return `${count} completions`;
 };
 
 const isHabitCompletedToday = (habit: Habit) => {
@@ -123,8 +56,7 @@ export function HabitItem({
   onStartTimer,
 }: HabitItemProps) {
   const isCompleted = isHabitCompletedToday(habit);
-  const lastCompletedText = formatLastCompleted(habit.completions);
-  const dailyStreak = calculateDailyStreak(habit.completions);
+  const completionCountText = formatCompletionCount(habit.completions.length);
   const {
     activeTimer,
     cancelTimer,
@@ -403,8 +335,6 @@ export function HabitItem({
     </Animated.View>
   ) : null;
 
-  console.log(dailyStreak);
-
   const renderContent = () => {
     if (isActiveTimer) {
       return (
@@ -431,21 +361,11 @@ export function HabitItem({
               <Text style={[styles.habitTitle, styles.completedHabitTitle]}>
                 {habit.title}
               </Text>
-              {dailyStreak > 0 && (
-                <View style={styles.streakBadge}>
-                  <MaterialIcons
-                    name="local-fire-department"
-                    size={16}
-                    color={colors.white}
-                  />
-                  <Text style={[styles.streakText, styles.completedStreakText]}>
-                    {dailyStreak}
-                  </Text>
-                </View>
-              )}
             </View>
-            {lastCompletedText ? (
-              <Text style={styles.completedTodayText}>{lastCompletedText}</Text>
+            {completionCountText ? (
+              <Text style={styles.completedTodayText}>
+                {completionCountText}
+              </Text>
             ) : null}
           </View>
           {timerButton}
@@ -458,22 +378,14 @@ export function HabitItem({
         <Animated.View style={[styles.habitInfo, preWipeTextStyle]}>
           <View style={styles.habitTitleRow}>
             <Text style={styles.habitTitle}>{habit.title}</Text>
-            {dailyStreak > 0 && (
-              <View style={styles.streakBadge}>
-                <MaterialIcons
-                  name="local-fire-department"
-                  size={16}
-                  color={colors.accent}
-                />
-                <Text style={styles.streakText}>{dailyStreak}</Text>
-              </View>
-            )}
           </View>
           {habit.description ? (
             <Text style={styles.habitDescription}>{habit.description}</Text>
           ) : null}
-          {lastCompletedText ? (
-            <Text style={styles.lastCompletedText}>{lastCompletedText}</Text>
+          {completionCountText ? (
+            <Text style={styles.completionCountText}>
+              {completionCountText}
+            </Text>
           ) : null}
         </Animated.View>
         <View style={styles.actionsContainer}>
@@ -541,30 +453,9 @@ export function HabitItem({
                         >
                           {habit.title}
                         </Text>
-                        <View style={styles.streakBadge}>
-                          <MaterialIcons
-                            name="local-fire-department"
-                            size={16}
-                            color={colors.white}
-                          />
-                          <Text
-                            style={[
-                              styles.streakText,
-                              styles.completedStreakText,
-                            ]}
-                          >
-                            {dailyStreak + 1}
-                          </Text>
-                        </View>
                       </View>
                       <Text style={styles.completedTodayText}>
-                        {`Completed today at ${new Date().toLocaleTimeString(
-                          [],
-                          {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          },
-                        )}`}
+                        {formatCompletionCount(habit.completions.length + 1)}
                       </Text>
                     </View>
                   </Animated.View>
@@ -651,22 +542,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  streakBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.backgroundDarker,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginLeft: 8,
-  },
-  streakText: {
+  completionText: {
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.small,
     color: colors.accent,
     marginLeft: 4,
   },
-  completedStreakText: {
+  completedCompletionText: {
     color: colors.white,
   },
   completedHabitInfo: {
@@ -680,7 +562,7 @@ const styles = StyleSheet.create({
   completedHabitTitle: {
     color: colors.white,
   },
-  lastCompletedText: {
+  completionCountText: {
     fontFamily: fonts.regular,
     fontSize: fontSizes.small,
     color: colors.grey,
