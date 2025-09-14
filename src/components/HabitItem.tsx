@@ -199,10 +199,13 @@ export function HabitItem({
     });
 
     // Start XP particle animation
-    xpParticleOpacity.value = withTiming(1, { duration: 200 });
+    xpParticleOpacity.value = withSequence(
+      withTiming(1, { duration: 800 }),
+      withTiming(0, { duration: 800 }),
+    );
+
     xpParticleTranslateY.value = withSequence(
-      withTiming(-50, { duration: 800, easing: Easing.out(Easing.quad) }),
-      withTiming(-80, { duration: 400, easing: Easing.in(Easing.quad) }),
+      withTiming(-40, { duration: 2000 }),
     );
 
     // Start wipe animation after button shrinks
@@ -238,17 +241,18 @@ export function HabitItem({
     setTimeout(() => {
       onComplete();
       setIsAnimating(false);
-      setShowXPParticle(false);
 
       // Reset animation values
       buttonScale.value = 1;
       wipeProgress.value = 0;
-      xpParticleOpacity.value = 0;
-      xpParticleTranslateY.value = 0;
       preWipeTextOpacity.value = 1;
       postWipeTextOpacity.value = 0;
       timerButtonTranslateX.value = 0;
     }, 800);
+
+    setTimeout(() => {
+      setShowXPParticle(false);
+    }, 2000);
   };
 
   const panGesture = Gesture.Pan()
@@ -481,11 +485,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'visible',
+    overflow: 'hidden',
   },
   animatedContainer: {
     width: '100%',
-    overflow: 'visible',
+    overflow: 'hidden',
   },
   buttonsContainer: {
     position: 'absolute',
@@ -511,7 +515,7 @@ const styles = StyleSheet.create({
   habitItem: {
     backgroundColor: colors.card,
     borderRadius: 16,
-    overflow: 'visible',
+    overflow: 'hidden',
     height: 64,
     display: 'flex',
     flexDirection: 'row',
@@ -525,7 +529,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     zIndex: 2,
     position: 'relative',
-    overflow: 'visible',
+    overflow: 'hidden',
   },
   activeTimerHabitItem: {
     backgroundColor: colors.backgroundDarker,
@@ -646,7 +650,7 @@ const styles = StyleSheet.create({
   xpParticle: {
     position: 'absolute',
     right: 16,
-    top: '50%',
+    top: '40%',
     zIndex: 10,
     pointerEvents: 'none',
   },
