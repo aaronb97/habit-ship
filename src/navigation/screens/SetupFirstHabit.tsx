@@ -29,7 +29,7 @@ export function SetupFirstHabit() {
   const isFormComplete = title.trim() !== '';
 
   const handleNext = useCallback(() => {
-    navigation.navigate('SetupFirstMountain', {
+    navigation.navigate('SetupFirstPlanet', {
       habit: {
         title,
         description,
@@ -147,7 +147,7 @@ export function SetupFirstHabit() {
             },
           ]}
         >
-          What new peak will you conquer?
+          What new world will you explore? 🌌
         </Animated.Text>
 
         <Animated.View
@@ -233,6 +233,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     fontFamily: fonts.regular,
     fontSize: fontSizes.medium,
+    color: colors.text,
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,

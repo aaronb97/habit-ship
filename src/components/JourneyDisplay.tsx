@@ -1,17 +1,16 @@
 import { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { mountains } from '../mountains';
+import { planets } from '../planets';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { useStore } from '../utils/store';
 import { ProgressBar } from './ProgressBar';
-import { metersToFeet } from '../utils/units';
 
-interface HikeDisplayProps {
-  onMountainPress?: () => void;
+interface JourneyDisplayProps {
+  onPlanetPress?: () => void;
 }
 
-export function HikeDisplay({ onMountainPress }: HikeDisplayProps) {
-  const { hike, expendEnergy, clearData } = useStore();
+export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
+  const { journey, expendEnergy, clearData } = useStore();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -21,49 +20,48 @@ export function HikeDisplay({ onMountainPress }: HikeDisplayProps) {
     return () => clearInterval(interval);
   }, [expendEnergy]);
 
-  const mountain = mountains.find((m) => m.name === hike?.mountainName);
+  const planet = planets.find((p) => p.name === journey?.planetName);
 
-  if (!mountain || !hike) {
-    console.error('Encountered invalid mountain, resetting data');
+  if (!planet || !journey) {
+    console.error('Encountered invalid planet, resetting data');
     clearData();
     return null;
   }
 
-  const heightPercentage = (hike.height || 0) / mountain.height;
-  const energyPercentage = (hike.energy || 0) / 100;
+  const distancePercentage = (journey.distance || 0) / planet.distance;
+  const energyPercentage = (journey.energy || 0) / 100;
 
-  const currentHeightInFeet = metersToFeet(hike.height).toFixed(1);
-  const totalHeightInFeet = metersToFeet(mountain.height).toLocaleString(
+  const currentDistanceInKm = (journey.distance / 1000).toFixed(0);
+  const totalDistanceInKm = (planet.distance / 1000000).toLocaleString(
     undefined,
     {
-      maximumFractionDigits: 0,
+      maximumFractionDigits: 2,
     },
   );
 
-  const progressValue = `${currentHeightInFeet.toLocaleString()} / ${totalHeightInFeet} ft`;
+  const progressValue = `${currentDistanceInKm.toLocaleString()} km / ${totalDistanceInKm} million km`;
 
   return (
-    <View style={styles.hikeDisplayContainer}>
+    <View style={styles.journeyDisplayContainer}>
       <TouchableOpacity
-        style={styles.mountainInfoContainer}
+        style={styles.planetInfoContainer}
         activeOpacity={0.7}
-        onPress={onMountainPress}
+        onPress={onPlanetPress}
       >
-        <Text style={styles.mountainTitle}>{hike.mountainName}</Text>
-        <Text style={styles.mountainSubtitle}>{mountain.location}</Text>
+        <Text style={styles.planetTitle}>{journey.planetName}</Text>
       </TouchableOpacity>
 
       <View style={styles.progressContainer}>
         <View style={styles.progressRow}>
-          <Text style={styles.progressLabel}>Progress</Text>
+          <Text style={styles.progressLabel}>🚀 Journey Progress</Text>
           <Text style={styles.progressValue}>{progressValue}</Text>
         </View>
-        <ProgressBar progress={heightPercentage} color={colors.primary} />
+        <ProgressBar progress={distancePercentage} color={colors.primary} />
       </View>
 
       <View style={styles.progressContainer}>
         <View style={styles.progressRow}>
-          <Text style={styles.progressLabel}>Energy</Text>
+          <Text style={styles.progressLabel}>⚡ Fuel</Text>
           <Text style={styles.progressValue}>
             {`${(energyPercentage * 100).toFixed(0)}%`}
           </Text>
@@ -71,9 +69,9 @@ export function HikeDisplay({ onMountainPress }: HikeDisplayProps) {
         <ProgressBar progress={energyPercentage} color={colors.accent} />
       </View>
 
-      {hike.energy === 0 && (
+      {journey.energy === 0 && (
         <Text style={styles.outOfEnergyText}>
-          Complete a habit in order to gain energy!
+          Complete a habit to refuel your spacecraft! ⛽
         </Text>
       )}
     </View>
@@ -88,27 +86,29 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
-  hikeDisplayContainer: {
+  journeyDisplayContainer: {
     backgroundColor: colors.card,
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
-    shadowColor: '#000',
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  mountainInfoContainer: {
+  planetInfoContainer: {
     marginBottom: 16,
   },
-  mountainTitle: {
+  planetTitle: {
     fontFamily: fonts.bold,
     fontSize: fontSizes.xlarge,
     color: colors.text,
     textAlign: 'center',
   },
-  mountainSubtitle: {
+  planetSubtitle: {
     fontFamily: fonts.regular,
     fontSize: fontSizes.medium,
     color: colors.grey,

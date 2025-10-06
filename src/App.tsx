@@ -11,6 +11,7 @@ import { Asset } from 'expo-asset';
 import { createURL } from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
 import { useCallback } from 'react';
+import { StatusBar } from 'react-native';
 import { Navigation } from './navigation';
 import { colors } from './styles/theme';
 
@@ -50,13 +51,16 @@ export function App() {
   }
 
   return (
-    <Navigation
-      theme={customTheme}
-      linking={{
-        enabled: 'auto',
-        prefixes: [prefix],
-      }}
-      onReady={onLayoutRootView}
-    />
+    <>
+      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <Navigation
+        theme={customTheme}
+        linking={{
+          enabled: 'auto',
+          prefixes: [prefix],
+        }}
+        onReady={onLayoutRootView}
+      />
+    </>
   );
 }

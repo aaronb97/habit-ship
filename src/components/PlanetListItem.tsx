@@ -1,68 +1,70 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import { Meter, metersToFeet } from '../utils/units';
-import { Mountain } from '../mountains';
+import { Meter } from '../utils/units';
+import { Planet } from '../planets';
 import { useUserLevel } from '../utils/store';
 
-interface MountainListItemProps {
-  mountain: Mountain;
+interface PlanetListItemProps {
+  planet: Planet;
   isSelected?: boolean;
   onPress: () => void;
 }
 
-export function MountainListItem({
-  mountain,
+export function PlanetListItem({
+  planet,
   isSelected,
   onPress,
-}: MountainListItemProps) {
+}: PlanetListItemProps) {
   const userLevel = useUserLevel();
-  const isLocked = userLevel.level < mountain.minLevel;
+  const isLocked = userLevel.level < planet.minLevel;
 
-  function getHeightString(height: Meter) {
-    return `${metersToFeet(height).toLocaleString(undefined, {
-      maximumFractionDigits: 0,
-    })} ft`;
+  function getDistanceString(distance: Meter) {
+    // Convert to millions of km for readability
+    const distanceInMillionsKm = distance / 1000000;
+    if (distanceInMillionsKm < 1) {
+      return `${distance.toLocaleString()} km`;
+    }
+
+    return `${distanceInMillionsKm.toLocaleString(undefined, {
+      maximumFractionDigits: 2,
+    })} million km`;
   }
 
   return (
     <TouchableOpacity
       style={[
-        styles.mountainBox,
-        isSelected && styles.selectedMountainBox,
-        isLocked && styles.lockedMountainBox,
+        styles.planetBox,
+        isSelected && styles.selectedPlanetBox,
+        isLocked && styles.lockedPlanetBox,
       ]}
       disabled={isLocked}
       onPress={isLocked ? undefined : onPress}
     >
-      <Text style={[styles.mountainName, isLocked && styles.lockedText]}>
-        {mountain.name}
+      <Text style={[styles.planetName, isLocked && styles.lockedText]}>
+        {planet.name}
       </Text>
 
-      <Text style={[styles.mountainInfo, isLocked && styles.lockedText]}>
-        <Text style={styles.mountainInfoLabel}>Location:</Text>{' '}
-        {mountain.location}
+      <Text style={[styles.planetInfo, isLocked && styles.lockedText]}>
+        <Text style={styles.planetInfoLabel}>System:</Text> {planet.system}
       </Text>
 
-      <Text style={[styles.mountainInfo, isLocked && styles.lockedText]}>
-        <Text style={styles.mountainInfoLabel}>Height:</Text>{' '}
-        {getHeightString(mountain.height)}
+      <Text style={[styles.planetInfo, isLocked && styles.lockedText]}>
+        <Text style={styles.planetInfoLabel}>Distance:</Text>{' '}
+        {getDistanceString(planet.distance)}
       </Text>
 
-      <Text style={[styles.mountainInfo, isLocked && styles.lockedText]}>
-        <Text style={styles.mountainInfoLabel}>Min Level:</Text>{' '}
-        {mountain.minLevel}
+      <Text style={[styles.planetInfo, isLocked && styles.lockedText]}>
+        <Text style={styles.planetInfoLabel}>Min Level:</Text> {planet.minLevel}
       </Text>
 
       {isLocked ? null : (
-        <Text style={styles.mountainDescription}>{mountain.description}</Text>
+        <Text style={styles.planetDescription}>{planet.description}</Text>
       )}
 
       {isLocked && (
         <View style={styles.lockOverlay}>
           <Text style={styles.lockIcon}>🔒</Text>
-          <Text style={styles.lockText}>
-            Level {mountain.minLevel} Required
-          </Text>
+          <Text style={styles.lockText}>Level {planet.minLevel} Required</Text>
         </View>
       )}
     </TouchableOpacity>
@@ -70,46 +72,48 @@ export function MountainListItem({
 }
 
 const styles = StyleSheet.create({
-  mountainBox: {
+  planetBox: {
     backgroundColor: colors.card,
     padding: 20,
     marginVertical: 8,
     borderRadius: 16,
-    shadowColor: '#000',
+    shadowColor: colors.accent,
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
     elevation: 3,
     borderWidth: 2,
     borderColor: 'transparent',
   },
-  selectedMountainBox: {
+  selectedPlanetBox: {
     borderColor: colors.primary,
+    shadowOpacity: 0.4,
   },
-  lockedMountainBox: {
-    backgroundColor: colors.lightGrey,
-    opacity: 0.6,
+  lockedPlanetBox: {
+    backgroundColor: colors.starfield,
+    opacity: 0.5,
   },
-  mountainName: {
+  planetName: {
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.large,
     color: colors.text,
     marginBottom: 12,
     textAlign: 'center',
   },
-  mountainInfo: {
+  planetInfo: {
     fontFamily: fonts.regular,
     fontSize: fontSizes.medium,
     color: colors.text,
     marginBottom: 4,
   },
-  mountainInfoLabel: {
+  planetInfoLabel: {
     fontFamily: fonts.medium,
+    color: colors.cosmic,
   },
-  mountainDescription: {
+  planetDescription: {
     fontFamily: fonts.regular,
     fontSize: fontSizes.medium,
     color: colors.grey,
@@ -125,7 +129,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',

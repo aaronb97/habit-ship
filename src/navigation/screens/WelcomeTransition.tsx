@@ -131,7 +131,7 @@ export function WelcomeTransition() {
             },
           ]}
         >
-          🏔️
+          🚀
         </Animated.Text>
 
         <Animated.Text
@@ -155,7 +155,7 @@ export function WelcomeTransition() {
             },
           ]}
         >
-          Every mountain is climbed one step at a time.
+          Every journey through the cosmos begins with a single step.
         </Animated.Text>
 
         <Animated.Text
@@ -167,7 +167,7 @@ export function WelcomeTransition() {
             },
           ]}
         >
-          Your adventure begins now.
+          The stars are waiting for you.
         </Animated.Text>
 
         <Animated.View

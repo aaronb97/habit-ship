@@ -1,14 +1,15 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useIsSetupInProgress, useStore } from './store';
+import { Meter } from './units';
 
 describe('store', () => {
   beforeEach(() => {
     useStore.setState({
       isSetupFinished: false,
       habits: [],
-      hike: undefined,
-      completedMountains: [],
+      journey: undefined,
+      completedPlanets: [],
     });
   });
 
@@ -110,9 +111,9 @@ describe('store', () => {
     const habitId = result.current.habits[0].id;
 
     act(() => {
-      result.current.setHike({
-        height: 0,
-        mountainName: 'Mount Everest',
+      result.current.setJourney({
+        distance: 0 as Meter,
+        planetName: 'Gliese 581g',
         energy: 0,
       });
     });
@@ -122,7 +123,7 @@ describe('store', () => {
     });
 
     expect(result.current.habits[0].completions).toHaveLength(1);
-    expect(result.current.hike?.energy).toBe(10);
+    expect(result.current.journey?.energy).toBe(10);
   });
 
   it('should cap energy at 100 when completing habits', () => {
@@ -135,9 +136,9 @@ describe('store', () => {
     const habitId = result.current.habits[0].id;
 
     act(() => {
-      result.current.setHike({
-        height: 0,
-        mountainName: 'Mount Everest',
+      result.current.setJourney({
+        distance: 0 as Meter,
+        planetName: 'Gliese 581g',
         energy: 95,
       });
     });
@@ -146,70 +147,72 @@ describe('store', () => {
       result.current.completeHabit(habitId);
     });
 
-    expect(result.current.hike?.energy).toBe(100);
+    expect(result.current.journey?.energy).toBe(100);
   });
 
-  it('should complete a mountain only once', () => {
+  it('should complete a planet only once', () => {
     const { result } = renderHook(() => useStore());
 
     act(() => {
-      result.current.completeMountain('Mount Everest');
-      result.current.completeMountain('Mount Everest');
+      result.current.completePlanet('Gliese 581g');
+      result.current.completePlanet('Gliese 581g');
     });
 
-    expect(result.current.completedMountains).toEqual(['Mount Everest']);
+    expect(result.current.completedPlanets).toEqual(['Gliese 581g']);
   });
 
-  it('should set hike correctly', () => {
+  it('should set journey correctly', () => {
     const { result } = renderHook(() => useStore());
 
     act(() => {
-      result.current.setHike({
-        height: 0,
-        mountainName: 'Mount Everest',
+      result.current.setJourney({
+        distance: 0 as Meter,
+        planetName: 'Gliese 581g',
         energy: 50,
       });
     });
 
-    expect(result.current.hike?.mountainName).toBe('Mount Everest');
-    expect(result.current.hike?.energy).toBe(50);
+    expect(result.current.journey?.planetName).toBe('Gliese 581g');
+    expect(result.current.journey?.energy).toBe(50);
   });
 
-  it('should expend energy and update height', () => {
+  it('should expend energy and update distance', () => {
     const { result } = renderHook(() => useStore());
 
     act(() => {
-      result.current.setHike({
-        height: 0,
-        mountainName: 'Mount Everest',
+      result.current.setJourney({
+        distance: 0 as Meter,
+        planetName: 'Gliese 581g',
         energy: 50,
-        lastEnergyUpdate: new Date(Date.now() - 3600000).toISOString(), // 1h ago
       });
+    });
 
+    act(() => {
       result.current.expendEnergy();
     });
 
-    expect(result.current.hike?.energy).toBeLessThan(50);
-    expect(result.current.hike?.height).toBeGreaterThan(0);
-    expect(result.current.hike?.lastEnergyUpdate).toBeDefined();
+    expect(result.current.journey?.energy).toBeLessThan(50);
+    expect(result.current.journey?.distance).toBeGreaterThan(0);
+    expect(result.current.journey?.lastEnergyUpdate).toBeDefined();
   });
 
-  it('should not exceed mountain height when expending energy', () => {
+  it('should not exceed planet distance when expending energy', () => {
     const { result } = renderHook(() => useStore());
 
     act(() => {
-      result.current.setHike({
-        height: 8840,
-        mountainName: 'Mount Everest',
+      result.current.setJourney({
+        distance: (189000000000000 - 1000) as Meter,
+        planetName: 'Gliese 581g',
         energy: 100,
-        lastEnergyUpdate: new Date(Date.now() - 36000000).toISOString(), // 10h ago
       });
+    });
 
+    act(() => {
       result.current.expendEnergy();
     });
 
-    const mountainHeight = result.current.hike?.height ?? 0;
-    expect(mountainHeight).toBeLessThanOrEqual(8848); // Everest height
+    const planetDistance = result.current.journey?.distance ?? 0;
+    expect(planetDistance).toBeLessThanOrEqual(189000000000000); // Gliese 581g distance
   });
 
   it('should clear all data', () => {
@@ -218,17 +221,19 @@ describe('store', () => {
     act(() => {
       result.current.setIsSetupFinished(true);
       result.current.addHabit({ title: 'Temp Habit' });
-      result.current.setHike({
-        height: 10,
-        mountainName: 'Mount Everest',
+      result.current.setJourney({
+        distance: 10 as Meter,
+        planetName: 'Gliese 581g',
         energy: 50,
       });
+    });
 
+    act(() => {
       result.current.clearData();
     });
 
     expect(result.current.isSetupFinished).toBe(false);
     expect(result.current.habits).toEqual([]);
-    expect(result.current.hike).toBeUndefined();
+    expect(result.current.journey).toBeUndefined();
   });
 });

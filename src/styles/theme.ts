@@ -1,17 +1,19 @@
 export const colors = {
-  background: '#E8F5E9', // Light Green
-  backgroundDarker: '#C5E4C1', // Darker Green
-  card: '#FFFFFF', // White
-  text: '#424242', // Dark Gray
-  primary: '#A5D6A7', // Medium Green
-  primaryText: '#76c478', // Slightly darker green
-  accent: '#7fbdf0', // Blue
+  background: '#0A0E27', // Deep space dark blue
+  backgroundDarker: '#060914', // Darker space blue
+  card: '#1A1F3A', // Dark card with slight blue tint
+  text: '#E8E9F3', // Light text for dark background
+  primary: '#7B68EE', // Medium slate blue (nebula-like)
+  primaryText: '#9D8DF1', // Lighter purple
+  accent: '#00D9FF', // Bright cyan (like stars/plasma)
   white: '#FFFFFF',
   black: '#000000',
-  grey: '#9E9E9E',
-  lightGrey: '#F5F5F5',
-  border: '#E0E0E0', // Light border color
-  danger: '#EF5350',
+  grey: '#8B92B0',
+  lightGrey: '#2A2F4A',
+  border: '#2D3250', // Subtle border for dark theme
+  danger: '#FF6B9D',
+  starfield: '#4A5578', // For locked items
+  cosmic: '#B794F6', // Purple accent
 };
 
 export const fonts = {

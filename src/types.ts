@@ -4,7 +4,7 @@ export type UserLevel = {
   totalXP: number;
 };
 
-export type XPSource = 'habit_completion' | 'mountain_completion';
+export type XPSource = 'habit_completion' | 'planet_completion';
 
 export type XPGain = {
   amount: number;
@@ -39,7 +39,7 @@ export const XP_REQUIREMENTS: Record<number, number> = {
 // XP rewards
 export const XP_REWARDS = {
   HABIT_COMPLETION: 25,
-  MOUNTAIN_COMPLETION: 200,
+  PLANET_COMPLETION: 200,
 } as const;
 
 // Helper functions for level calculations

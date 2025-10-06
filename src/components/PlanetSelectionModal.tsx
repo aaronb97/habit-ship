@@ -8,51 +8,51 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { mountains } from '../mountains';
+import { planets } from '../planets';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { useStore } from '../utils/store';
-import { MountainListItem } from './MountainListItem';
+import { PlanetListItem } from './PlanetListItem';
 import { Meter } from '../utils/units';
 
-interface MountainSelectionModalProps {
+interface PlanetSelectionModalProps {
   visible: boolean;
   onClose: () => void;
 }
 
-export function MountainSelectionModal({
+export function PlanetSelectionModal({
   visible,
   onClose,
-}: MountainSelectionModalProps) {
-  const { hike, setHike } = useStore();
-  const [selectedMountain, setSelectedMountain] = useState(
-    hike?.mountainName || mountains[0].name,
+}: PlanetSelectionModalProps) {
+  const { journey, setJourney } = useStore();
+  const [selectedPlanet, setSelectedPlanet] = useState(
+    journey?.planetName || planets[0].name,
   );
 
-  const handleStartNewHike = () => {
-    if (!hike) return;
+  const handleStartNewJourney = () => {
+    if (!journey) return;
 
-    const currentMountain = mountains.find((m) => m.name === hike.mountainName);
+    const currentPlanet = planets.find((p) => p.name === journey.planetName);
     const hasProgress =
-      (hike.height > 0 || hike.energy > 0) &&
-      hike.height < (currentMountain?.height || 0);
+      (journey.distance > 0 || journey.energy > 0) &&
+      journey.distance < (currentPlanet?.distance || 0);
 
     if (hasProgress) {
       Alert.alert(
-        'Start New Hike',
-        'You have progress on your current hike. Starting a new hike will reset your progress to 0. Are you sure you want to continue?',
+        'Start New Journey',
+        'You have progress on your current journey. Starting a new journey will reset your progress to 0. Are you sure you want to continue?',
         [
           {
             text: 'Cancel',
             style: 'cancel',
           },
           {
-            text: 'Start New Hike',
+            text: 'Start New Journey',
             style: 'destructive',
             onPress: () => {
-              setHike({
-                height: 0 as Meter,
+              setJourney({
+                distance: 0 as Meter,
                 energy: 0,
-                mountainName: selectedMountain,
+                planetName: selectedPlanet,
               });
 
               onClose();
@@ -61,10 +61,10 @@ export function MountainSelectionModal({
         ],
       );
     } else {
-      setHike({
-        height: 0 as Meter,
+      setJourney({
+        distance: 0 as Meter,
         energy: 0,
-        mountainName: selectedMountain,
+        planetName: selectedPlanet,
       });
 
       onClose();
@@ -83,8 +83,8 @@ export function MountainSelectionModal({
           <TouchableOpacity onPress={onClose}>
             <Text style={styles.cancelButton}>Cancel</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Select Mountain</Text>
-          <TouchableOpacity onPress={handleStartNewHike}>
+          <Text style={styles.title}>Select Planet</Text>
+          <TouchableOpacity onPress={handleStartNewJourney}>
             <Text style={styles.startButton}>Start</Text>
           </TouchableOpacity>
         </View>
@@ -93,12 +93,12 @@ export function MountainSelectionModal({
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
         >
-          {mountains.map((mountain) => (
-            <MountainListItem
-              key={mountain.name}
-              mountain={mountain}
-              isSelected={selectedMountain === mountain.name}
-              onPress={() => setSelectedMountain(mountain.name)}
+          {planets.map((planet) => (
+            <PlanetListItem
+              key={planet.name}
+              planet={planet}
+              isSelected={selectedPlanet === planet.name}
+              onPress={() => setSelectedPlanet(planet.name)}
             />
           ))}
         </ScrollView>

@@ -8,19 +8,19 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { MountainListItem } from '../../components/MountainListItem';
+import { PlanetListItem } from '../../components/PlanetListItem';
 import { RootStackParamList } from '..';
-import { mountains } from '../../mountains';
+import { planets } from '../../planets';
 import { colors, fonts, fontSizes } from '../../styles/theme';
 import { useStore } from '../../utils/store';
 import { Meter } from '../../utils/units';
 
-export function SetupFirstMountain() {
+export function SetupFirstPlanet() {
   const navigation = useNavigation();
-  const { setIsSetupFinished, addHabit, setHike } = useStore();
-  const [selectedMountain, setSelectedMountain] = useState(mountains[0].name);
+  const { setIsSetupFinished, addHabit, setJourney } = useStore();
+  const [selectedPlanet, setSelectedPlanet] = useState(planets[0].name);
   const params =
-    useRoute<RouteProp<RootStackParamList, 'SetupFirstMountain'>>().params;
+    useRoute<RouteProp<RootStackParamList, 'SetupFirstPlanet'>>().params;
 
   // Animation values
   const titleOpacity = useState(new Animated.Value(0))[0];
@@ -35,10 +35,10 @@ export function SetupFirstMountain() {
   const handleFinish = useCallback(() => {
     addHabit(habit);
 
-    setHike({
-      height: 0 as Meter,
+    setJourney({
+      distance: 0 as Meter,
       energy: 0,
-      mountainName: selectedMountain,
+      planetName: selectedPlanet,
     });
 
     setIsSetupFinished(true);
@@ -46,8 +46,8 @@ export function SetupFirstMountain() {
   }, [
     addHabit,
     habit,
-    selectedMountain,
-    setHike,
+    selectedPlanet,
+    setJourney,
     setIsSetupFinished,
     navigation,
   ]);
@@ -138,7 +138,7 @@ export function SetupFirstMountain() {
             },
           ]}
         >
-          Your First Adventure
+          Your First Destination 🚀
         </Animated.Text>
 
         <Animated.Text
@@ -150,7 +150,7 @@ export function SetupFirstMountain() {
             },
           ]}
         >
-          Choose a mountain to begin your journey.
+          Choose a planet to begin your space journey.
         </Animated.Text>
 
         <Animated.ScrollView
@@ -162,12 +162,12 @@ export function SetupFirstMountain() {
             },
           ]}
         >
-          {mountains.map((mountain) => (
-            <MountainListItem
-              key={mountain.name}
-              mountain={mountain}
-              isSelected={selectedMountain === mountain.name}
-              onPress={() => setSelectedMountain(mountain.name)}
+          {planets.map((planet) => (
+            <PlanetListItem
+              key={planet.name}
+              planet={planet}
+              isSelected={selectedPlanet === planet.name}
+              onPress={() => setSelectedPlanet(planet.name)}
             />
           ))}
         </Animated.ScrollView>

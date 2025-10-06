@@ -10,9 +10,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CreateHabitModal } from '../../components/CreateHabitModal';
 import { EditHabitModal } from '../../components/EditHabitModal';
 import { HabitItem } from '../../components/HabitItem';
-import { HikeDisplay } from '../../components/HikeDisplay';
+import { JourneyDisplay } from '../../components/JourneyDisplay';
 import { LevelProgressBar } from '../../components/LevelProgressBar';
-import { MountainSelectionModal } from '../../components/MountainSelectionModal';
+import { PlanetSelectionModal } from '../../components/PlanetSelectionModal';
 import { colors, fonts, fontSizes } from '../../styles/theme';
 import { Habit, HabitId, useStore } from '../../utils/store';
 
@@ -29,7 +29,7 @@ export function Home() {
 
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showMountainModal, setShowMountainModal] = useState(false);
+  const [showPlanetModal, setShowPlanetModal] = useState(false);
 
   const handleCreate = (habit: {
     title: string;
@@ -71,7 +71,7 @@ export function Home() {
           keyExtractor={(item) => item.id}
           ListHeaderComponent={
             <>
-              <HikeDisplay onMountainPress={() => setShowMountainModal(true)} />
+              <JourneyDisplay onPlanetPress={() => setShowPlanetModal(true)} />
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Daily Habits</Text>
                 <TouchableOpacity onPress={() => setShowCreateModal(true)}>
@@ -105,9 +105,9 @@ export function Home() {
         onClose={() => setShowCreateModal(false)}
       />
 
-      <MountainSelectionModal
-        visible={showMountainModal}
-        onClose={() => setShowMountainModal(false)}
+      <PlanetSelectionModal
+        visible={showPlanetModal}
+        onClose={() => setShowPlanetModal(false)}
       />
     </SafeAreaView>
   );

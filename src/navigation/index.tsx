@@ -5,7 +5,7 @@ import { colors, fonts } from '../styles/theme';
 import { Home } from './screens/Home';
 import { NotFound } from './screens/NotFound';
 import { SetupFirstHabit } from './screens/SetupFirstHabit';
-import { SetupFirstMountain } from './screens/SetupFirstMountain';
+import { SetupFirstPlanet } from './screens/SetupFirstPlanet';
 import { WelcomeTransition } from './screens/WelcomeTransition';
 
 const RootStack = createNativeStackNavigator({
@@ -17,7 +17,7 @@ const RootStack = createNativeStackNavigator({
       color: colors.primaryText,
     },
   },
-  initialRouteName: 'Home',
+  initialRouteName: 'SetupFirstHabit',
   screens: {
     SetupFirstHabit: {
       screen: SetupFirstHabit,
@@ -28,8 +28,8 @@ const RootStack = createNativeStackNavigator({
         headerShadowVisible: false,
       },
     },
-    SetupFirstMountain: {
-      screen: SetupFirstMountain,
+    SetupFirstPlanet: {
+      screen: SetupFirstPlanet,
       if: useIsSetupInProgress,
       options: {
         title: '',
@@ -68,7 +68,7 @@ export const Navigation = createStaticNavigation(RootStack);
 
 export type RootStackParamList = {
   SetupFirstHabit: undefined;
-  SetupFirstMountain: {
+  SetupFirstPlanet: {
     habit: {
       title: string;
       description?: string;

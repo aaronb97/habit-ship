@@ -3,7 +3,7 @@ import { Alert } from 'react-native';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import { mountains } from '../mountains';
+import { planets } from '../planets';
 import {
   UserLevel,
   XPGain,
@@ -23,15 +23,15 @@ export type Habit = {
   timerLength?: number;
 };
 
-export type Hike = {
+export type Journey = {
   /**
-   * The height of the hiker (initialized to 0)
+   * The distance traveled (initialized to 0)
    */
-  height: Meter;
-  mountainName: string;
+  distance: Meter;
+  planetName: string;
 
   /**
-   * The energy of the hiker (initialized to 0 and increases by 10 for each completed habit, max of 100)
+   * The fuel/energy (initialized to 0 and increases by 10 for each completed habit, max of 100)
    */
   energy: number;
 
@@ -41,8 +41,8 @@ export type Hike = {
 type Store = {
   isSetupFinished: boolean;
   habits: Habit[];
-  hike?: Hike;
-  completedMountains?: string[];
+  journey?: Journey;
+  completedPlanets?: string[];
   userLevel: UserLevel;
   xpHistory: XPGain[];
   idCount: number;
@@ -53,8 +53,8 @@ type Store = {
   swipedHabitId?: HabitId;
 
   setIsSetupFinished: (value: boolean) => void;
-  setHike: (hike: Hike) => void;
-  completeMountain: (mountainName: string) => void;
+  setJourney: (journey: Journey) => void;
+  completePlanet: (planetName: string) => void;
 
   /**
    * Compares the current time to the last energy update and updates the energy accordingly
@@ -86,7 +86,7 @@ type Store = {
 
   addXP: (
     amount: number,
-    source: 'habit_completion' | 'mountain_completion',
+    source: 'habit_completion' | 'planet_completion',
   ) => void;
 
   clearData: () => void;
@@ -95,8 +95,8 @@ type Store = {
 const initialData = {
   isSetupFinished: false,
   habits: [],
-  hike: undefined,
-  completedMountains: undefined,
+  journey: undefined,
+  completedPlanets: undefined,
   userLevel: {
     level: 1,
     currentXP: 0,
@@ -147,11 +147,11 @@ export const useStore = create<Store>()(
             habitToComplete.completions.push(new Date().toISOString());
           }
 
-          if (!state.hike) throw new Error('No hike found');
+          if (!state.journey) throw new Error('No journey found');
 
-          state.hike.energy += 10;
-          if (state.hike.energy > 100) {
-            state.hike.energy = 100;
+          state.journey.energy += 10;
+          if (state.journey.energy > 100) {
+            state.journey.energy = 100;
           }
 
           // Award XP for habit completion
@@ -170,22 +170,22 @@ export const useStore = create<Store>()(
         });
       },
 
-      completeMountain: (mountainName: string) => {
+      completePlanet: (planetName: string) => {
         set((state) => {
-          if (!state.completedMountains) {
-            state.completedMountains = [];
+          if (!state.completedPlanets) {
+            state.completedPlanets = [];
           }
 
-          if (state.completedMountains.includes(mountainName)) {
+          if (state.completedPlanets.includes(planetName)) {
             return;
           }
 
-          state.completedMountains.push(mountainName);
+          state.completedPlanets.push(planetName);
 
-          // Award XP for mountain completion
+          // Award XP for planet completion
           const xpGain: XPGain = {
-            amount: XP_REWARDS.MOUNTAIN_COMPLETION,
-            source: 'mountain_completion',
+            amount: XP_REWARDS.PLANET_COMPLETION,
+            source: 'planet_completion',
             timestamp: new Date().toISOString(),
           };
 
@@ -207,19 +207,19 @@ export const useStore = create<Store>()(
         });
       },
 
-      setHike: (hike) => {
+      setJourney: (journey) => {
         set((state) => {
-          state.hike = hike;
+          state.journey = journey;
         });
       },
 
       expendEnergy: () => {
         set((state) => {
-          if (!state.hike) throw new Error('No hike found');
+          if (!state.journey) throw new Error('No journey found');
 
           const now = Date.now();
-          const lastUpdate = state.hike.lastEnergyUpdate
-            ? new Date(state.hike.lastEnergyUpdate).getTime()
+          const lastUpdate = state.journey.lastEnergyUpdate
+            ? new Date(state.journey.lastEnergyUpdate).getTime()
             : now;
 
           const timeSinceLastUpdate = now - lastUpdate;
@@ -229,29 +229,29 @@ export const useStore = create<Store>()(
           const energyDecrease = (timeSinceLastUpdate / 36000000) * 100;
           const actualEnergyDecrease = Math.min(
             energyDecrease,
-            state.hike.energy,
+            state.journey.energy,
           );
 
-          state.hike.energy -= actualEnergyDecrease;
-          state.hike.lastEnergyUpdate = new Date().toISOString();
+          state.journey.energy -= actualEnergyDecrease;
+          state.journey.lastEnergyUpdate = new Date().toISOString();
 
           if (actualEnergyDecrease > 0) {
-            const heightIncrease = ((actualEnergyDecrease / 10) * 548.64) / 2;
-            state.hike.height = (state.hike.height + heightIncrease) as Meter;
+            const distanceIncrease = ((actualEnergyDecrease / 10) * 548.64) / 2;
+            state.journey.distance = (state.journey.distance + distanceIncrease) as Meter;
 
-            const mountain = mountains.find(
-              (m) => m.name === state.hike!.mountainName,
+            const planet = planets.find(
+              (p) => p.name === state.journey!.planetName,
             );
 
-            if (!mountain) throw new Error('No mountain found');
+            if (!planet) throw new Error('No planet found');
 
-            state.hike.height = Math.min(
-              state.hike.height,
-              mountain.height,
+            state.journey.distance = Math.min(
+              state.journey.distance,
+              planet.distance,
             ) as Meter;
 
-            if (state.hike.height >= mountain.height) {
-              state.completeMountain(mountain.name);
+            if (state.journey.distance >= planet.distance) {
+              state.completePlanet(planet.name);
             }
           }
         });
@@ -295,7 +295,7 @@ export const useStore = create<Store>()(
 
       addXP: (
         amount: number,
-        source: 'habit_completion' | 'mountain_completion',
+        source: 'habit_completion' | 'planet_completion',
       ) => {
         set((state) => {
           const xpGain: XPGain = {
@@ -320,7 +320,7 @@ export const useStore = create<Store>()(
       },
     })),
     {
-      name: 'habit-hiker-storage',
+      name: 'space-explorer-storage',
       storage: createJSONStorage(() => AsyncStorage),
     },
   ),
