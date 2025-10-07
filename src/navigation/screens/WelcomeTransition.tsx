@@ -122,17 +122,15 @@ export function WelcomeTransition() {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Animated.Text
+        <Animated.View
           style={[
-            styles.emoji,
+            styles.iconContainer,
             {
               opacity: emojiOpacity,
               transform: [{ scale: emojiScale }],
             },
           ]}
-        >
-          🚀
-        </Animated.Text>
+        />
 
         <Animated.Text
           style={[
@@ -203,8 +201,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     textAlign: 'center',
   },
-  emoji: {
-    fontSize: 80,
+  iconContainer: {
+    width: 80,
+    height: 80,
     marginBottom: 24,
   },
   title: {

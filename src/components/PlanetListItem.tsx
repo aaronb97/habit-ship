@@ -1,34 +1,31 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import { Meter } from '../utils/units';
 import { Planet } from '../planets';
 import { useUserLevel } from '../utils/store';
 
 interface PlanetListItemProps {
   planet: Planet;
+  distance: number; // Distance in km from current position
   isSelected?: boolean;
   onPress: () => void;
 }
 
 export function PlanetListItem({
   planet,
+  distance,
   isSelected,
   onPress,
 }: PlanetListItemProps) {
   const userLevel = useUserLevel();
   const isLocked = userLevel.level < planet.minLevel;
 
-  function getDistanceString(distance: Meter) {
-    // Convert to millions of km for readability
-    const distanceInMillionsKm = distance / 1000000;
-    if (distanceInMillionsKm < 1) {
-      return `${distance.toLocaleString()} km`;
-    }
-
-    return `${distanceInMillionsKm.toLocaleString(undefined, {
-      maximumFractionDigits: 2,
-    })} million km`;
-  }
+  // Format distance for display
+  const formatDistance = (dist: number): string => {
+    if (dist === 0) return '0 km';
+    if (dist < 1000) return `${dist.toFixed(0)} km`;
+    if (dist < 1000000) return `${(dist / 1000).toFixed(1)}K km`;
+    return `${(dist / 1000000).toFixed(1)}M km`;
+  };
 
   return (
     <TouchableOpacity
@@ -45,12 +42,7 @@ export function PlanetListItem({
       </Text>
 
       <Text style={[styles.planetInfo, isLocked && styles.lockedText]}>
-        <Text style={styles.planetInfoLabel}>System:</Text> {planet.system}
-      </Text>
-
-      <Text style={[styles.planetInfo, isLocked && styles.lockedText]}>
-        <Text style={styles.planetInfoLabel}>Distance:</Text>{' '}
-        {getDistanceString(planet.distance)}
+        <Text style={styles.planetInfoLabel}>Distance:</Text> {formatDistance(distance)}
       </Text>
 
       <Text style={[styles.planetInfo, isLocked && styles.lockedText]}>
@@ -63,7 +55,6 @@ export function PlanetListItem({
 
       {isLocked && (
         <View style={styles.lockOverlay}>
-          <Text style={styles.lockIcon}>🔒</Text>
           <Text style={styles.lockText}>Level {planet.minLevel} Required</Text>
         </View>
       )}
@@ -133,10 +124,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  lockIcon: {
-    fontSize: 32,
-    marginBottom: 8,
   },
   lockText: {
     fontFamily: fonts.semiBold,

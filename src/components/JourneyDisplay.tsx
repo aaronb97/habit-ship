@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { EARTH, planets } from '../planets';
+import { planets } from '../planets';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { calculateDistance, getPlanetPosition, useStore } from '../utils/store';
 import { ProgressBar } from './ProgressBar';
@@ -39,7 +39,7 @@ export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
     ? userPosition.currentLocation 
     : userPosition.targetPlanet;
 
-  const planet = [...planets, EARTH].find((p) => p.name === displayLocation);
+  const planet = planets.find((p) => p.name === displayLocation);
 
   if (!planet) {
     console.error('Encountered invalid planet, resetting data');
@@ -81,7 +81,6 @@ export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
         onPress={onPlanetPress}
       >
         <Text style={styles.planetTitle}>
-          {isLanded && '🌍 '}
           {planet.name}
         </Text>
         {isLanded && (
@@ -96,7 +95,7 @@ export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
         <>
           <View style={styles.progressContainer}>
             <View style={styles.progressRow}>
-              <Text style={styles.progressLabel}>🚀 Journey Progress</Text>
+              <Text style={styles.progressLabel}>Journey Progress</Text>
               <Text style={styles.progressValue}>
                 {(distancePercentage * 100).toFixed(1)}%
               </Text>
@@ -106,7 +105,7 @@ export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
 
           <View style={styles.progressContainer}>
             <View style={styles.progressRow}>
-              <Text style={styles.progressLabel}>⚡ Speed</Text>
+              <Text style={styles.progressLabel}>Speed</Text>
               <Text style={styles.progressValue}>
                 {userPosition.speed.toLocaleString()} km/h
               </Text>
@@ -115,7 +114,7 @@ export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
 
           <View style={styles.progressContainer}>
             <View style={styles.progressRow}>
-              <Text style={styles.progressLabel}>⏱️ Time Remaining</Text>
+              <Text style={styles.progressLabel}>Time Remaining</Text>
               <Text style={styles.progressValue}>
                 {formatTime(timeRemaining)}
               </Text>
@@ -124,7 +123,7 @@ export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
 
           <View style={styles.progressContainer}>
             <View style={styles.progressRow}>
-              <Text style={styles.progressLabel}>📍 Distance Remaining</Text>
+              <Text style={styles.progressLabel}>Distance Remaining</Text>
               <Text style={styles.progressValue}>
                 {distanceRemaining.toLocaleString(undefined, {
                   maximumFractionDigits: 0,
@@ -139,8 +138,8 @@ export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
       {isLanded && userPosition.speed === 0 && (
         <Text style={styles.landedText}>
           {userPosition.targetPlanet 
-            ? `Complete a habit to launch toward ${userPosition.targetPlanet}! 🚀`
-            : 'Select a destination to begin your journey! 🌟'
+            ? `Complete a habit to launch toward ${userPosition.targetPlanet}`
+            : 'Select a destination to begin your journey'
           }
         </Text>
       )}

@@ -147,7 +147,7 @@ export function SetupFirstHabit() {
             },
           ]}
         >
-          What new world will you explore? 🌌
+          What new world will you explore?
         </Animated.Text>
 
         <Animated.View

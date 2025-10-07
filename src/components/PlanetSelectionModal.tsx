@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Alert,
   Modal,
@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { planets } from '../planets';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import { useStore } from '../utils/store';
+import { calculateDistance, getPlanetPosition, useStore } from '../utils/store';
 import { PlanetListItem } from './PlanetListItem';
 
 interface PlanetSelectionModalProps {
@@ -23,10 +23,23 @@ export function PlanetSelectionModal({
   onClose,
 }: PlanetSelectionModalProps) {
   const { userPosition, setDestination } = useStore();
-  const landablePlanets = planets.filter((p) => p.isLandable);
   const [selectedPlanet, setSelectedPlanet] = useState(
-    userPosition.targetPlanet || landablePlanets[0].name,
+    userPosition.targetPlanet || planets[0].name,
   );
+
+  // Calculate distances and sort planets
+  const planetsWithDistance = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const currentCoords = userPosition.currentCoordinates || { x: 0, y: 0, z: 0 };
+
+    return planets
+      .map((planet) => {
+        const planetCoords = getPlanetPosition(planet.name, today);
+        const distance = calculateDistance(currentCoords, planetCoords);
+        return { planet, distance };
+      })
+      .sort((a, b) => a.distance - b.distance);
+  }, [userPosition.currentCoordinates]);
 
   const handleStartNewJourney = () => {
     const isTraveling = userPosition.state === 'traveling';
@@ -78,10 +91,11 @@ export function PlanetSelectionModal({
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
         >
-          {landablePlanets.map((planet) => (
+          {planetsWithDistance.map(({ planet, distance }) => (
             <PlanetListItem
               key={planet.name}
               planet={planet}
+              distance={distance}
               isSelected={selectedPlanet === planet.name}
               onPress={() => setSelectedPlanet(planet.name)}
             />

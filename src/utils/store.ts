@@ -3,7 +3,7 @@ import { Alert } from 'react-native';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import { EARTH, planets } from '../planets';
+import { planets } from '../planets';
 import {
   Coordinates,
   UserLevel,
@@ -33,7 +33,7 @@ export function calculateDistance(a: Coordinates, b: Coordinates): number {
 
 // Helper function to get planet position for a given date
 export function getPlanetPosition(planetName: string, date: string): Coordinates {
-  const planet = [...planets, EARTH].find((p) => p.name === planetName);
+  const planet = planets.find((p) => p.name === planetName);
   if (!planet) throw new Error(`Planet ${planetName} not found`);
   
   const position = planet.dailyPositions.find((p) => p.date === date);

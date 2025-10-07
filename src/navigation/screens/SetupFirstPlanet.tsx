@@ -1,5 +1,5 @@
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Animated,
   SafeAreaView,
@@ -12,14 +12,28 @@ import { PlanetListItem } from '../../components/PlanetListItem';
 import { RootStackParamList } from '..';
 import { planets } from '../../planets';
 import { colors, fonts, fontSizes } from '../../styles/theme';
-import { useStore } from '../../utils/store';
+import { calculateDistance, getPlanetPosition, useStore } from '../../utils/store';
 
 export function SetupFirstPlanet() {
   const navigation = useNavigation();
-  const { setIsSetupFinished, addHabit, setDestination } = useStore();
+  const { setIsSetupFinished, addHabit, setDestination, userPosition } = useStore();
   const [selectedPlanet, setSelectedPlanet] = useState(planets[0].name);
   const params =
     useRoute<RouteProp<RootStackParamList, 'SetupFirstPlanet'>>().params;
+
+  // Calculate distances and sort planets
+  const planetsWithDistance = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const currentCoords = userPosition.currentCoordinates || { x: 0, y: 0, z: 0 };
+
+    return planets
+      .map((planet) => {
+        const planetCoords = getPlanetPosition(planet.name, today);
+        const distance = calculateDistance(currentCoords, planetCoords);
+        return { planet, distance };
+      })
+      .sort((a, b) => a.distance - b.distance);
+  }, [userPosition.currentCoordinates]);
 
   // Animation values
   const titleOpacity = useState(new Animated.Value(0))[0];
@@ -131,7 +145,7 @@ export function SetupFirstPlanet() {
             },
           ]}
         >
-          Your First Destination 🚀
+          Your First Destination
         </Animated.Text>
 
         <Animated.Text
@@ -155,10 +169,11 @@ export function SetupFirstPlanet() {
             },
           ]}
         >
-          {planets.map((planet) => (
+          {planetsWithDistance.map(({ planet, distance }) => (
             <PlanetListItem
               key={planet.name}
               planet={planet}
+              distance={distance}
               isSelected={selectedPlanet === planet.name}
               onPress={() => setSelectedPlanet(planet.name)}
             />
