@@ -6,6 +6,7 @@ import { NotFound } from './screens/NotFound';
 import { SetupFirstHabit } from './screens/SetupFirstHabit';
 import { SetupFirstPlanet } from './screens/SetupFirstPlanet';
 import { WelcomeTransition } from './screens/WelcomeTransition';
+import { useIsSetupFinished, useIsSetupInProgress } from '../utils/store';
 
 const RootStack = createNativeStackNavigator({
   screenOptions: {
@@ -19,6 +20,7 @@ const RootStack = createNativeStackNavigator({
   screens: {
     SetupFirstHabit: {
       screen: SetupFirstHabit,
+      if: useIsSetupInProgress,
       options: {
         title: '',
         headerTransparent: true,
@@ -27,6 +29,7 @@ const RootStack = createNativeStackNavigator({
     },
     SetupFirstPlanet: {
       screen: SetupFirstPlanet,
+      if: useIsSetupInProgress,
       options: {
         title: '',
         headerTransparent: true,
@@ -41,6 +44,7 @@ const RootStack = createNativeStackNavigator({
     },
     Home: {
       screen: Home,
+      if: useIsSetupFinished,
       options: {
         title: '',
         headerTransparent: true,
