@@ -22,7 +22,7 @@ export function PlanetSelectionModal({
   visible,
   onClose,
 }: PlanetSelectionModalProps) {
-  const { userPosition, setDestination } = useStore();
+  const { userPosition, setDestination, completedPlanets } = useStore();
   const [selectedPlanet, setSelectedPlanet] = useState(
     userPosition.targetPlanet || planets[0].name,
   );
@@ -53,7 +53,10 @@ export function PlanetSelectionModal({
           disabledReason = 'You are already traveling to this planet';
         }
 
-        return { planet, distance, disabledReason };
+        // Check if planet has been visited
+        const isVisited = completedPlanets.includes(planet.name) || false;
+
+        return { planet, distance, disabledReason, isVisited };
       })
       .sort((a, b) => a.distance - b.distance);
   }, [
@@ -61,6 +64,7 @@ export function PlanetSelectionModal({
     userPosition.currentLocation,
     userPosition.targetPlanet,
     userPosition.state,
+    completedPlanets,
   ]);
 
   const handleStartNewJourney = () => {
@@ -113,16 +117,19 @@ export function PlanetSelectionModal({
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
         >
-          {planetsWithDistance.map(({ planet, distance, disabledReason }) => (
-            <PlanetListItem
-              key={planet.name}
-              planet={planet}
-              distance={distance}
-              isSelected={selectedPlanet === planet.name}
-              disabledReason={disabledReason}
-              onPress={() => setSelectedPlanet(planet.name)}
-            />
-          ))}
+          {planetsWithDistance.map(
+            ({ planet, distance, disabledReason, isVisited }) => (
+              <PlanetListItem
+                key={planet.name}
+                planet={planet}
+                distance={distance}
+                isSelected={selectedPlanet === planet.name}
+                disabledReason={disabledReason}
+                isVisited={isVisited}
+                onPress={() => setSelectedPlanet(planet.name)}
+              />
+            ),
+          )}
         </ScrollView>
       </View>
     </Modal>

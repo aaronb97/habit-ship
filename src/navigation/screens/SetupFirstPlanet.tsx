@@ -176,6 +176,7 @@ export function SetupFirstPlanet() {
               planet={planet}
               distance={distance}
               isSelected={selectedPlanet === planet.name}
+              isVisited={false}
               onPress={() => setSelectedPlanet(planet.name)}
             />
           ))}

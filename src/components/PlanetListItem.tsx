@@ -9,6 +9,7 @@ interface PlanetListItemProps {
   isSelected?: boolean;
   onPress: () => void;
   disabledReason?: string; // Reason why planet cannot be selected
+  isVisited?: boolean; // Whether the planet has been visited/completed
 }
 
 export function PlanetListItem({
@@ -17,6 +18,7 @@ export function PlanetListItem({
   isSelected,
   onPress,
   disabledReason,
+  isVisited,
 }: PlanetListItemProps) {
   const userLevel = useUserLevel();
   const isLocked = userLevel.level < planet.minLevel;
@@ -41,12 +43,16 @@ export function PlanetListItem({
       disabled={isDisabled}
       onPress={isDisabled ? undefined : onPress}
     >
-      <Text style={[styles.planetName, isDisabled && styles.lockedText]}>
-        {planet.name}
-      </Text>
+      <View style={styles.nameContainer}>
+        <Text style={[styles.planetName, isDisabled && styles.lockedText]}>
+          {planet.name}
+        </Text>
+        {isVisited && <Text style={styles.visitedBadge}>✓ Visited</Text>}
+      </View>
 
       <Text style={[styles.planetInfo, isDisabled && styles.lockedText]}>
-        <Text style={styles.planetInfoLabel}>Distance:</Text> {formatDistance(distance)}
+        <Text style={styles.planetInfoLabel}>Distance:</Text>{' '}
+        {formatDistance(distance)}
       </Text>
 
       <Text style={[styles.planetInfo, isDisabled && styles.lockedText]}>
@@ -101,12 +107,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.starfield,
     opacity: 0.6,
   },
+  nameContainer: {
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 4,
+  },
   planetName: {
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.large,
     color: colors.text,
-    marginBottom: 12,
-    textAlign: 'center',
+  },
+  visitedBadge: {
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.small,
+    color: colors.primary,
   },
   planetInfo: {
     fontFamily: fonts.regular,

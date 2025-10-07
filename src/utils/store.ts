@@ -52,7 +52,7 @@ type Store = {
   isSetupFinished: boolean;
   habits: Habit[];
   userPosition: UserPosition;
-  completedPlanets?: string[];
+  completedPlanets: string[];
   userLevel: UserLevel;
   xpHistory: XPGain[];
   idCount: number;
@@ -107,7 +107,7 @@ const initialData = {
     currentLocation: 'Earth',
     speed: 0,
   },
-  completedPlanets: undefined,
+  completedPlanets: ['Earth'],
   userLevel: {
     level: 1,
     currentXP: 0,
@@ -215,10 +215,6 @@ export const useStore = create<Store>()(
 
       completePlanet: (planetName: string) => {
         set((state) => {
-          if (!state.completedPlanets) {
-            state.completedPlanets = [];
-          }
-
           if (state.completedPlanets.includes(planetName)) {
             return;
           }
