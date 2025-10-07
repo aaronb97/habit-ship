@@ -32,16 +32,19 @@ export function calculateDistance(a: Coordinates, b: Coordinates): number {
 }
 
 // Helper function to get planet position for a given date
-export function getPlanetPosition(planetName: string, date: string): Coordinates {
+export function getPlanetPosition(
+  planetName: string,
+  date: string,
+): Coordinates {
   const planet = planets.find((p) => p.name === planetName);
   if (!planet) throw new Error(`Planet ${planetName} not found`);
-  
+
   const position = planet.dailyPositions.find((p) => p.date === date);
   if (!position) {
     // If no exact match, return the first position
     return planet.dailyPositions[0].coordinates;
   }
-  
+
   return position.coordinates;
 }
 
@@ -169,13 +172,16 @@ export const useStore = create<Store>()(
           );
 
           // Launch/speed mechanics
-          if (state.userPosition.state === 'landed' && state.userPosition.speed === 0) {
+          if (
+            state.userPosition.state === 'landed' &&
+            state.userPosition.speed === 0
+          ) {
             // Launch with initial speed of 50,000 km/h
             state.userPosition.speed = 50000;
             if (state.userPosition.targetPlanet) {
               state.userPosition.state = 'traveling';
               state.userPosition.launchTime = new Date().toISOString();
-              
+
               // Calculate initial distance
               const currentPos = getPlanetPosition(
                 state.userPosition.currentLocation || 'Earth',
@@ -187,10 +193,19 @@ export const useStore = create<Store>()(
                 new Date().toISOString().split('T')[0],
               );
 
-              state.userPosition.initialDistance = calculateDistance(currentPos, targetPos);
+              state.userPosition.initialDistance = calculateDistance(
+                currentPos,
+                targetPos,
+              );
+
               state.userPosition.currentCoordinates = currentPos;
             }
           } else if (state.userPosition.state === 'traveling') {
+            if (state.userPosition.speed === 0) {
+              state.userPosition.speed = 50000;
+              return;
+            }
+
             // Increase speed by 1.2x
             state.userPosition.speed *= 1.2;
           }
@@ -243,11 +258,17 @@ export const useStore = create<Store>()(
 
       updateTravelPosition: () => {
         set((state) => {
-          if (state.userPosition.state !== 'traveling' || !state.userPosition.targetPlanet) {
+          if (
+            state.userPosition.state !== 'traveling' ||
+            !state.userPosition.targetPlanet
+          ) {
             return;
           }
 
-          if (!state.userPosition.launchTime || !state.userPosition.currentCoordinates) {
+          if (
+            !state.userPosition.launchTime ||
+            !state.userPosition.currentCoordinates
+          ) {
             return;
           }
 
@@ -277,7 +298,9 @@ export const useStore = create<Store>()(
           if (distanceTraveled >= totalDistance) {
             // Arrived at destination
             state.userPosition.state = 'landed';
-            state.userPosition.currentLocation = state.userPosition.targetPlanet;
+            state.userPosition.currentLocation =
+              state.userPosition.targetPlanet;
+
             state.userPosition.currentCoordinates = undefined;
             state.userPosition.targetPlanet = undefined;
             state.userPosition.speed = 0;
