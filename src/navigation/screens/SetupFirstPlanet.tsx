@@ -12,19 +12,29 @@ import { PlanetListItem } from '../../components/PlanetListItem';
 import { RootStackParamList } from '..';
 import { planets } from '../../planets';
 import { colors, fonts, fontSizes } from '../../styles/theme';
-import { calculateDistance, getPlanetPosition, useStore } from '../../utils/store';
+import {
+  calculateDistance,
+  getPlanetPosition,
+  useStore,
+} from '../../utils/store';
 
 export function SetupFirstPlanet() {
   const navigation = useNavigation();
-  const { setIsSetupFinished, addHabit, setDestination, userPosition } = useStore();
-  const [selectedPlanet, setSelectedPlanet] = useState(planets[0].name);
+  const { setIsSetupFinished, addHabit, setDestination, userPosition } =
+    useStore();
+
+  const [selectedPlanet, setSelectedPlanet] = useState<string | undefined>();
   const params =
     useRoute<RouteProp<RootStackParamList, 'SetupFirstPlanet'>>().params;
 
   // Calculate distances and sort planets (exclude Earth from initial selection)
   const planetsWithDistance = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    const currentCoords = userPosition.currentCoordinates || { x: 0, y: 0, z: 0 };
+    const currentCoords = userPosition.currentCoordinates || {
+      x: 0,
+      y: 0,
+      z: 0,
+    };
 
     return planets
       .filter((planet) => planet.name !== 'Earth') // Don't show Earth on initial screen
@@ -48,7 +58,7 @@ export function SetupFirstPlanet() {
 
   const handleFinish = useCallback(() => {
     addHabit(habit);
-    setDestination(selectedPlanet);
+    setDestination(selectedPlanet!);
     setIsSetupFinished(true);
     navigation.navigate('WelcomeTransition');
   }, [
@@ -63,8 +73,19 @@ export function SetupFirstPlanet() {
   useEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity style={styles.headerButton} onPress={handleFinish}>
-          <Text style={styles.headerButtonText}>Finish</Text>
+        <TouchableOpacity
+          style={styles.headerButton}
+          disabled={selectedPlanet === undefined}
+          onPress={handleFinish}
+        >
+          <Text
+            style={[
+              styles.headerButtonText,
+              selectedPlanet === undefined && styles.headerButtonDisabledText,
+            ]}
+          >
+            Finish
+          </Text>
         </TouchableOpacity>
       ),
     });
@@ -74,7 +95,7 @@ export function SetupFirstPlanet() {
         headerRight: undefined,
       });
     };
-  }, [navigation, handleFinish]);
+  }, [navigation, handleFinish, selectedPlanet]);
 
   useEffect(() => {
     // Animate elements in sequence
@@ -220,5 +241,8 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.large,
     color: colors.primaryText,
+  },
+  headerButtonDisabledText: {
+    color: colors.grey,
   },
 });
