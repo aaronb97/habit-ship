@@ -1,6 +1,5 @@
 import { createStaticNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useIsSetupFinished, useIsSetupInProgress } from '../utils/store';
 import { colors, fonts } from '../styles/theme';
 import { Home } from './screens/Home';
 import { NotFound } from './screens/NotFound';
@@ -17,11 +16,9 @@ const RootStack = createNativeStackNavigator({
       color: colors.primaryText,
     },
   },
-  initialRouteName: 'SetupFirstHabit',
   screens: {
     SetupFirstHabit: {
       screen: SetupFirstHabit,
-      if: useIsSetupInProgress,
       options: {
         title: '',
         headerTransparent: true,
@@ -30,7 +27,6 @@ const RootStack = createNativeStackNavigator({
     },
     SetupFirstPlanet: {
       screen: SetupFirstPlanet,
-      if: useIsSetupInProgress,
       options: {
         title: '',
         headerTransparent: true,
@@ -45,7 +41,6 @@ const RootStack = createNativeStackNavigator({
     },
     Home: {
       screen: Home,
-      if: useIsSetupFinished,
       options: {
         title: '',
         headerTransparent: true,

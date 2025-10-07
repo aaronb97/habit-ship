@@ -3,15 +3,16 @@ import { Alert } from 'react-native';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import { planets } from '../planets';
+import { EARTH, planets } from '../planets';
 import {
+  Coordinates,
   UserLevel,
+  UserPosition,
   XPGain,
   XP_REWARDS,
   calculateLevel,
   getCurrentLevelXP,
 } from '../types';
-import { Meter } from './units';
 
 export type HabitId = string & { __habitId: true };
 
@@ -23,25 +24,31 @@ export type Habit = {
   timerLength?: number;
 };
 
-export type Journey = {
-  /**
-   * The distance traveled (initialized to 0)
-   */
-  distance: Meter;
-  planetName: string;
+// Helper function to calculate distance between two coordinates
+export function calculateDistance(a: Coordinates, b: Coordinates): number {
+  return Math.sqrt(
+    Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2) + Math.pow(b.z - a.z, 2),
+  );
+}
 
-  /**
-   * The fuel/energy (initialized to 0 and increases by 10 for each completed habit, max of 100)
-   */
-  energy: number;
-
-  lastEnergyUpdate?: string;
-};
+// Helper function to get planet position for a given date
+export function getPlanetPosition(planetName: string, date: string): Coordinates {
+  const planet = [...planets, EARTH].find((p) => p.name === planetName);
+  if (!planet) throw new Error(`Planet ${planetName} not found`);
+  
+  const position = planet.dailyPositions.find((p) => p.date === date);
+  if (!position) {
+    // If no exact match, return the first position
+    return planet.dailyPositions[0].coordinates;
+  }
+  
+  return position.coordinates;
+}
 
 type Store = {
   isSetupFinished: boolean;
   habits: Habit[];
-  journey?: Journey;
+  userPosition: UserPosition;
   completedPlanets?: string[];
   userLevel: UserLevel;
   xpHistory: XPGain[];
@@ -53,13 +60,9 @@ type Store = {
   swipedHabitId?: HabitId;
 
   setIsSetupFinished: (value: boolean) => void;
-  setJourney: (journey: Journey) => void;
+  setDestination: (planetName: string) => void;
   completePlanet: (planetName: string) => void;
-
-  /**
-   * Compares the current time to the last energy update and updates the energy accordingly
-   */
-  expendEnergy: () => void;
+  updateTravelPosition: () => void;
 
   addHabit: (habit: {
     title: string;
@@ -95,7 +98,11 @@ type Store = {
 const initialData = {
   isSetupFinished: false,
   habits: [],
-  journey: undefined,
+  userPosition: {
+    state: 'landed' as const,
+    currentLocation: 'Earth',
+    speed: 0,
+  },
   completedPlanets: undefined,
   userLevel: {
     level: 1,
@@ -147,13 +154,6 @@ export const useStore = create<Store>()(
             habitToComplete.completions.push(new Date().toISOString());
           }
 
-          if (!state.journey) throw new Error('No journey found');
-
-          state.journey.energy += 10;
-          if (state.journey.energy > 100) {
-            state.journey.energy = 100;
-          }
-
           // Award XP for habit completion
           const xpGain: XPGain = {
             amount: XP_REWARDS.HABIT_COMPLETION,
@@ -167,6 +167,33 @@ export const useStore = create<Store>()(
           state.userLevel.currentXP = getCurrentLevelXP(
             state.userLevel.totalXP,
           );
+
+          // Launch/speed mechanics
+          if (state.userPosition.state === 'landed' && state.userPosition.speed === 0) {
+            // Launch with initial speed of 50,000 km/h
+            state.userPosition.speed = 50000;
+            if (state.userPosition.targetPlanet) {
+              state.userPosition.state = 'traveling';
+              state.userPosition.launchTime = new Date().toISOString();
+              
+              // Calculate initial distance
+              const currentPos = getPlanetPosition(
+                state.userPosition.currentLocation || 'Earth',
+                new Date().toISOString().split('T')[0],
+              );
+
+              const targetPos = getPlanetPosition(
+                state.userPosition.targetPlanet,
+                new Date().toISOString().split('T')[0],
+              );
+
+              state.userPosition.initialDistance = calculateDistance(currentPos, targetPos);
+              state.userPosition.currentCoordinates = currentPos;
+            }
+          } else if (state.userPosition.state === 'traveling') {
+            // Increase speed by 1.2x
+            state.userPosition.speed *= 1.2;
+          }
         });
       },
 
@@ -207,52 +234,68 @@ export const useStore = create<Store>()(
         });
       },
 
-      setJourney: (journey) => {
+      setDestination: (planetName: string) => {
         set((state) => {
-          state.journey = journey;
+          state.userPosition.targetPlanet = planetName;
+          state.userPosition.speed = 0; // Reset speed when selecting new destination
         });
       },
 
-      expendEnergy: () => {
+      updateTravelPosition: () => {
         set((state) => {
-          if (!state.journey) throw new Error('No journey found');
+          if (state.userPosition.state !== 'traveling' || !state.userPosition.targetPlanet) {
+            return;
+          }
 
+          if (!state.userPosition.launchTime || !state.userPosition.currentCoordinates) {
+            return;
+          }
+
+          // Calculate time elapsed since launch (in hours)
           const now = Date.now();
-          const lastUpdate = state.journey.lastEnergyUpdate
-            ? new Date(state.journey.lastEnergyUpdate).getTime()
-            : now;
+          const launchTime = new Date(state.userPosition.launchTime).getTime();
+          const hoursElapsed = (now - launchTime) / (1000 * 60 * 60);
 
-          const timeSinceLastUpdate = now - lastUpdate;
+          // Calculate distance traveled (speed in km/h * hours)
+          const distanceTraveled = state.userPosition.speed * hoursElapsed;
 
-          // 10% energy should last 1 hour (3,600,000 ms)
-          // So 100% energy lasts 10 hours (36,000,000 ms)
-          const energyDecrease = (timeSinceLastUpdate / 36000000) * 100;
-          const actualEnergyDecrease = Math.min(
-            energyDecrease,
-            state.journey.energy,
+          // Get target position
+          const targetPos = getPlanetPosition(
+            state.userPosition.targetPlanet,
+            new Date().toISOString().split('T')[0],
           );
 
-          state.journey.energy -= actualEnergyDecrease;
-          state.journey.lastEnergyUpdate = new Date().toISOString();
+          // Get launch position
+          const launchPos = state.userPosition.currentCoordinates;
 
-          if (actualEnergyDecrease > 0) {
-            const distanceIncrease = ((actualEnergyDecrease / 10) * 548.64) / 2;
-            state.journey.distance = (state.journey.distance + distanceIncrease) as Meter;
+          // Calculate direction vector
+          const dx = targetPos.x - launchPos.x;
+          const dy = targetPos.y - launchPos.y;
+          const dz = targetPos.z - launchPos.z;
+          const totalDistance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-            const planet = planets.find(
-              (p) => p.name === state.journey!.planetName,
-            );
+          if (distanceTraveled >= totalDistance) {
+            // Arrived at destination
+            state.userPosition.state = 'landed';
+            state.userPosition.currentLocation = state.userPosition.targetPlanet;
+            state.userPosition.currentCoordinates = undefined;
+            state.userPosition.targetPlanet = undefined;
+            state.userPosition.speed = 0;
+            state.userPosition.launchTime = undefined;
+            state.userPosition.initialDistance = undefined;
 
-            if (!planet) throw new Error('No planet found');
-
-            state.journey.distance = Math.min(
-              state.journey.distance,
-              planet.distance,
-            ) as Meter;
-
-            if (state.journey.distance >= planet.distance) {
-              state.completePlanet(planet.name);
+            // Complete planet
+            if (state.userPosition.currentLocation) {
+              state.completePlanet(state.userPosition.currentLocation);
             }
+          } else {
+            // Update current position
+            const progress = distanceTraveled / totalDistance;
+            state.userPosition.currentCoordinates = {
+              x: launchPos.x + dx * progress,
+              y: launchPos.y + dy * progress,
+              z: launchPos.z + dz * progress,
+            };
           }
         });
       },

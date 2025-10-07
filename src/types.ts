@@ -1,3 +1,27 @@
+// Coordinate system types
+export type Coordinates = {
+  x: number;
+  y: number;
+  z: number;
+};
+
+export type DailyPosition = {
+  date: string; // YYYY-MM-DD format
+  coordinates: Coordinates;
+};
+
+export type TravelState = 'landed' | 'traveling';
+
+export type UserPosition = {
+  state: TravelState;
+  currentLocation?: string; // Planet/moon name if landed
+  currentCoordinates?: Coordinates; // Current position if traveling
+  targetPlanet?: string; // Destination planet/moon name
+  speed: number; // km/h
+  launchTime?: string; // ISO timestamp
+  initialDistance?: number; // Initial distance in km at launch
+};
+
 export type UserLevel = {
   level: number;
   currentXP: number;

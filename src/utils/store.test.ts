@@ -1,14 +1,17 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useIsSetupInProgress, useStore } from './store';
-import { Meter } from './units';
 
 describe('store', () => {
   beforeEach(() => {
     useStore.setState({
       isSetupFinished: false,
       habits: [],
-      journey: undefined,
+      userPosition: {
+        state: 'landed',
+        currentLocation: 'Earth',
+        speed: 0,
+      },
       completedPlanets: [],
     });
   });
@@ -101,7 +104,7 @@ describe('store', () => {
     expect(result.current.habits).toHaveLength(0);
   });
 
-  it('should complete a habit and increase energy', () => {
+  it('should complete a habit and launch with initial speed', () => {
     const { result } = renderHook(() => useStore());
 
     act(() => {
@@ -111,11 +114,7 @@ describe('store', () => {
     const habitId = result.current.habits[0].id;
 
     act(() => {
-      result.current.setJourney({
-        distance: 0 as Meter,
-        planetName: 'Gliese 581g',
-        energy: 0,
-      });
+      result.current.setDestination('The Moon');
     });
 
     act(() => {
@@ -123,31 +122,31 @@ describe('store', () => {
     });
 
     expect(result.current.habits[0].completions).toHaveLength(1);
-    expect(result.current.journey?.energy).toBe(10);
+    expect(result.current.userPosition.speed).toBe(50000);
+    expect(result.current.userPosition.state).toBe('traveling');
   });
 
-  it('should cap energy at 100 when completing habits', () => {
+  it('should increase speed by 1.2x when completing habits while traveling', () => {
     const { result } = renderHook(() => useStore());
 
     act(() => {
-      result.current.addHabit({ title: 'Cap Energy' });
+      result.current.addHabit({ title: 'Speed Boost' });
     });
 
     const habitId = result.current.habits[0].id;
 
     act(() => {
-      result.current.setJourney({
-        distance: 0 as Meter,
-        planetName: 'Gliese 581g',
-        energy: 95,
-      });
+      result.current.setDestination('The Moon');
+      result.current.completeHabit(habitId); // Launch
     });
+
+    const initialSpeed = result.current.userPosition.speed;
 
     act(() => {
-      result.current.completeHabit(habitId);
+      result.current.completeHabit(habitId); // Boost speed
     });
 
-    expect(result.current.journey?.energy).toBe(100);
+    expect(result.current.userPosition.speed).toBe(initialSpeed * 1.2);
   });
 
   it('should complete a planet only once', () => {
@@ -161,58 +160,59 @@ describe('store', () => {
     expect(result.current.completedPlanets).toEqual(['Gliese 581g']);
   });
 
-  it('should set journey correctly', () => {
+  it('should set destination correctly', () => {
     const { result } = renderHook(() => useStore());
 
     act(() => {
-      result.current.setJourney({
-        distance: 0 as Meter,
-        planetName: 'Gliese 581g',
-        energy: 50,
-      });
+      result.current.setDestination('The Moon');
     });
 
-    expect(result.current.journey?.planetName).toBe('Gliese 581g');
-    expect(result.current.journey?.energy).toBe(50);
+    expect(result.current.userPosition.targetPlanet).toBe('The Moon');
+    expect(result.current.userPosition.speed).toBe(0);
   });
 
-  it('should expend energy and update distance', () => {
+  it('should update travel position when traveling', () => {
     const { result } = renderHook(() => useStore());
 
     act(() => {
-      result.current.setJourney({
-        distance: 0 as Meter,
-        planetName: 'Gliese 581g',
-        energy: 50,
-      });
+      result.current.addHabit({ title: 'Travel Test' });
     });
+
+    const habitId = result.current.habits[0].id;
 
     act(() => {
-      result.current.expendEnergy();
+      result.current.setDestination('The Moon');
+      result.current.completeHabit(habitId); // Launch
     });
 
-    expect(result.current.journey?.energy).toBeLessThan(50);
-    expect(result.current.journey?.distance).toBeGreaterThan(0);
-    expect(result.current.journey?.lastEnergyUpdate).toBeDefined();
+    expect(result.current.userPosition.state).toBe('traveling');
+    expect(result.current.userPosition.currentCoordinates).toBeDefined();
+    expect(result.current.userPosition.launchTime).toBeDefined();
   });
 
-  it('should not exceed planet distance when expending energy', () => {
+  it('should land when reaching destination', () => {
     const { result } = renderHook(() => useStore());
 
     act(() => {
-      result.current.setJourney({
-        distance: (189000000000000 - 1000) as Meter,
-        planetName: 'Gliese 581g',
-        energy: 100,
-      });
+      result.current.addHabit({ title: 'Quick Trip' });
     });
+
+    const habitId = result.current.habits[0].id;
 
     act(() => {
-      result.current.expendEnergy();
+      result.current.setDestination('The Moon');
+      result.current.completeHabit(habitId);
     });
 
-    const planetDistance = result.current.journey?.distance ?? 0;
-    expect(planetDistance).toBeLessThanOrEqual(189000000000000); // Gliese 581g distance
+    // Simulate arrival by manually setting state as if enough time has passed
+    act(() => {
+      result.current.userPosition.state = 'landed';
+      result.current.userPosition.currentLocation = 'The Moon';
+      result.current.userPosition.speed = 0;
+    });
+
+    expect(result.current.userPosition.state).toBe('landed');
+    expect(result.current.userPosition.currentLocation).toBe('The Moon');
   });
 
   it('should clear all data', () => {
@@ -221,11 +221,7 @@ describe('store', () => {
     act(() => {
       result.current.setIsSetupFinished(true);
       result.current.addHabit({ title: 'Temp Habit' });
-      result.current.setJourney({
-        distance: 10 as Meter,
-        planetName: 'Gliese 581g',
-        energy: 50,
-      });
+      result.current.setDestination('The Moon');
     });
 
     act(() => {
@@ -234,6 +230,7 @@ describe('store', () => {
 
     expect(result.current.isSetupFinished).toBe(false);
     expect(result.current.habits).toEqual([]);
-    expect(result.current.journey).toBeUndefined();
+    expect(result.current.userPosition.state).toBe('landed');
+    expect(result.current.userPosition.currentLocation).toBe('Earth');
   });
 });

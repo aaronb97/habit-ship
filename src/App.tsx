@@ -10,10 +10,11 @@ import { DefaultTheme } from '@react-navigation/native';
 import { Asset } from 'expo-asset';
 import { createURL } from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { StatusBar } from 'react-native';
 import { Navigation } from './navigation';
 import { colors } from './styles/theme';
+import { useIsSetupFinished } from './utils/store';
 
 void Asset.loadAsync([...NavigationAssets]);
 
@@ -40,11 +41,24 @@ export function App() {
     Poppins_700Bold,
   });
 
+  const isSetupFinished = useIsSetupFinished();
+
   const onLayoutRootView = useCallback(async () => {
     if (fontsLoaded) {
       await SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
+
+  const linking = useMemo(
+    () => ({
+      enabled: 'auto' as const,
+      prefixes: [prefix],
+      config: {
+        initialRouteName: isSetupFinished ? 'Home' : 'SetupFirstHabit',
+      },
+    }),
+    [isSetupFinished],
+  );
 
   if (!fontsLoaded) {
     return null;
@@ -55,10 +69,7 @@ export function App() {
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
       <Navigation
         theme={customTheme}
-        linking={{
-          enabled: 'auto',
-          prefixes: [prefix],
-        }}
+        linking={linking}
         onReady={onLayoutRootView}
       />
     </>

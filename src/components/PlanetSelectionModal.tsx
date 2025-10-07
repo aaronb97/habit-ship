@@ -12,7 +12,6 @@ import { planets } from '../planets';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { useStore } from '../utils/store';
 import { PlanetListItem } from './PlanetListItem';
-import { Meter } from '../utils/units';
 
 interface PlanetSelectionModalProps {
   visible: boolean;
@@ -23,50 +22,36 @@ export function PlanetSelectionModal({
   visible,
   onClose,
 }: PlanetSelectionModalProps) {
-  const { journey, setJourney } = useStore();
+  const { userPosition, setDestination } = useStore();
+  const landablePlanets = planets.filter((p) => p.isLandable);
   const [selectedPlanet, setSelectedPlanet] = useState(
-    journey?.planetName || planets[0].name,
+    userPosition.targetPlanet || landablePlanets[0].name,
   );
 
   const handleStartNewJourney = () => {
-    if (!journey) return;
+    const isTraveling = userPosition.state === 'traveling';
 
-    const currentPlanet = planets.find((p) => p.name === journey.planetName);
-    const hasProgress =
-      (journey.distance > 0 || journey.energy > 0) &&
-      journey.distance < (currentPlanet?.distance || 0);
-
-    if (hasProgress) {
+    if (isTraveling) {
       Alert.alert(
-        'Start New Journey',
-        'You have progress on your current journey. Starting a new journey will reset your progress to 0. Are you sure you want to continue?',
+        'Change Destination',
+        'You are currently traveling. Changing your destination will reset your journey. Are you sure you want to continue?',
         [
           {
             text: 'Cancel',
             style: 'cancel',
           },
           {
-            text: 'Start New Journey',
+            text: 'Change Destination',
             style: 'destructive',
             onPress: () => {
-              setJourney({
-                distance: 0 as Meter,
-                energy: 0,
-                planetName: selectedPlanet,
-              });
-
+              setDestination(selectedPlanet);
               onClose();
             },
           },
         ],
       );
     } else {
-      setJourney({
-        distance: 0 as Meter,
-        energy: 0,
-        planetName: selectedPlanet,
-      });
-
+      setDestination(selectedPlanet);
       onClose();
     }
   };
@@ -93,7 +78,7 @@ export function PlanetSelectionModal({
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
         >
-          {planets.map((planet) => (
+          {landablePlanets.map((planet) => (
             <PlanetListItem
               key={planet.name}
               planet={planet}

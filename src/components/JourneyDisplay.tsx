@@ -1,45 +1,77 @@
 import { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { planets } from '../planets';
+import { EARTH, planets } from '../planets';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import { useStore } from '../utils/store';
+import { calculateDistance, getPlanetPosition, useStore } from '../utils/store';
 import { ProgressBar } from './ProgressBar';
 
 interface JourneyDisplayProps {
   onPlanetPress?: () => void;
 }
 
-export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
-  const { journey, expendEnergy, clearData } = useStore();
+function formatTime(hours: number): string {
+  if (hours < 1) {
+    const minutes = Math.floor(hours * 60);
+    return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+  } else if (hours < 24) {
+    return `${hours.toFixed(1)} hour${hours !== 1 ? 's' : ''}`;
+  } else {
+    const days = Math.floor(hours / 24);
+    const remainingHours = Math.floor(hours % 24);
+    return `${days} day${days !== 1 ? 's' : ''} ${remainingHours}h`;
+  }
+}
 
+export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
+  const { userPosition, updateTravelPosition, clearData } = useStore();
+
+  // Update position every second (which also triggers re-render for time remaining)
   useEffect(() => {
     const interval = setInterval(() => {
-      expendEnergy();
-    }, 100);
+      updateTravelPosition();
+    }, 1000);
 
     return () => clearInterval(interval);
-  }, [expendEnergy]);
+  }, [updateTravelPosition]);
 
-  const planet = planets.find((p) => p.name === journey?.planetName);
+  // Determine what to display
+  const displayLocation = userPosition.state === 'landed' 
+    ? userPosition.currentLocation 
+    : userPosition.targetPlanet;
 
-  if (!planet || !journey) {
+  const planet = [...planets, EARTH].find((p) => p.name === displayLocation);
+
+  if (!planet) {
     console.error('Encountered invalid planet, resetting data');
     clearData();
     return null;
   }
 
-  const distancePercentage = (journey.distance || 0) / planet.distance;
-  const energyPercentage = (journey.energy || 0) / 100;
+  // Calculate current stats if traveling
+  let distanceRemaining = 0;
+  let distancePercentage = 0;
+  let timeRemaining = 0;
 
-  const currentDistanceInKm = (journey.distance / 1000).toFixed(0);
-  const totalDistanceInKm = (planet.distance / 1000000).toLocaleString(
-    undefined,
-    {
-      maximumFractionDigits: 2,
-    },
-  );
+  if (userPosition.state === 'traveling' && userPosition.targetPlanet && userPosition.currentCoordinates) {
+    const targetPos = getPlanetPosition(
+      userPosition.targetPlanet,
+      new Date().toISOString().split('T')[0],
+    );
+    
+    distanceRemaining = calculateDistance(userPosition.currentCoordinates, targetPos);
+    
+    if (userPosition.initialDistance && userPosition.initialDistance > 0) {
+      const distanceTraveled = userPosition.initialDistance - distanceRemaining;
+      distancePercentage = distanceTraveled / userPosition.initialDistance;
+    }
+    
+    if (userPosition.speed > 0) {
+      timeRemaining = distanceRemaining / userPosition.speed;
+    }
+  }
 
-  const progressValue = `${currentDistanceInKm.toLocaleString()} km / ${totalDistanceInKm} million km`;
+  const isLanded = userPosition.state === 'landed';
+  const isTraveling = userPosition.state === 'traveling';
 
   return (
     <View style={styles.journeyDisplayContainer}>
@@ -48,30 +80,68 @@ export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
         activeOpacity={0.7}
         onPress={onPlanetPress}
       >
-        <Text style={styles.planetTitle}>{journey.planetName}</Text>
+        <Text style={styles.planetTitle}>
+          {isLanded && '🌍 '}
+          {planet.name}
+        </Text>
+        {isLanded && (
+          <Text style={styles.statusText}>Landed</Text>
+        )}
+        {isTraveling && (
+          <Text style={styles.statusText}>En Route</Text>
+        )}
       </TouchableOpacity>
 
-      <View style={styles.progressContainer}>
-        <View style={styles.progressRow}>
-          <Text style={styles.progressLabel}>🚀 Journey Progress</Text>
-          <Text style={styles.progressValue}>{progressValue}</Text>
-        </View>
-        <ProgressBar progress={distancePercentage} color={colors.primary} />
-      </View>
+      {isTraveling && (
+        <>
+          <View style={styles.progressContainer}>
+            <View style={styles.progressRow}>
+              <Text style={styles.progressLabel}>🚀 Journey Progress</Text>
+              <Text style={styles.progressValue}>
+                {(distancePercentage * 100).toFixed(1)}%
+              </Text>
+            </View>
+            <ProgressBar progress={distancePercentage} color={colors.primary} />
+          </View>
 
-      <View style={styles.progressContainer}>
-        <View style={styles.progressRow}>
-          <Text style={styles.progressLabel}>⚡ Fuel</Text>
-          <Text style={styles.progressValue}>
-            {`${(energyPercentage * 100).toFixed(0)}%`}
-          </Text>
-        </View>
-        <ProgressBar progress={energyPercentage} color={colors.accent} />
-      </View>
+          <View style={styles.progressContainer}>
+            <View style={styles.progressRow}>
+              <Text style={styles.progressLabel}>⚡ Speed</Text>
+              <Text style={styles.progressValue}>
+                {userPosition.speed.toLocaleString()} km/h
+              </Text>
+            </View>
+          </View>
 
-      {journey.energy === 0 && (
-        <Text style={styles.outOfEnergyText}>
-          Complete a habit to refuel your spacecraft! ⛽
+          <View style={styles.progressContainer}>
+            <View style={styles.progressRow}>
+              <Text style={styles.progressLabel}>⏱️ Time Remaining</Text>
+              <Text style={styles.progressValue}>
+                {formatTime(timeRemaining)}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.progressContainer}>
+            <View style={styles.progressRow}>
+              <Text style={styles.progressLabel}>📍 Distance Remaining</Text>
+              <Text style={styles.progressValue}>
+                {distanceRemaining.toLocaleString(undefined, {
+                  maximumFractionDigits: 0,
+                })}{' '}
+                km
+              </Text>
+            </View>
+          </View>
+        </>
+      )}
+
+      {isLanded && userPosition.speed === 0 && (
+        <Text style={styles.landedText}>
+          {userPosition.targetPlanet 
+            ? `Complete a habit to launch toward ${userPosition.targetPlanet}! 🚀`
+            : 'Select a destination to begin your journey! 🌟'
+          }
         </Text>
       )}
     </View>
@@ -79,12 +149,19 @@ export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
 }
 
 const styles = StyleSheet.create({
-  outOfEnergyText: {
+  landedText: {
     fontFamily: fonts.regular,
     fontSize: fontSizes.medium,
     color: colors.grey,
     marginTop: 8,
     textAlign: 'center',
+  },
+  statusText: {
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.small,
+    color: colors.accent,
+    textAlign: 'center',
+    marginTop: 4,
   },
   journeyDisplayContainer: {
     backgroundColor: colors.card,

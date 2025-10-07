@@ -13,11 +13,10 @@ import { RootStackParamList } from '..';
 import { planets } from '../../planets';
 import { colors, fonts, fontSizes } from '../../styles/theme';
 import { useStore } from '../../utils/store';
-import { Meter } from '../../utils/units';
 
 export function SetupFirstPlanet() {
   const navigation = useNavigation();
-  const { setIsSetupFinished, addHabit, setJourney } = useStore();
+  const { setIsSetupFinished, addHabit, setDestination } = useStore();
   const [selectedPlanet, setSelectedPlanet] = useState(planets[0].name);
   const params =
     useRoute<RouteProp<RootStackParamList, 'SetupFirstPlanet'>>().params;
@@ -34,20 +33,14 @@ export function SetupFirstPlanet() {
 
   const handleFinish = useCallback(() => {
     addHabit(habit);
-
-    setJourney({
-      distance: 0 as Meter,
-      energy: 0,
-      planetName: selectedPlanet,
-    });
-
+    setDestination(selectedPlanet);
     setIsSetupFinished(true);
     navigation.navigate('WelcomeTransition');
   }, [
     addHabit,
     habit,
     selectedPlanet,
-    setJourney,
+    setDestination,
     setIsSetupFinished,
     navigation,
   ]);
