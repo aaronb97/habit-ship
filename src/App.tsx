@@ -51,10 +51,16 @@ export function App() {
 
   const linking = useMemo(
     () => ({
-      enabled: 'auto' as const,
       prefixes: [prefix],
       config: {
-        initialRouteName: isSetupFinished ? 'Home' : 'SetupFirstHabit',
+        screens: {
+          SetupFirstHabit: 'setup/habit',
+          SetupFirstPlanet: 'setup/planet',
+          WelcomeTransition: 'welcome',
+          Home: 'home',
+          NotFound: '*',
+        },
+        initialRouteName: (isSetupFinished ? 'Home' : 'SetupFirstHabit') as 'Home' | 'SetupFirstHabit',
       },
     }),
     [isSetupFinished],

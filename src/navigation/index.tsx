@@ -1,4 +1,4 @@
-import { createStaticNavigation } from '@react-navigation/native';
+import { NavigationContainer, Theme, LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { colors, fonts } from '../styles/theme';
 import { Home } from './screens/Home';
@@ -6,64 +6,84 @@ import { NotFound } from './screens/NotFound';
 import { SetupFirstHabit } from './screens/SetupFirstHabit';
 import { SetupFirstPlanet } from './screens/SetupFirstPlanet';
 import { WelcomeTransition } from './screens/WelcomeTransition';
-import { useIsSetupFinished, useIsSetupInProgress } from '../utils/store';
+import { useIsSetupFinished } from '../utils/store';
 
-const RootStack = createNativeStackNavigator({
-  screenOptions: {
-    headerTintColor: colors.primaryText,
-    headerBackTitle: 'Back',
-    headerBackTitleStyle: {
-      fontFamily: fonts.regular,
-      color: colors.primaryText,
-    },
-  },
-  screens: {
-    SetupFirstHabit: {
-      screen: SetupFirstHabit,
-      if: useIsSetupInProgress,
-      options: {
-        title: '',
-        headerTransparent: true,
-        headerShadowVisible: false,
-      },
-    },
-    SetupFirstPlanet: {
-      screen: SetupFirstPlanet,
-      if: useIsSetupInProgress,
-      options: {
-        title: '',
-        headerTransparent: true,
-        headerShadowVisible: false,
-      },
-    },
-    WelcomeTransition: {
-      screen: WelcomeTransition,
-      options: {
-        headerShown: false,
-      },
-    },
-    Home: {
-      screen: Home,
-      if: useIsSetupFinished,
-      options: {
-        title: '',
-        headerTransparent: true,
-        headerShadowVisible: false,
-      },
-    },
-    NotFound: {
-      screen: NotFound,
-      options: {
-        title: '404',
-      },
-      linking: {
-        path: '*',
-      },
-    },
-  },
-});
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
-export const Navigation = createStaticNavigation(RootStack);
+type NavigationProps = {
+  theme?: Theme;
+  linking?: LinkingOptions<RootStackParamList>;
+  onReady?: () => void;
+};
+
+export function Navigation({ theme, linking, onReady }: NavigationProps) {
+  const isSetupFinished = useIsSetupFinished();
+
+  return (
+    <NavigationContainer
+      theme={theme}
+      linking={linking}
+      onReady={onReady}
+    >
+      <Stack.Navigator
+        screenOptions={{
+          headerTintColor: colors.primaryText,
+          headerBackTitle: 'Back',
+          headerBackTitleStyle: {
+            fontFamily: fonts.regular,
+          },
+        }}
+      >
+        {!isSetupFinished ? (
+          <>
+            <Stack.Screen
+              name="SetupFirstHabit"
+              component={SetupFirstHabit}
+              options={{
+                title: '',
+                headerTransparent: true,
+                headerShadowVisible: false,
+              }}
+            />
+            <Stack.Screen
+              name="SetupFirstPlanet"
+              component={SetupFirstPlanet}
+              options={{
+                title: '',
+                headerTransparent: true,
+                headerShadowVisible: false,
+              }}
+            />
+          </>
+        ) : (
+          <Stack.Screen
+            name="Home"
+            component={Home}
+            options={{
+              title: '',
+              headerTransparent: true,
+              headerShadowVisible: false,
+            }}
+          />
+        )}
+        <Stack.Screen
+          name="WelcomeTransition"
+          component={WelcomeTransition}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="NotFound"
+          component={NotFound}
+          options={{
+            title: '404',
+          }}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
 
 export type RootStackParamList = {
   SetupFirstHabit: undefined;
