@@ -8,6 +8,7 @@ interface PlanetListItemProps {
   distance: number; // Distance in km from current position
   isSelected?: boolean;
   onPress: () => void;
+  disabledReason?: string; // Reason why planet cannot be selected
 }
 
 export function PlanetListItem({
@@ -15,9 +16,11 @@ export function PlanetListItem({
   distance,
   isSelected,
   onPress,
+  disabledReason,
 }: PlanetListItemProps) {
   const userLevel = useUserLevel();
   const isLocked = userLevel.level < planet.minLevel;
+  const isDisabled = !!disabledReason || isLocked;
 
   // Format distance for display
   const formatDistance = (dist: number): string => {
@@ -33,29 +36,36 @@ export function PlanetListItem({
         styles.planetBox,
         isSelected && styles.selectedPlanetBox,
         isLocked && styles.lockedPlanetBox,
+        disabledReason && styles.disabledPlanetBox,
       ]}
-      disabled={isLocked}
-      onPress={isLocked ? undefined : onPress}
+      disabled={isDisabled}
+      onPress={isDisabled ? undefined : onPress}
     >
-      <Text style={[styles.planetName, isLocked && styles.lockedText]}>
+      <Text style={[styles.planetName, isDisabled && styles.lockedText]}>
         {planet.name}
       </Text>
 
-      <Text style={[styles.planetInfo, isLocked && styles.lockedText]}>
+      <Text style={[styles.planetInfo, isDisabled && styles.lockedText]}>
         <Text style={styles.planetInfoLabel}>Distance:</Text> {formatDistance(distance)}
       </Text>
 
-      <Text style={[styles.planetInfo, isLocked && styles.lockedText]}>
+      <Text style={[styles.planetInfo, isDisabled && styles.lockedText]}>
         <Text style={styles.planetInfoLabel}>Min Level:</Text> {planet.minLevel}
       </Text>
 
-      {isLocked ? null : (
+      {isDisabled ? null : (
         <Text style={styles.planetDescription}>{planet.description}</Text>
       )}
 
       {isLocked && (
         <View style={styles.lockOverlay}>
           <Text style={styles.lockText}>Level {planet.minLevel} Required</Text>
+        </View>
+      )}
+
+      {disabledReason && !isLocked && (
+        <View style={styles.lockOverlay}>
+          <Text style={styles.lockText}>{disabledReason}</Text>
         </View>
       )}
     </TouchableOpacity>
@@ -86,6 +96,10 @@ const styles = StyleSheet.create({
   lockedPlanetBox: {
     backgroundColor: colors.starfield,
     opacity: 0.5,
+  },
+  disabledPlanetBox: {
+    backgroundColor: colors.starfield,
+    opacity: 0.6,
   },
   planetName: {
     fontFamily: fonts.semiBold,

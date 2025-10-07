@@ -173,10 +173,7 @@ export const useStore = create<Store>()(
           );
 
           // Launch/speed mechanics
-          if (
-            state.userPosition.state === 'landed' &&
-            state.userPosition.speed === 0
-          ) {
+          if (state.userPosition.speed === 0) {
             // Launch with initial speed of 50,000 km/h
             state.userPosition.speed = 50000;
             if (state.userPosition.targetPlanet) {
@@ -185,10 +182,12 @@ export const useStore = create<Store>()(
               state.lastUpdateTime = Date.now();
 
               // Calculate initial distance
-              const currentPos = getPlanetPosition(
-                state.userPosition.currentLocation || 'Earth',
-                new Date().toISOString().split('T')[0],
-              );
+              const currentPos =
+                state.userPosition.currentCoordinates ||
+                getPlanetPosition(
+                  state.userPosition.currentLocation || 'Earth',
+                  new Date().toISOString().split('T')[0],
+                );
 
               const targetPos = getPlanetPosition(
                 state.userPosition.targetPlanet,
@@ -281,7 +280,8 @@ export const useStore = create<Store>()(
           const hoursElapsed = millisecondsElapsed / 3600000; // 1 hour = 3,600,000 ms
 
           // Calculate distance traveled since last update (speed in km/h * hours)
-          const distanceTraveledThisUpdate = state.userPosition.speed * hoursElapsed;
+          const distanceTraveledThisUpdate =
+            state.userPosition.speed * hoursElapsed;
 
           // Get target position
           const targetPos = getPlanetPosition(
@@ -317,13 +317,13 @@ export const useStore = create<Store>()(
             const dz = targetPos.z - currentPos.z;
             const totalDistance = Math.sqrt(dx * dx + dy * dy + dz * dz);
             const progress = distanceTraveledThisUpdate / totalDistance;
-            
+
             state.userPosition.currentCoordinates = {
               x: currentPos.x + dx * progress,
               y: currentPos.y + dy * progress,
               z: currentPos.z + dz * progress,
             };
-            
+
             // Update last update time
             state.lastUpdateTime = now;
           }

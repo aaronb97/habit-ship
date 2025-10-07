@@ -21,12 +21,13 @@ export function SetupFirstPlanet() {
   const params =
     useRoute<RouteProp<RootStackParamList, 'SetupFirstPlanet'>>().params;
 
-  // Calculate distances and sort planets
+  // Calculate distances and sort planets (exclude Earth from initial selection)
   const planetsWithDistance = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     const currentCoords = userPosition.currentCoordinates || { x: 0, y: 0, z: 0 };
 
     return planets
+      .filter((planet) => planet.name !== 'Earth') // Don't show Earth on initial screen
       .map((planet) => {
         const planetCoords = getPlanetPosition(planet.name, today);
         const distance = calculateDistance(currentCoords, planetCoords);

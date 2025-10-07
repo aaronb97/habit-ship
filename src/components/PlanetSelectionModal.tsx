@@ -30,16 +30,38 @@ export function PlanetSelectionModal({
   // Calculate distances and sort planets
   const planetsWithDistance = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    const currentCoords = userPosition.currentCoordinates || { x: 0, y: 0, z: 0 };
+    const currentCoords = userPosition.currentCoordinates || {
+      x: 0,
+      y: 0,
+      z: 0,
+    };
 
     return planets
       .map((planet) => {
         const planetCoords = getPlanetPosition(planet.name, today);
         const distance = calculateDistance(currentCoords, planetCoords);
-        return { planet, distance };
+
+        // Determine if planet should be disabled and why
+        let disabledReason: string | undefined;
+
+        if (
+          planet.name === userPosition.currentLocation &&
+          userPosition.state === 'landed'
+        ) {
+          disabledReason = 'You are currently on this planet';
+        } else if (planet.name === userPosition.targetPlanet) {
+          disabledReason = 'You are already traveling to this planet';
+        }
+
+        return { planet, distance, disabledReason };
       })
       .sort((a, b) => a.distance - b.distance);
-  }, [userPosition.currentCoordinates]);
+  }, [
+    userPosition.currentCoordinates,
+    userPosition.currentLocation,
+    userPosition.targetPlanet,
+    userPosition.state,
+  ]);
 
   const handleStartNewJourney = () => {
     const isTraveling = userPosition.state === 'traveling';
@@ -91,12 +113,13 @@ export function PlanetSelectionModal({
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
         >
-          {planetsWithDistance.map(({ planet, distance }) => (
+          {planetsWithDistance.map(({ planet, distance, disabledReason }) => (
             <PlanetListItem
               key={planet.name}
               planet={planet}
               distance={distance}
               isSelected={selectedPlanet === planet.name}
+              disabledReason={disabledReason}
               onPress={() => setSelectedPlanet(planet.name)}
             />
           ))}
