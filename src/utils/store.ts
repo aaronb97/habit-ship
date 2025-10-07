@@ -61,6 +61,7 @@ type Store = {
     startTime: string;
   };
   swipedHabitId?: HabitId;
+  lastUpdateTime?: number;
 
   setIsSetupFinished: (value: boolean) => void;
   setDestination: (planetName: string) => void;
@@ -181,6 +182,7 @@ export const useStore = create<Store>()(
             if (state.userPosition.targetPlanet) {
               state.userPosition.state = 'traveling';
               state.userPosition.launchTime = new Date().toISOString();
+              state.lastUpdateTime = Date.now();
 
               // Calculate initial distance
               const currentPos = getPlanetPosition(
@@ -272,13 +274,14 @@ export const useStore = create<Store>()(
             return;
           }
 
-          // Calculate time elapsed since launch (in hours)
+          // Calculate time elapsed since last update (in hours)
           const now = Date.now();
-          const launchTime = new Date(state.userPosition.launchTime).getTime();
-          const hoursElapsed = (now - launchTime) / (1000 * 60 * 60);
+          const lastUpdate = state.lastUpdateTime || now;
+          const millisecondsElapsed = now - lastUpdate;
+          const hoursElapsed = millisecondsElapsed / 3600000; // 1 hour = 3,600,000 ms
 
-          // Calculate distance traveled (speed in km/h * hours)
-          const distanceTraveled = state.userPosition.speed * hoursElapsed;
+          // Calculate distance traveled since last update (speed in km/h * hours)
+          const distanceTraveledThisUpdate = state.userPosition.speed * hoursElapsed;
 
           // Get target position
           const targetPos = getPlanetPosition(
@@ -286,16 +289,11 @@ export const useStore = create<Store>()(
             new Date().toISOString().split('T')[0],
           );
 
-          // Get launch position
-          const launchPos = state.userPosition.currentCoordinates;
+          // Calculate current distance to target
+          const currentPos = state.userPosition.currentCoordinates;
+          const distanceRemaining = calculateDistance(currentPos, targetPos);
 
-          // Calculate direction vector
-          const dx = targetPos.x - launchPos.x;
-          const dy = targetPos.y - launchPos.y;
-          const dz = targetPos.z - launchPos.z;
-          const totalDistance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-          if (distanceTraveled >= totalDistance) {
+          if (distanceTraveledThisUpdate >= distanceRemaining) {
             // Arrived at destination
             state.userPosition.state = 'landed';
             state.userPosition.currentLocation =
@@ -306,19 +304,28 @@ export const useStore = create<Store>()(
             state.userPosition.speed = 0;
             state.userPosition.launchTime = undefined;
             state.userPosition.initialDistance = undefined;
+            state.lastUpdateTime = undefined;
 
             // Complete planet
             if (state.userPosition.currentLocation) {
               state.completePlanet(state.userPosition.currentLocation);
             }
           } else {
-            // Update current position
-            const progress = distanceTraveled / totalDistance;
+            // Update current position incrementally
+            const dx = targetPos.x - currentPos.x;
+            const dy = targetPos.y - currentPos.y;
+            const dz = targetPos.z - currentPos.z;
+            const totalDistance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            const progress = distanceTraveledThisUpdate / totalDistance;
+            
             state.userPosition.currentCoordinates = {
-              x: launchPos.x + dx * progress,
-              y: launchPos.y + dy * progress,
-              z: launchPos.z + dz * progress,
+              x: currentPos.x + dx * progress,
+              y: currentPos.y + dy * progress,
+              z: currentPos.z + dz * progress,
             };
+            
+            // Update last update time
+            state.lastUpdateTime = now;
           }
         });
       },
