@@ -39,13 +39,13 @@ export function getPlanetPosition(
   const planet = planets.find((p) => p.name === planetName);
   if (!planet) throw new Error(`Planet ${planetName} not found`);
 
-  const position = planet.dailyPositions.find((p) => p.date === date);
-  if (!position) {
-    // If no exact match, return the first position
-    return planet.dailyPositions[0].coordinates;
-  }
+  // Try to get position for the given date, or use first available date
+  const position =
+    planet.dailyPositions[date] ??
+    planet.dailyPositions[Object.keys(planet.dailyPositions).at(-1) as string];
 
-  return position.coordinates;
+  const [x, y, z] = position;
+  return { x, y, z };
 }
 
 type Store = {
