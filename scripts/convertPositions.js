@@ -16,6 +16,22 @@ const POSITION_SOURCES_DIR = path.join(
 
 const POSITIONS_DIR = path.join(__dirname, '..', 'src', 'positions');
 
+function extractTargetBodyName(textContent) {
+  // Extract target body name from "Target body name: Mercury (199)" -> "Mercury"
+  const lines = textContent.split('\n');
+  for (const line of lines) {
+    if (line.includes('Target body name:')) {
+      // Match the name before the parentheses
+      const match = line.match(/Target body name:\s*([^(]+)/);
+      if (match) {
+        return match[1].trim();
+      }
+    }
+  }
+
+  return null;
+}
+
 function parseDate(dateString) {
   // Parse "A.D. 2025-Oct-08 00:00:00.0000" to "2025-10-08"
   const match = dateString.match(/A\.D\.\s+(\d{4})-(\w{3})-(\d{2})/);
@@ -89,18 +105,25 @@ function processFile(filename) {
   // Read the text file
   const textContent = fs.readFileSync(sourcePath, 'utf8');
 
+  // Extract target body name from file content
+  const targetBodyName = extractTargetBodyName(textContent);
+  if (!targetBodyName) {
+    console.log(`✗ Could not extract target body name from ${filename}`);
+    return;
+  }
+
   // Convert to JSON format
   const positions = convertTextToJson(textContent);
 
-  // Determine output filename (e.g., Earth.txt -> earth.json)
-  const baseName = path.basename(filename, '.txt').toLowerCase();
+  // Determine output filename using extracted name (e.g., "Mercury" -> mercury.json)
+  const baseName = targetBodyName.toLowerCase();
   const outputPath = path.join(POSITIONS_DIR, `${baseName}.json`);
 
   // Write JSON file
   fs.writeFileSync(outputPath, `${JSON.stringify(positions, null, 2)}\n`);
 
   console.log(
-    `✓ Converted ${filename} -> ${baseName}.json (${
+    `✓ Converted ${filename} (${targetBodyName}) -> ${baseName}.json (${
       Object.keys(positions).length
     } entries)`,
   );
