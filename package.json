@@ -2,6 +2,7 @@
   "name": "react-nav-test",
   "version": "1.0.0",
   "main": "index.tsx",
+  "type": "module",
   "scripts": {
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -11,7 +12,8 @@
     "ios": "expo run:ios",
     "test": "vitest",
     "test:watch": "vitest watch",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "convert-positions": "node scripts/convertPositions.js"
   },
   "dependencies": {
     "@expo-google-fonts/poppins": "^0.4.0",

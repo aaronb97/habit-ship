@@ -20,8 +20,7 @@ import {
 
 export function SetupFirstPlanet() {
   const navigation = useNavigation();
-  const { setIsSetupFinished, addHabit, setDestination, userPosition } =
-    useStore();
+  const { setIsSetupFinished, addHabit, setDestination } = useStore();
 
   const [selectedPlanet, setSelectedPlanet] = useState<string | undefined>();
   const params =
@@ -29,11 +28,7 @@ export function SetupFirstPlanet() {
 
   // Calculate distances and sort planets (exclude Earth from initial selection)
   const planetsWithDistance = useMemo(() => {
-    const currentCoords = userPosition.currentCoordinates || {
-      x: 0,
-      y: 0,
-      z: 0,
-    };
+    const currentCoords = getPlanetPosition('Earth');
 
     return planets
       .filter((planet) => planet.name !== 'Earth') // Don't show Earth on initial screen
@@ -43,7 +38,7 @@ export function SetupFirstPlanet() {
         return { planet, distance };
       })
       .sort((a, b) => a.distance - b.distance);
-  }, [userPosition.currentCoordinates]);
+  }, []);
 
   // Animation values
   const titleOpacity = useState(new Animated.Value(0))[0];

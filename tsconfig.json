@@ -3,5 +3,10 @@
   "compilerOptions": {
     "moduleResolution": "bundler",
     "strict": true
-  }
+  },
+  "include": [
+    "src/**/*",
+    "*.ts",
+    "*.tsx"
+  ]
 }
