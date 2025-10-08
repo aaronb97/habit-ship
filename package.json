@@ -2,7 +2,6 @@
   "name": "react-nav-test",
   "version": "1.0.0",
   "main": "index.tsx",
-  "type": "module",
   "scripts": {
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
