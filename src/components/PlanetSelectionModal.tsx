@@ -29,7 +29,6 @@ export function PlanetSelectionModal({
 
   // Calculate distances and sort planets
   const planetsWithDistance = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
     const currentCoords = userPosition.currentCoordinates || {
       x: 0,
       y: 0,
@@ -38,7 +37,7 @@ export function PlanetSelectionModal({
 
     return planets
       .map((planet) => {
-        const planetCoords = getPlanetPosition(planet.name, today);
+        const planetCoords = getPlanetPosition(planet.name);
         const distance = calculateDistance(currentCoords, planetCoords);
 
         // Determine if planet should be disabled and why

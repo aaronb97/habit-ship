@@ -59,10 +59,7 @@ export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
     userPosition.currentCoordinates &&
     userPosition.speed > 0
   ) {
-    const targetPos = getPlanetPosition(
-      userPosition.targetPlanet,
-      new Date().toISOString().split('T')[0],
-    );
+    const targetPos = getPlanetPosition(userPosition.targetPlanet);
 
     distanceRemaining = calculateDistance(
       userPosition.currentCoordinates,

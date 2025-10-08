@@ -34,7 +34,7 @@ export function calculateDistance(a: Coordinates, b: Coordinates): number {
 // Helper function to get planet position for a given date
 export function getPlanetPosition(
   planetName: string,
-  date: string,
+  date = new Date().toISOString().split('T')[0],
 ): Coordinates {
   const planet = planets.find((p) => p.name === planetName);
   if (!planet) throw new Error(`Planet ${planetName} not found`);
@@ -186,12 +186,10 @@ export const useStore = create<Store>()(
                 state.userPosition.currentCoordinates ||
                 getPlanetPosition(
                   state.userPosition.currentLocation || 'Earth',
-                  new Date().toISOString().split('T')[0],
                 );
 
               const targetPos = getPlanetPosition(
                 state.userPosition.targetPlanet,
-                new Date().toISOString().split('T')[0],
               );
 
               state.userPosition.initialDistance = calculateDistance(
@@ -280,10 +278,7 @@ export const useStore = create<Store>()(
             state.userPosition.speed * hoursElapsed;
 
           // Get target position
-          const targetPos = getPlanetPosition(
-            state.userPosition.targetPlanet,
-            new Date().toISOString().split('T')[0],
-          );
+          const targetPos = getPlanetPosition(state.userPosition.targetPlanet);
 
           // Calculate current distance to target
           const currentPos = state.userPosition.currentCoordinates;
