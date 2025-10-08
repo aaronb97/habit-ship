@@ -55,10 +55,6 @@ export function PlanetListItem({
         {formatDistance(distance)}
       </Text>
 
-      <Text style={[styles.planetInfo, isDisabled && styles.lockedText]}>
-        <Text style={styles.planetInfoLabel}>Min Level:</Text> {planet.minLevel}
-      </Text>
-
       {isDisabled ? null : (
         <Text style={styles.planetDescription}>{planet.description}</Text>
       )}
