@@ -74,9 +74,11 @@ export function Home() {
               <JourneyDisplay onPlanetPress={() => setShowPlanetModal(true)} />
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Daily Habits</Text>
-                <TouchableOpacity onPress={() => setShowCreateModal(true)}>
-                  <Text style={styles.newHabitButtonText}>+ New Habit</Text>
-                </TouchableOpacity>
+                {habits.length < 5 ? (
+                  <TouchableOpacity onPress={() => setShowCreateModal(true)}>
+                    <Text style={styles.newHabitButtonText}>+ New Habit</Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
             </>
           }
