@@ -27,19 +27,19 @@ export const planets: Planet[] = [
   {
     name: 'Mercury',
     description: 'Closest planet to the Sun',
-    minLevel: 2,
+    minLevel: 1,
     dailyPositions: mercuryPositions,
   },
   {
     name: 'Venus',
     description: 'The morning star',
-    minLevel: 3,
+    minLevel: 1,
     dailyPositions: venusPositions,
   },
   {
     name: 'Mars',
     description: 'The Red Planet',
-    minLevel: 4,
+    minLevel: 1,
     dailyPositions: marsPositions,
   },
 ];
