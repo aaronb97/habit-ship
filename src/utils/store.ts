@@ -63,6 +63,8 @@ type Store = {
   swipedHabitId?: HabitId;
   lastUpdateTime?: number;
 
+  notificationId?: string;
+
   setIsSetupFinished: (value: boolean) => void;
   setDestination: (planetName: string) => void;
   completePlanet: (planetName: string) => void;
@@ -103,7 +105,6 @@ const initialData = {
   isSetupFinished: false,
   habits: [],
   userPosition: {
-    state: 'landed' as const,
     currentLocation: 'Earth',
     speed: 0,
   },
@@ -176,8 +177,8 @@ export const useStore = create<Store>()(
           if (state.userPosition.speed === 0) {
             // Launch with initial speed of 50,000 km/h
             state.userPosition.speed = 50000;
-            if (state.userPosition.targetPlanet) {
-              state.userPosition.state = 'traveling';
+
+            if (state.userPosition.target) {
               state.userPosition.launchTime = new Date().toISOString();
               state.lastUpdateTime = Date.now();
 
@@ -188,9 +189,7 @@ export const useStore = create<Store>()(
                   state.userPosition.currentLocation || 'Earth',
                 );
 
-              const targetPos = getPlanetPosition(
-                state.userPosition.targetPlanet,
-              );
+              const targetPos = state.userPosition.target.position;
 
               state.userPosition.initialDistance = calculateDistance(
                 currentPos,
@@ -199,7 +198,7 @@ export const useStore = create<Store>()(
 
               state.userPosition.currentCoordinates = currentPos;
             }
-          } else if (state.userPosition.state === 'traveling') {
+          } else if (state.userPosition.target) {
             if (state.userPosition.speed === 0) {
               state.userPosition.speed = 50000;
               return;
@@ -246,7 +245,11 @@ export const useStore = create<Store>()(
 
       setDestination: (planetName: string) => {
         set((state) => {
-          state.userPosition.targetPlanet = planetName;
+          state.userPosition.target = {
+            name: planetName,
+            position: getPlanetPosition(planetName),
+          };
+
           state.userPosition.speed = 0; // Reset speed when selecting new destination
         });
       },
@@ -254,13 +257,7 @@ export const useStore = create<Store>()(
       updateTravelPosition: () => {
         set((state) => {
           if (
-            state.userPosition.state !== 'traveling' ||
-            !state.userPosition.targetPlanet
-          ) {
-            return;
-          }
-
-          if (
+            !state.userPosition.target ||
             !state.userPosition.launchTime ||
             !state.userPosition.currentCoordinates
           ) {
@@ -278,7 +275,7 @@ export const useStore = create<Store>()(
             state.userPosition.speed * hoursElapsed;
 
           // Get target position
-          const targetPos = getPlanetPosition(state.userPosition.targetPlanet);
+          const targetPos = state.userPosition.target.position;
 
           // Calculate current distance to target
           const currentPos = state.userPosition.currentCoordinates;
@@ -286,12 +283,10 @@ export const useStore = create<Store>()(
 
           if (distanceTraveledThisUpdate >= distanceRemaining) {
             // Arrived at destination
-            state.userPosition.state = 'landed';
-            state.userPosition.currentLocation =
-              state.userPosition.targetPlanet;
+            state.userPosition.currentLocation = state.userPosition.target.name;
 
             state.userPosition.currentCoordinates = undefined;
-            state.userPosition.targetPlanet = undefined;
+            state.userPosition.target = undefined;
             state.userPosition.speed = 0;
             state.userPosition.launchTime = undefined;
             state.userPosition.initialDistance = undefined;
@@ -393,3 +388,25 @@ export const useStore = create<Store>()(
 export const useIsSetupFinished = () => useStore().isSetupFinished;
 export const useIsSetupInProgress = () => !useStore().isSetupFinished;
 export const useUserLevel = () => useStore().userLevel;
+
+export function useTimeRemaining() {
+  const { userPosition } = useStore();
+
+  if (!userPosition.target || !userPosition.currentCoordinates) {
+    return 0;
+  }
+
+  const timeRemaining =
+    calculateDistance(
+      userPosition.currentCoordinates,
+      userPosition.target.position,
+    ) / userPosition.speed;
+
+  return timeRemaining;
+}
+
+export function useIsTraveling() {
+  const { userPosition } = useStore();
+
+  return userPosition.target !== undefined && userPosition.speed > 0;
+}

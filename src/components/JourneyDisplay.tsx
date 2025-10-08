@@ -2,7 +2,12 @@ import { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { planets } from '../planets';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import { calculateDistance, getPlanetPosition, useStore } from '../utils/store';
+import {
+  calculateDistance,
+  useIsTraveling,
+  useStore,
+  useTimeRemaining,
+} from '../utils/store';
 import { ProgressBar } from './ProgressBar';
 
 interface JourneyDisplayProps {
@@ -36,9 +41,9 @@ export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
 
   // Determine what to display
   const displayLocation =
-    userPosition.state === 'landed'
-      ? userPosition.currentLocation
-      : userPosition.targetPlanet;
+    userPosition.target?.name || userPosition.currentLocation;
+
+  const isTraveling = useIsTraveling();
 
   const planet = planets.find((p) => p.name === displayLocation);
 
@@ -51,15 +56,14 @@ export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
   // Calculate current stats if traveling
   let distanceRemaining = 0;
   let distancePercentage = 0;
-  let timeRemaining = 0;
+  const timeRemaining = useTimeRemaining();
 
   if (
-    userPosition.state === 'traveling' &&
-    userPosition.targetPlanet &&
+    userPosition.target &&
     userPosition.currentCoordinates &&
     userPosition.speed > 0
   ) {
-    const targetPos = getPlanetPosition(userPosition.targetPlanet);
+    const targetPos = userPosition.target.position;
 
     distanceRemaining = calculateDistance(
       userPosition.currentCoordinates,
@@ -70,14 +74,7 @@ export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
       const distanceTraveled = userPosition.initialDistance - distanceRemaining;
       distancePercentage = distanceTraveled / userPosition.initialDistance;
     }
-
-    if (userPosition.speed > 0) {
-      timeRemaining = distanceRemaining / userPosition.speed;
-    }
   }
-
-  const isLanded = userPosition.state === 'landed';
-  const isTraveling = userPosition.state === 'traveling';
 
   return (
     <View style={styles.journeyDisplayContainer}>
@@ -87,7 +84,7 @@ export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
         onPress={onPlanetPress}
       >
         <Text style={styles.planetTitle}>{planet.name}</Text>
-        {isLanded && <Text style={styles.statusText}>Landed</Text>}
+        {!isTraveling && <Text style={styles.statusText}>Landed</Text>}
         {isTraveling && <Text style={styles.statusText}>En Route</Text>}
       </TouchableOpacity>
 
@@ -135,10 +132,10 @@ export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
         </>
       )}
 
-      {isLanded && userPosition.speed === 0 && (
+      {userPosition.speed === 0 && (
         <Text style={styles.landedText}>
-          {userPosition.targetPlanet
-            ? `Complete a habit to launch toward ${userPosition.targetPlanet}`
+          {userPosition.target?.name
+            ? `Complete a habit to launch toward ${userPosition.target.name}`
             : 'Select a destination to begin your journey'}
         </Text>
       )}

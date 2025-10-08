@@ -10,7 +10,12 @@ import {
 } from 'react-native';
 import { planets } from '../planets';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import { calculateDistance, getPlanetPosition, useStore } from '../utils/store';
+import {
+  calculateDistance,
+  getPlanetPosition,
+  useIsTraveling,
+  useStore,
+} from '../utils/store';
 import { PlanetListItem } from './PlanetListItem';
 
 interface PlanetSelectionModalProps {
@@ -24,8 +29,10 @@ export function PlanetSelectionModal({
 }: PlanetSelectionModalProps) {
   const { userPosition, setDestination, completedPlanets } = useStore();
   const [selectedPlanet, setSelectedPlanet] = useState(
-    userPosition.targetPlanet || planets[0].name,
+    userPosition.target?.name || planets[0].name,
   );
+
+  const isTraveling = useIsTraveling();
 
   // Calculate distances and sort planets
   const planetsWithDistance = useMemo(() => {
@@ -45,10 +52,10 @@ export function PlanetSelectionModal({
 
         if (
           planet.name === userPosition.currentLocation &&
-          userPosition.state === 'landed'
+          userPosition.speed === 0
         ) {
           disabledReason = 'You are currently on this planet';
-        } else if (planet.name === userPosition.targetPlanet) {
+        } else if (planet.name === userPosition.target?.name) {
           disabledReason = 'You are already traveling to this planet';
         }
 
@@ -61,14 +68,10 @@ export function PlanetSelectionModal({
   }, [
     userPosition.currentCoordinates,
     userPosition.currentLocation,
-    userPosition.targetPlanet,
-    userPosition.state,
     completedPlanets,
   ]);
 
   const handleStartNewJourney = () => {
-    const isTraveling = userPosition.state === 'traveling';
-
     if (isTraveling) {
       Alert.alert(
         'Change Destination',
