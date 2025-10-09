@@ -1,26 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
+import { Minute } from '../utils/units';
 
-const timerOptions: { label: string; value: number | 'custom' }[] = [
-  { label: '5 minutes', value: 5 },
-  { label: '10 minutes', value: 10 },
-  { label: '20 minutes', value: 20 },
-  { label: '30 minutes', value: 30 },
-  { label: '1 hour', value: 60 },
+const timerOptions: { label: string; value: Minute | 'custom' }[] = [
+  { label: '5 minutes', value: 5 as Minute },
+  { label: '10 minutes', value: 10 as Minute },
+  { label: '20 minutes', value: 20 as Minute },
+  { label: '30 minutes', value: 30 as Minute },
+  { label: '1 hour', value: 60 as Minute },
   { label: 'Custom', value: 'custom' },
 ];
 
 interface TimerSelectionProps {
-  onTimerChange: (minutes: number) => void;
-  initialTimer?: number;
+  onTimerChange: (minutes: Minute) => void;
+  initialTimer?: Minute;
 }
 
 const TimerSelection: React.FC<TimerSelectionProps> = ({
   onTimerChange,
   initialTimer,
 }) => {
-  const [selectedTimer, setSelectedTimer] = useState<number | null>(
+  const [selectedTimer, setSelectedTimer] = useState<Minute | null>(
     initialTimer || null,
   );
 
@@ -28,11 +29,11 @@ const TimerSelection: React.FC<TimerSelectionProps> = ({
     setSelectedTimer(initialTimer || null);
   }, [initialTimer]);
 
-  const handlePress = (value: number | 'custom') => {
+  const handlePress = (value: Minute | 'custom') => {
     // If the pressed button is already selected, deselect it.
     if (value !== 'custom' && value === selectedTimer) {
       setSelectedTimer(null);
-      onTimerChange(0);
+      onTimerChange(0 as Minute);
       return;
     }
 
@@ -50,8 +51,8 @@ const TimerSelection: React.FC<TimerSelectionProps> = ({
             onPress: (text: string | undefined) => {
               const minutes = parseInt(text || '0', 10);
               if (!isNaN(minutes) && minutes > 0) {
-                setSelectedTimer(minutes);
-                onTimerChange(minutes);
+                setSelectedTimer(minutes as Minute);
+                onTimerChange(minutes as Minute);
               }
             },
           },

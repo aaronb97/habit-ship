@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import TimerSelection from './TimerSelection';
+import { Minute } from '../utils/units';
 
 interface CreateHabitModalProps {
   visible: boolean;
@@ -16,7 +17,7 @@ interface CreateHabitModalProps {
   onCreate: (habit: {
     title: string;
     description: string;
-    timerLength?: number;
+    timerLength?: Minute;
   }) => void;
 }
 
@@ -27,7 +28,7 @@ export function CreateHabitModal({
 }: CreateHabitModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [timerLength, setTimerLength] = useState(0);
+  const [timerLength, setTimerLength] = useState(0 as Minute);
 
   const isFormValid = title.trim() !== '';
 
@@ -42,7 +43,7 @@ export function CreateHabitModal({
       // Clear state and close modal
       setTitle('');
       setDescription('');
-      setTimerLength(0);
+      setTimerLength(0 as Minute);
       onClose();
     }
   };
@@ -51,7 +52,7 @@ export function CreateHabitModal({
     // Clear state before closing
     setTitle('');
     setDescription('');
-    setTimerLength(0);
+    setTimerLength(0 as Minute);
     onClose();
   };
 

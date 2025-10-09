@@ -16,6 +16,7 @@ import {
 import * as Notifications from 'expo-notifications';
 import { useCallback } from 'react';
 import { schedulePushNotification } from './schedulePushNotification';
+import { Minute, minutesToHours } from './units';
 
 export type HabitId = string & { __habitId: true };
 
@@ -24,7 +25,11 @@ export type Habit = {
   title: string;
   description?: string;
   completions: string[];
-  timerLength?: number;
+
+  /**
+   * Timer length in minutes
+   */
+  timerLength?: Minute;
 };
 
 // Helper function to calculate distance between two coordinates
@@ -76,7 +81,7 @@ type Store = {
   addHabit: (habit: {
     title: string;
     description?: string;
-    timerLength?: number;
+    timerLength?: Minute;
   }) => void;
 
   editHabit: (
@@ -92,7 +97,7 @@ type Store = {
 
   removeHabit: (habitId: HabitId) => void;
 
-  startTimer: (habitId: HabitId) => void;
+  startTimer: (habitId: HabitId, timerNotificationId: string) => void;
 
   cancelTimer: () => void;
 
@@ -315,15 +320,6 @@ export const useStore = create<Store>()(
 
       startTimer: (habitId: HabitId) => {
         set((state) => {
-          if (state.activeTimer) {
-            Alert.alert(
-              'Timer Already Active',
-              'Another timer is already running. Please stop it before starting a new one.',
-            );
-
-            return;
-          }
-
           state.activeTimer = {
             habitId,
             startTime: new Date().toISOString(),
@@ -427,6 +423,42 @@ export function useCompleteHabit() {
   );
 
   return completeHabit;
+}
+
+export function useStartTimer() {
+  const { startTimer, habits, activeTimer } = useStore();
+
+  const fn = useCallback(
+    async (habitId: HabitId) => {
+      if (activeTimer) {
+        Alert.alert(
+          'Timer Already Active',
+          'Another timer is already running. Please stop it before starting a new one.',
+        );
+
+        return;
+      }
+
+      const habit = habits.find((h) => h.id === habitId);
+
+      console.log(habit?.timerLength);
+
+      if (!habit || !habit.timerLength) {
+        Alert.alert('Timer Error', 'Habit not found or timer length not set');
+        return;
+      }
+
+      const timerId = await schedulePushNotification({
+        title: `Your timer for ${habit.title} is up!`,
+        hours: minutesToHours(habit.timerLength),
+      });
+
+      startTimer(habitId, timerId);
+    },
+    [startTimer, habits, activeTimer],
+  );
+
+  return fn;
 }
 
 export const useIsSetupFinished = () => useStore().isSetupFinished;

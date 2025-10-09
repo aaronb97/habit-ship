@@ -1,4 +1,8 @@
-import { NavigationContainer, Theme, LinkingOptions } from '@react-navigation/native';
+import {
+  NavigationContainer,
+  Theme,
+  LinkingOptions,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { colors, fonts } from '../styles/theme';
 import { Home } from './screens/Home';
@@ -7,6 +11,7 @@ import { SetupFirstHabit } from './screens/SetupFirstHabit';
 import { SetupFirstPlanet } from './screens/SetupFirstPlanet';
 import { WelcomeTransition } from './screens/WelcomeTransition';
 import { useIsSetupFinished } from '../utils/store';
+import { Minute } from '../utils/units';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -20,11 +25,7 @@ export function Navigation({ theme, linking, onReady }: NavigationProps) {
   const isSetupFinished = useIsSetupFinished();
 
   return (
-    <NavigationContainer
-      theme={theme}
-      linking={linking}
-      onReady={onReady}
-    >
+    <NavigationContainer theme={theme} linking={linking} onReady={onReady}>
       <Stack.Navigator
         screenOptions={{
           headerTintColor: colors.primaryText,
@@ -91,7 +92,7 @@ export type RootStackParamList = {
     habit: {
       title: string;
       description?: string;
-      timerLength?: number;
+      timerLength?: Minute;
     };
   };
   WelcomeTransition: undefined;

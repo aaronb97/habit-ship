@@ -14,13 +14,20 @@ import { JourneyDisplay } from '../../components/JourneyDisplay';
 import { LevelProgressBar } from '../../components/LevelProgressBar';
 import { PlanetSelectionModal } from '../../components/PlanetSelectionModal';
 import { colors, fonts, fontSizes } from '../../styles/theme';
-import { Habit, HabitId, useCompleteHabit, useStore } from '../../utils/store';
+import {
+  Habit,
+  HabitId,
+  useCompleteHabit,
+  useStartTimer,
+  useStore,
+} from '../../utils/store';
+import { Minute } from '../../utils/units';
 
 export function Home() {
-  const { habits, editHabit, addHabit, startTimer, clearData, resetAllSwipes } =
-    useStore();
+  const { habits, editHabit, addHabit, clearData, resetAllSwipes } = useStore();
 
   const completeHabit = useCompleteHabit();
+  const startTimer = useStartTimer();
 
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -29,7 +36,7 @@ export function Home() {
   const handleCreate = (habit: {
     title: string;
     description: string;
-    timerLength?: number;
+    timerLength?: Minute;
   }) => {
     addHabit(habit);
     setShowCreateModal(false);
@@ -37,7 +44,7 @@ export function Home() {
 
   const handleEditSave = (
     habitId: HabitId,
-    updates: { title: string; description: string; timerLength?: number },
+    updates: { title: string; description: string; timerLength?: Minute },
   ) => {
     editHabit(habitId, updates);
     setEditingHabit(null);
@@ -58,9 +65,7 @@ export function Home() {
           renderItem={({ item }) => (
             <HabitItem
               habit={item}
-              onComplete={async () => {
-                await completeHabit(item.id);
-              }}
+              onComplete={() => completeHabit(item.id)}
               onEdit={() => setEditingHabit(item)}
               onStartTimer={() => startTimer(item.id)}
             />

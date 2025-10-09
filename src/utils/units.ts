@@ -8,3 +8,14 @@ export const metersToFeet = (meters: Meter): Foot => {
 export const feetToMeters = (feet: Foot): Meter => {
   return (feet / 3.28084) as Meter;
 };
+
+export type Minute = number & { __unit: 'minute' };
+export type Hour = number & { __unit: 'hour' };
+
+export const minutesToHours = (minutes: Minute): Hour => {
+  return (minutes / 60) as Hour;
+};
+
+export const hoursToMinutes = (hours: Hour): Minute => {
+  return (hours * 60) as Minute;
+};
