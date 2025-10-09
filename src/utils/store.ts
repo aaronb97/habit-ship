@@ -16,7 +16,7 @@ import {
 import * as Notifications from 'expo-notifications';
 import { useCallback } from 'react';
 import { schedulePushNotification } from './schedulePushNotification';
-import { Minute, minutesToHours } from './units';
+import { Hour, Minute, minutesToHours } from './units';
 
 export type HabitId = string & { __habitId: true };
 
@@ -477,14 +477,14 @@ function getTimeRemaining(
   speed: number = position.speed,
 ) {
   if (!position.target) {
-    return 0;
+    return 0 as Hour;
   }
 
   const timeRemaining =
     calculateDistance(getCurrentPosition(position), position.target.position) /
     speed;
 
-  return timeRemaining;
+  return timeRemaining as Hour;
 }
 
 export function useTimeRemaining() {

@@ -1,4 +1,5 @@
 import * as Notifications from 'expo-notifications';
+import { Hour } from './units';
 
 export async function schedulePushNotification({
   title,
@@ -7,7 +8,7 @@ export async function schedulePushNotification({
 }: {
   title: string;
   body?: string;
-  hours: number;
+  hours: Hour;
 }) {
   return Notifications.scheduleNotificationAsync({
     content: {
