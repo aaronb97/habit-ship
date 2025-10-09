@@ -193,12 +193,7 @@ export const useStore = create<Store>()(
               state.lastUpdateTime = Date.now();
 
               // Calculate initial distance
-              const currentPos =
-                state.userPosition.currentCoordinates ||
-                getPlanetPosition(
-                  state.userPosition.currentLocation || 'Earth',
-                );
-
+              const currentPos = getCurrentPosition(state.userPosition);
               const targetPos = state.userPosition.target.position;
 
               state.userPosition.initialDistance = calculateDistance(
@@ -436,6 +431,13 @@ export const useIsSetupFinished = () => useStore().isSetupFinished;
 export const useIsSetupInProgress = () => !useStore().isSetupFinished;
 export const useUserLevel = () => useStore().userLevel;
 
+function getCurrentPosition(position: UserPosition) {
+  return (
+    position.currentCoordinates ??
+    getPlanetPosition(position.currentLocation ?? 'Earth')
+  );
+}
+
 function getTimeRemaining(
   position: UserPosition,
   speed: number = position.speed,
@@ -445,11 +447,8 @@ function getTimeRemaining(
   }
 
   const timeRemaining =
-    calculateDistance(
-      position.currentCoordinates ??
-        getPlanetPosition(position.currentLocation!),
-      position.target.position,
-    ) / speed;
+    calculateDistance(getCurrentPosition(position), position.target.position) /
+    speed;
 
   return timeRemaining;
 }
