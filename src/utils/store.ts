@@ -66,7 +66,7 @@ type Store = {
   swipedHabitId?: HabitId;
   lastUpdateTime?: number;
 
-  notificationId?: string;
+  planetLandedNotificationId?: string;
 
   setIsSetupFinished: (value: boolean) => void;
   setDestination: (planetName: string) => void;
@@ -388,7 +388,7 @@ export const useStore = create<Store>()(
 export function useCompleteHabit() {
   const {
     userPosition,
-    notificationId,
+    planetLandedNotificationId,
     completeHabit: _completeHabit,
   } = useStore();
 
@@ -398,9 +398,11 @@ export function useCompleteHabit() {
       const nextSpeed = isLaunching ? 50000 : userPosition.speed * 1.2;
       const boostType = isLaunching ? ('LAUNCH' as const) : ('BOOST' as const);
 
-      if (notificationId) {
+      if (planetLandedNotificationId) {
         try {
-          await Notifications.cancelScheduledNotificationAsync(notificationId);
+          await Notifications.cancelScheduledNotificationAsync(
+            planetLandedNotificationId,
+          );
         } catch (e) {
           console.warn('Failed to cancel notification', e);
         }
@@ -414,14 +416,14 @@ export function useCompleteHabit() {
           hours: timeRemaining,
         });
 
-        useStore.setState({ notificationId: id });
+        useStore.setState({ planetLandedNotificationId: id });
       } catch (e) {
         console.warn('Failed to schedule notification', e);
       }
 
       _completeHabit(habitId, nextSpeed, boostType);
     },
-    [userPosition, notificationId, _completeHabit],
+    [userPosition, planetLandedNotificationId, _completeHabit],
   );
 
   return completeHabit;
