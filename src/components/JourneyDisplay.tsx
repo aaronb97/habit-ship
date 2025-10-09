@@ -46,6 +46,7 @@ export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
   const isTraveling = useIsTraveling();
 
   const planet = planets.find((p) => p.name === displayLocation);
+  const timeRemaining = useTimeRemaining();
 
   if (!planet) {
     console.error('Encountered invalid planet, resetting data');
@@ -56,7 +57,6 @@ export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
   // Calculate current stats if traveling
   let distanceRemaining = 0;
   let distancePercentage = 0;
-  const timeRemaining = useTimeRemaining();
 
   if (
     userPosition.target &&

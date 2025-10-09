@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   Alert,
   Modal,
@@ -35,41 +35,38 @@ export function PlanetSelectionModal({
   const isTraveling = useIsTraveling();
 
   // Calculate distances and sort planets
-  const planetsWithDistance = useMemo(() => {
-    const currentCoords = userPosition.currentCoordinates || {
-      x: 0,
-      y: 0,
-      z: 0,
-    };
+  const currentCoords = userPosition.currentCoordinates || {
+    x: 0,
+    y: 0,
+    z: 0,
+  };
 
-    return planets
-      .map((planet) => {
-        const planetCoords = getPlanetPosition(planet.name);
-        const distance = calculateDistance(currentCoords, planetCoords);
+  const planetsWithDistance = planets
+    .filter(
+      (planet) => isTraveling || planet.name !== userPosition.currentLocation,
+    )
+    .map((planet) => {
+      const planetCoords = getPlanetPosition(planet.name);
+      const distance = calculateDistance(currentCoords, planetCoords);
 
-        // Determine if planet should be disabled and why
-        let disabledReason: string | undefined;
+      // Determine if planet should be disabled and why
+      let disabledReason: string | undefined;
 
-        if (
-          planet.name === userPosition.currentLocation &&
-          userPosition.speed === 0
-        ) {
-          disabledReason = 'You are currently on this planet';
-        } else if (planet.name === userPosition.target?.name) {
-          disabledReason = 'You are already traveling to this planet';
-        }
+      if (
+        planet.name === userPosition.currentLocation &&
+        userPosition.speed === 0
+      ) {
+        disabledReason = 'You are currently on this planet';
+      } else if (planet.name === userPosition.target?.name) {
+        disabledReason = 'You are already traveling to this planet';
+      }
 
-        // Check if planet has been visited
-        const isVisited = completedPlanets.includes(planet.name) || false;
+      // Check if planet has been visited
+      const isVisited = completedPlanets.includes(planet.name) || false;
 
-        return { planet, distance, disabledReason, isVisited };
-      })
-      .sort((a, b) => a.distance - b.distance);
-  }, [
-    userPosition.currentCoordinates,
-    userPosition.currentLocation,
-    completedPlanets,
-  ]);
+      return { planet, distance, disabledReason, isVisited };
+    })
+    .sort((a, b) => a.distance - b.distance);
 
   const handleStartNewJourney = () => {
     if (isTraveling) {

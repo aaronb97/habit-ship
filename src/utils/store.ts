@@ -13,6 +13,9 @@ import {
   calculateLevel,
   getCurrentLevelXP,
 } from '../types';
+import * as Notifications from 'expo-notifications';
+import { useCallback } from 'react';
+import { schedulePushNotification } from './schedulePushNotification';
 
 export type HabitId = string & { __habitId: true };
 
@@ -81,7 +84,11 @@ type Store = {
     editedHabit: Partial<Omit<Habit, 'id'>>,
   ) => void;
 
-  completeHabit: (habitId: HabitId) => void;
+  completeHabit: (
+    habitId: HabitId,
+    nextSpeed: number,
+    boostType: 'LAUNCH' | 'BOOST',
+  ) => void;
 
   removeHabit: (habitId: HabitId) => void;
 
@@ -152,7 +159,11 @@ export const useStore = create<Store>()(
         });
       },
 
-      completeHabit: (habitId: HabitId) => {
+      completeHabit: (
+        habitId: HabitId,
+        nextSpeed: number,
+        boostType: 'LAUNCH' | 'BOOST',
+      ) => {
         set((state) => {
           const habitToComplete = state.habits.find((h) => h.id === habitId);
           if (habitToComplete) {
@@ -173,11 +184,10 @@ export const useStore = create<Store>()(
             state.userLevel.totalXP,
           );
 
-          // Launch/speed mechanics
-          if (state.userPosition.speed === 0) {
-            // Launch with initial speed of 50,000 km/h
-            state.userPosition.speed = 50000;
+          state.userPosition.speed = nextSpeed;
 
+          // Launch/speed mechanics
+          if (boostType === 'LAUNCH') {
             if (state.userPosition.target) {
               state.userPosition.launchTime = new Date().toISOString();
               state.lastUpdateTime = Date.now();
@@ -198,14 +208,6 @@ export const useStore = create<Store>()(
 
               state.userPosition.currentCoordinates = currentPos;
             }
-          } else if (state.userPosition.target) {
-            if (state.userPosition.speed === 0) {
-              state.userPosition.speed = 50000;
-              return;
-            }
-
-            // Increase speed by 1.2x
-            state.userPosition.speed *= 1.2;
           }
         });
       },
@@ -385,24 +387,77 @@ export const useStore = create<Store>()(
   ),
 );
 
+/**
+ * Hook that calculates the next speed, clears existing land notification, sets next notification using new speed, and completes habit
+ */
+export function useCompleteHabit() {
+  const {
+    userPosition,
+    notificationId,
+    completeHabit: _completeHabit,
+  } = useStore();
+
+  const completeHabit = useCallback(
+    async (habitId: HabitId) => {
+      const isLaunching = userPosition.speed === 0;
+      const nextSpeed = isLaunching ? 50000 : userPosition.speed * 1.2;
+      const boostType = isLaunching ? ('LAUNCH' as const) : ('BOOST' as const);
+
+      if (notificationId) {
+        try {
+          await Notifications.cancelScheduledNotificationAsync(notificationId);
+        } catch (e) {
+          console.warn('Failed to cancel notification', e);
+        }
+      }
+
+      const timeRemaining = getTimeRemaining(userPosition, nextSpeed);
+
+      try {
+        const id = await schedulePushNotification({
+          title: `You have landed on ${userPosition.target!.name}!`,
+          hours: timeRemaining,
+        });
+
+        useStore.setState({ notificationId: id });
+      } catch (e) {
+        console.warn('Failed to schedule notification', e);
+      }
+
+      _completeHabit(habitId, nextSpeed, boostType);
+    },
+    [userPosition, notificationId, _completeHabit],
+  );
+
+  return completeHabit;
+}
+
 export const useIsSetupFinished = () => useStore().isSetupFinished;
 export const useIsSetupInProgress = () => !useStore().isSetupFinished;
 export const useUserLevel = () => useStore().userLevel;
 
-export function useTimeRemaining() {
-  const { userPosition } = useStore();
-
-  if (!userPosition.target || !userPosition.currentCoordinates) {
+function getTimeRemaining(
+  position: UserPosition,
+  speed: number = position.speed,
+) {
+  if (!position.target) {
     return 0;
   }
 
   const timeRemaining =
     calculateDistance(
-      userPosition.currentCoordinates,
-      userPosition.target.position,
-    ) / userPosition.speed;
+      position.currentCoordinates ??
+        getPlanetPosition(position.currentLocation!),
+      position.target.position,
+    ) / speed;
 
   return timeRemaining;
+}
+
+export function useTimeRemaining() {
+  const { userPosition } = useStore();
+
+  return getTimeRemaining(userPosition);
 }
 
 export function useIsTraveling() {

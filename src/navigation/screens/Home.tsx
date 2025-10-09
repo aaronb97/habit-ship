@@ -14,18 +14,13 @@ import { JourneyDisplay } from '../../components/JourneyDisplay';
 import { LevelProgressBar } from '../../components/LevelProgressBar';
 import { PlanetSelectionModal } from '../../components/PlanetSelectionModal';
 import { colors, fonts, fontSizes } from '../../styles/theme';
-import { Habit, HabitId, useStore } from '../../utils/store';
+import { Habit, HabitId, useCompleteHabit, useStore } from '../../utils/store';
 
 export function Home() {
-  const {
-    habits,
-    completeHabit,
-    editHabit,
-    addHabit,
-    startTimer,
-    clearData,
-    resetAllSwipes,
-  } = useStore();
+  const { habits, editHabit, addHabit, startTimer, clearData, resetAllSwipes } =
+    useStore();
+
+  const completeHabit = useCompleteHabit();
 
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -63,7 +58,9 @@ export function Home() {
           renderItem={({ item }) => (
             <HabitItem
               habit={item}
-              onComplete={() => completeHabit(item.id)}
+              onComplete={async () => {
+                await completeHabit(item.id);
+              }}
               onEdit={() => setEditingHabit(item)}
               onStartTimer={() => startTimer(item.id)}
             />

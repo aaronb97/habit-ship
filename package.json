@@ -28,6 +28,7 @@
     "expo-dev-client": "~5.2.4",
     "expo-font": "^14.0.8",
     "expo-linking": "~7.1.7",
+    "expo-notifications": "~0.32.12",
     "expo-splash-screen": "~0.30.7",
     "expo-system-ui": "~5.0.6",
     "immer": "^10.1.3",
@@ -41,7 +42,9 @@
     "react-native-screens": "~4.11.1",
     "react-native-web": "^0.20.0",
     "react-timer-hook": "^4.0.5",
-    "zustand": "^5.0.8"
+    "zustand": "^5.0.8",
+    "expo-constants": "~18.0.9",
+    "expo-device": "~8.0.9"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
