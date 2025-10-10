@@ -63,7 +63,11 @@ export function Home() {
           renderItem={({ item }) => (
             <HabitItem
               habit={item}
-              onComplete={() => completeHabit(item.id)}
+              onComplete={() =>
+                completeHabit(item.id).catch((e) => {
+                  console.error(e);
+                })
+              }
               onEdit={() => setEditingHabit(item)}
               onStartTimer={() => startTimer(item.id)}
             />
