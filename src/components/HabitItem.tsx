@@ -67,7 +67,6 @@ export function HabitItem({
   const translateX = useSharedValue(0);
   const isThisHabitSwiped = swipedHabitId === habit.id;
 
-
   const resetSwipe = () => {
     translateX.value = withTiming(0);
     setSwipedHabit(undefined);
@@ -204,7 +203,6 @@ export function HabitItem({
     };
   });
 
-
   const timerButton = habit.timerLength ? (
     <TouchableOpacity
       style={[styles.actionButton, { backgroundColor: colors.accent }]}
@@ -313,9 +311,7 @@ export function HabitItem({
               onLongPress={handleEdit}
             >
               <Animated.View style={[styles.timerWipe, animatedWipeStyle]} />
-              <View style={styles.contentContainer}>
-                {renderContent()}
-              </View>
+              <View style={styles.contentContainer}>{renderContent()}</View>
             </TouchableOpacity>
           </Animated.View>
         </GestureDetector>
@@ -359,8 +355,9 @@ const styles = StyleSheet.create({
   habitItem: {
     backgroundColor: colors.card,
     borderRadius: 16,
+    padding: 4,
     overflow: 'hidden',
-    height: 64,
+    minHeight: 64,
     display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
