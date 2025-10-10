@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   Gesture,
@@ -10,15 +10,12 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-  withSequence,
-  withDelay,
   Easing,
   runOnJS,
 } from 'react-native-reanimated';
 import { useTimer } from 'react-timer-hook';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { Habit, useStore } from '../utils/store';
-import { XP_REWARDS } from '../types';
 
 type HabitItemProps = {
   habit: Habit;
@@ -70,16 +67,6 @@ export function HabitItem({
   const translateX = useSharedValue(0);
   const isThisHabitSwiped = swipedHabitId === habit.id;
 
-  // Animation values for completion
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [showXPParticle, setShowXPParticle] = useState(false);
-  const buttonScale = useSharedValue(1);
-  const wipeProgress = useSharedValue(0);
-  const xpParticleOpacity = useSharedValue(0);
-  const xpParticleTranslateY = useSharedValue(0);
-  const preWipeTextOpacity = useSharedValue(1);
-  const postWipeTextOpacity = useSharedValue(0);
-  const timerButtonTranslateX = useSharedValue(0);
 
   const resetSwipe = () => {
     translateX.value = withTiming(0);
@@ -182,80 +169,8 @@ export function HabitItem({
   };
 
   const handleCompleteHabit = () => {
-    if (isCompleted || isAnimating) return;
-
-    setIsAnimating(true);
-    setShowXPParticle(true);
-
-    // Start button shrink animation
-    buttonScale.value = withTiming(0, {
-      duration: 300,
-      easing: Easing.out(Easing.quad),
-    });
-
-    // Fade out pre-wipe text
-    preWipeTextOpacity.value = withTiming(0, {
-      duration: 200,
-      easing: Easing.out(Easing.quad),
-    });
-
-    // Start XP particle animation
-    xpParticleOpacity.value = withSequence(
-      withTiming(1, { duration: 800 }),
-      withTiming(0, { duration: 800 }),
-    );
-
-    xpParticleTranslateY.value = withSequence(
-      withTiming(-40, { duration: 2000 }),
-    );
-
-    // Start wipe animation after button shrinks
-    wipeProgress.value = withDelay(
-      200,
-      withTiming(1, {
-        duration: 400,
-        easing: Easing.out(Easing.quad),
-      }),
-    );
-
-    console.log(wipeProgress.value);
-
-    // Animate timer button from left to right during wipe
-    if (habit.timerLength) {
-      timerButtonTranslateX.value = withDelay(
-        300,
-        withTiming(54, {
-          duration: 300,
-          easing: Easing.out(Easing.quad),
-        }),
-      );
-    }
-
-    // Fade in post-wipe text during wipe (start earlier for smoother transition)
-    postWipeTextOpacity.value = withDelay(
-      300,
-      withTiming(1, {
-        duration: 400,
-        easing: Easing.out(Easing.quad),
-      }),
-    );
-
-    // Complete the habit after animations
-    setTimeout(() => {
-      onComplete();
-      setIsAnimating(false);
-
-      // Reset animation values
-      buttonScale.value = 1;
-      wipeProgress.value = 0;
-      preWipeTextOpacity.value = 1;
-      postWipeTextOpacity.value = 0;
-      timerButtonTranslateX.value = 0;
-    }, 800);
-
-    setTimeout(() => {
-      setShowXPParticle(false);
-    }, 2000);
+    if (isCompleted) return;
+    onComplete();
   };
 
   const panGesture = Gesture.Pan()
@@ -289,57 +204,17 @@ export function HabitItem({
     };
   });
 
-  // Animation styles for completion
-  const buttonAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: buttonScale.value }],
-      opacity: buttonScale.value,
-    };
-  });
-
-  const completionWipeStyle = useAnimatedStyle(() => {
-    return {
-      width: `${wipeProgress.value * 100}%`,
-    };
-  });
-
-  const xpParticleStyle = useAnimatedStyle(() => {
-    return {
-      opacity: xpParticleOpacity.value,
-      transform: [{ translateY: xpParticleTranslateY.value }],
-    };
-  });
-
-  const preWipeTextStyle = useAnimatedStyle(() => {
-    return {
-      opacity: preWipeTextOpacity.value,
-    };
-  });
-
-  const postWipeTextStyle = useAnimatedStyle(() => {
-    return {
-      opacity: postWipeTextOpacity.value,
-    };
-  });
-
-  const timerButtonAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateX: timerButtonTranslateX.value }],
-    };
-  });
 
   const timerButton = habit.timerLength ? (
-    <Animated.View style={timerButtonAnimatedStyle}>
-      <TouchableOpacity
-        style={[styles.actionButton, { backgroundColor: colors.accent }]}
-        onPress={handleStartTimer}
-      >
-        <MaterialIcons name="timer" size={20} color={colors.white} />
-        <Text style={styles.actionButtonText}>{`${
-          habit.timerLength / 60
-        } min`}</Text>
-      </TouchableOpacity>
-    </Animated.View>
+    <TouchableOpacity
+      style={[styles.actionButton, { backgroundColor: colors.accent }]}
+      onPress={handleStartTimer}
+    >
+      <MaterialIcons name="timer" size={20} color={colors.white} />
+      <Text style={styles.actionButtonText}>{`${
+        habit.timerLength / 60
+      } min`}</Text>
+    </TouchableOpacity>
   ) : null;
 
   const renderContent = () => {
@@ -382,7 +257,7 @@ export function HabitItem({
 
     return (
       <>
-        <Animated.View style={[styles.habitInfo, preWipeTextStyle]}>
+        <View style={styles.habitInfo}>
           <View style={styles.habitTitleRow}>
             <Text style={styles.habitTitle}>{habit.title}</Text>
           </View>
@@ -394,18 +269,15 @@ export function HabitItem({
               {completionCountText}
             </Text>
           ) : null}
-        </Animated.View>
+        </View>
         <View style={styles.actionsContainer}>
           {timerButton}
-          <Animated.View style={buttonAnimatedStyle}>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.primary }]}
-              disabled={isAnimating}
-              onPress={handleCompleteHabit}
-            >
-              <MaterialIcons name="check" size={24} color={colors.white} />
-            </TouchableOpacity>
-          </Animated.View>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.primary }]}
+            onPress={handleCompleteHabit}
+          >
+            <MaterialIcons name="check" size={24} color={colors.white} />
+          </TouchableOpacity>
         </View>
       </>
     );
@@ -441,39 +313,8 @@ export function HabitItem({
               onLongPress={handleEdit}
             >
               <Animated.View style={[styles.timerWipe, animatedWipeStyle]} />
-              <Animated.View
-                style={[styles.completionWipe, completionWipeStyle]}
-              />
               <View style={styles.contentContainer}>
                 {renderContent()}
-                {isAnimating && (
-                  <Animated.View
-                    style={[styles.completedOverlay, postWipeTextStyle]}
-                  >
-                    <View style={styles.completedHabitInfo}>
-                      <View style={styles.habitTitleRow}>
-                        <Text
-                          style={[
-                            styles.habitTitle,
-                            styles.completedHabitTitle,
-                          ]}
-                        >
-                          {habit.title}
-                        </Text>
-                      </View>
-                      <Text style={styles.completedTodayText}>
-                        {formatCompletionCount(habit.completions.length + 1)}
-                      </Text>
-                    </View>
-                  </Animated.View>
-                )}
-                {showXPParticle && (
-                  <Animated.View style={[styles.xpParticle, xpParticleStyle]}>
-                    <Text style={styles.xpParticleText}>
-                      +{XP_REWARDS.HABIT_COMPLETION} XP
-                    </Text>
-                  </Animated.View>
-                )}
               </View>
             </TouchableOpacity>
           </Animated.View>
