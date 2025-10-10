@@ -1,9 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+
 import { planets } from '../planets';
+import { schedulePushNotification } from './schedulePushNotification';
 import {
   Coordinates,
   UserLevel,
@@ -13,10 +15,11 @@ import {
   calculateLevel,
   getCurrentLevelXP,
 } from '../types';
-import * as Notifications from 'expo-notifications';
-import { useCallback } from 'react';
-import { schedulePushNotification } from './schedulePushNotification';
-import { Hour, Minute, minutesToHours } from './units';
+import { Minute, minutesToHours, Hour } from './units';
+
+// =================================================================
+// TYPES
+// =================================================================
 
 export type HabitId = string & { __habitId: true };
 
@@ -25,29 +28,25 @@ export type Habit = {
   title: string;
   description?: string;
   completions: string[];
-
-  /**
-   * Timer length in minutes
-   */
   timerLength?: Minute;
 };
 
-// Helper function to calculate distance between two coordinates
+// =================================================================
+// HELPER FUNCTIONS
+// =================================================================
+
 export function calculateDistance(a: Coordinates, b: Coordinates): number {
   return Math.sqrt(
     Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2) + Math.pow(b.z - a.z, 2),
   );
 }
 
-// Helper function to get planet position for a given date
 export function getPlanetPosition(
   planetName: string,
   date = new Date().toISOString().split('T')[0],
 ): Coordinates {
   const planet = planets.find((p) => p.name === planetName);
   if (!planet) throw new Error(`Planet ${planetName} not found`);
-
-  // Try to get position for the given date, or use first available date
   const position =
     planet.dailyPositions[date] ??
     planet.dailyPositions[Object.keys(planet.dailyPositions).at(-1) as string];
@@ -55,6 +54,10 @@ export function getPlanetPosition(
   const [x, y, z] = position;
   return { x, y, z };
 }
+
+// =================================================================
+// STORE DEFINITION
+// =================================================================
 
 type Store = {
   isSetupFinished: boolean;
@@ -71,14 +74,12 @@ type Store = {
   };
   swipedHabitId?: HabitId;
   lastUpdateTime?: number;
-
   planetLandedNotificationId?: string;
 
+  // Actions
   setIsSetupFinished: (value: boolean) => void;
   setDestination: (planetName: string) => void;
-  completePlanet: (planetName: string) => void;
   updateTravelPosition: () => void;
-
   addHabit: (habit: {
     title: string;
     description?: string;
@@ -90,28 +91,19 @@ type Store = {
     editedHabit: Partial<Omit<Habit, 'id'>>,
   ) => void;
 
-  completeHabit: (
-    habitId: HabitId,
-    nextSpeed: number,
-    boostType: 'LAUNCH' | 'BOOST',
-  ) => void;
-
   removeHabit: (habitId: HabitId) => void;
-
-  startTimer: (habitId: HabitId, timerNotificationId: string) => void;
-
-  cancelTimer: () => void;
-
   setSwipedHabit: (habitId?: HabitId) => void;
-
   resetAllSwipes: () => void;
-
   addXP: (
     amount: number,
     source: 'habit_completion' | 'planet_completion',
   ) => void;
-
   clearData: () => void;
+
+  completeHabit: (habitId: HabitId) => Promise<void>;
+  startTimer: (habitId: HabitId) => Promise<boolean>; // Returns true on success, false on failure
+  cancelTimer: () => Promise<void>;
+  expireTimer: () => void; // Sync action is sufficient here
 };
 
 const initialData = {
@@ -130,19 +122,17 @@ const initialData = {
   xpHistory: [],
   idCount: 0,
   swipedHabitId: undefined,
+  activeTimer: undefined,
+  lastUpdateTime: undefined,
+  planetLandedNotificationId: undefined,
 } satisfies Partial<Store>;
 
 export const useStore = create<Store>()(
   persist(
-    immer((set) => ({
+    immer((set, get) => ({
       ...initialData,
 
-      setIsSetupFinished: (value: boolean) => {
-        set((state) => {
-          state.isSetupFinished = value;
-        });
-      },
-
+      setIsSetupFinished: (value) => set({ isSetupFinished: value }),
       addHabit: (habit) => {
         set((state) => {
           state.habits.push({
@@ -165,78 +155,6 @@ export const useStore = create<Store>()(
         });
       },
 
-      completeHabit: (
-        habitId: HabitId,
-        nextSpeed: number,
-        boostType: 'LAUNCH' | 'BOOST',
-      ) => {
-        set((state) => {
-          const habitToComplete = state.habits.find((h) => h.id === habitId);
-          if (habitToComplete) {
-            habitToComplete.completions.push(new Date().toISOString());
-          }
-
-          // Award XP for habit completion
-          const xpGain: XPGain = {
-            amount: XP_REWARDS.HABIT_COMPLETION,
-            source: 'habit_completion',
-            timestamp: new Date().toISOString(),
-          };
-
-          state.xpHistory.push(xpGain);
-          state.userLevel.totalXP += xpGain.amount;
-          state.userLevel.level = calculateLevel(state.userLevel.totalXP);
-          state.userLevel.currentXP = getCurrentLevelXP(
-            state.userLevel.totalXP,
-          );
-
-          state.userPosition.speed = nextSpeed;
-
-          // Launch/speed mechanics
-          if (boostType === 'LAUNCH') {
-            if (state.userPosition.target) {
-              state.userPosition.launchTime = new Date().toISOString();
-              state.lastUpdateTime = Date.now();
-
-              // Calculate initial distance
-              const currentPos = getCurrentPosition(state.userPosition);
-              const targetPos = state.userPosition.target.position;
-
-              state.userPosition.initialDistance = calculateDistance(
-                currentPos,
-                targetPos,
-              );
-
-              state.userPosition.currentCoordinates = currentPos;
-            }
-          }
-        });
-      },
-
-      completePlanet: (planetName: string) => {
-        set((state) => {
-          if (state.completedPlanets.includes(planetName)) {
-            return;
-          }
-
-          state.completedPlanets.push(planetName);
-
-          // Award XP for planet completion
-          const xpGain: XPGain = {
-            amount: XP_REWARDS.PLANET_COMPLETION,
-            source: 'planet_completion',
-            timestamp: new Date().toISOString(),
-          };
-
-          state.xpHistory.push(xpGain);
-          state.userLevel.totalXP += xpGain.amount;
-          state.userLevel.level = calculateLevel(state.userLevel.totalXP);
-          state.userLevel.currentXP = getCurrentLevelXP(
-            state.userLevel.totalXP,
-          );
-        });
-      },
-
       removeHabit: (habitId) => {
         set((state) => {
           const habitIndex = state.habits.findIndex((h) => h.id === habitId);
@@ -246,48 +164,189 @@ export const useStore = create<Store>()(
         });
       },
 
-      setDestination: (planetName: string) => {
+      setDestination: (planetName) => {
         set((state) => {
           state.userPosition.target = {
             name: planetName,
             position: getPlanetPosition(planetName),
           };
 
-          state.userPosition.speed = 0; // Reset speed when selecting new destination
+          state.userPosition.speed = 0;
+        });
+      },
+      setSwipedHabit: (habitId) => set({ swipedHabitId: habitId }),
+      resetAllSwipes: () => set({ swipedHabitId: undefined }),
+      clearData: () => set(initialData),
+
+      // --- Complex/Async Actions ---
+
+      /**
+       * Completes a habit, awards XP, updates travel speed, and reschedules notifications.
+       */
+      completeHabit: async (habitId) => {
+        const { userPosition, planetLandedNotificationId } = get();
+        const isLaunching = userPosition.speed === 0;
+        const nextSpeed = isLaunching ? 50000 : userPosition.speed * 1.2;
+        const boostType = isLaunching
+          ? ('LAUNCH' as const)
+          : ('BOOST' as const);
+
+        if (planetLandedNotificationId) {
+          try {
+            await Notifications.cancelScheduledNotificationAsync(
+              planetLandedNotificationId,
+            );
+          } catch (e) {
+            console.warn('Failed to cancel notification', e);
+          }
+        }
+
+        const timeRemaining = getTimeRemaining(userPosition, nextSpeed);
+        let newNotificationId: string | undefined;
+        if (userPosition.target) {
+          try {
+            newNotificationId = await schedulePushNotification({
+              title: `You have landed on ${userPosition.target.name}!`,
+              hours: timeRemaining,
+            });
+          } catch (e) {
+            console.warn('Failed to schedule notification', e);
+          }
+        }
+
+        set((state) => {
+          const habitToComplete = state.habits.find((h) => h.id === habitId);
+          if (habitToComplete) {
+            habitToComplete.completions.push(new Date().toISOString());
+          }
+
+          state.addXP(XP_REWARDS.HABIT_COMPLETION, 'habit_completion');
+          state.userPosition.speed = nextSpeed;
+
+          if (newNotificationId) {
+            state.planetLandedNotificationId = newNotificationId;
+          }
+
+          if (boostType === 'LAUNCH' && state.userPosition.target) {
+            state.userPosition.launchTime = new Date().toISOString();
+            state.lastUpdateTime = Date.now();
+            const currentPos = getCurrentPosition(state.userPosition);
+            const targetPos = state.userPosition.target.position;
+            state.userPosition.initialDistance = calculateDistance(
+              currentPos,
+              targetPos,
+            );
+
+            state.userPosition.currentCoordinates = currentPos;
+          }
         });
       },
 
+      /**
+       * Starts a timer for a specific habit if one isn't already running.
+       * @returns `true` if the timer was started successfully, `false` otherwise.
+       */
+      startTimer: async (habitId) => {
+        const { activeTimer, habits } = get();
+
+        if (activeTimer) {
+          console.warn(
+            'Timer Already Active: Another timer is already running.',
+          );
+
+          return false; // Indicate failure
+        }
+
+        const habit = habits.find((h) => h.id === habitId);
+        if (!habit || !habit.timerLength) {
+          console.error('Timer Error: Habit not found or timer length not set');
+          return false; // Indicate failure
+        }
+
+        try {
+          const timerId = await schedulePushNotification({
+            title: `Your timer for ${habit.title} is up!`,
+            hours: minutesToHours(habit.timerLength),
+          });
+
+          set({
+            activeTimer: {
+              habitId,
+              startTime: new Date().toISOString(),
+              timerNotificationId: timerId,
+            },
+          });
+
+          return true; // Indicate success
+        } catch (e) {
+          console.error('Failed to schedule timer notification', e);
+          return false; // Indicate failure
+        }
+      },
+
+      /**
+       * Cancels the currently active timer and its scheduled notification.
+       */
+      cancelTimer: async () => {
+        const { activeTimer } = get();
+        if (activeTimer?.timerNotificationId) {
+          try {
+            await Notifications.cancelScheduledNotificationAsync(
+              activeTimer.timerNotificationId,
+            );
+          } catch (e) {
+            console.warn('Failed to cancel timer notification', e);
+          }
+        }
+
+        set({ activeTimer: undefined });
+      },
+
+      /**
+       * Clears the active timer from state without trying to cancel the notification.
+       * (Used after a notification has already fired).
+       */
+      expireTimer: () => {
+        set({ activeTimer: undefined });
+      },
+
+      /**
+       * This is a placeholder for the more complex logic you had.
+       * It's often better to have a dedicated `completePlanet` action.
+       */
+      completePlanet: (planetName: string) => {
+        set((state) => {
+          if (state.completedPlanets.includes(planetName)) return;
+          state.completedPlanets.push(planetName);
+          state.addXP(XP_REWARDS.PLANET_COMPLETION, 'planet_completion');
+        });
+      },
+
+      /**
+       * Updates the user's position during travel. If destination is reached,
+       * completes the planet and resets travel state.
+       */
       updateTravelPosition: () => {
         set((state) => {
-          if (
-            !state.userPosition.target ||
-            !state.userPosition.launchTime ||
-            !state.userPosition.currentCoordinates
-          ) {
-            return;
-          }
+          const { lastUpdateTime } = state;
+          const { target, launchTime, currentCoordinates, speed } =
+            state.userPosition;
 
-          // Calculate time elapsed since last update (in hours)
+          if (!target || !launchTime || !currentCoordinates) return;
+
           const now = Date.now();
-          const lastUpdate = state.lastUpdateTime || now;
-          const millisecondsElapsed = now - lastUpdate;
-          const hoursElapsed = millisecondsElapsed / 3600000; // 1 hour = 3,600,000 ms
+          const lastUpdate = lastUpdateTime || now;
+          const hoursElapsed = (now - lastUpdate) / 3600000;
+          const distanceTraveled = speed * hoursElapsed;
 
-          // Calculate distance traveled since last update (speed in km/h * hours)
-          const distanceTraveledThisUpdate =
-            state.userPosition.speed * hoursElapsed;
-
-          // Get target position
-          const targetPos = state.userPosition.target.position;
-
-          // Calculate current distance to target
-          const currentPos = state.userPosition.currentCoordinates;
+          const targetPos = target.position;
+          const currentPos = currentCoordinates;
           const distanceRemaining = calculateDistance(currentPos, targetPos);
 
-          if (distanceTraveledThisUpdate >= distanceRemaining) {
-            // Arrived at destination
-            state.userPosition.currentLocation = state.userPosition.target.name;
-
+          if (distanceTraveled >= distanceRemaining) {
+            // Arrived
+            const destinationName = target.name;
+            state.userPosition.currentLocation = destinationName;
             state.userPosition.currentCoordinates = undefined;
             state.userPosition.target = undefined;
             state.userPosition.speed = 0;
@@ -295,17 +354,17 @@ export const useStore = create<Store>()(
             state.userPosition.initialDistance = undefined;
             state.lastUpdateTime = undefined;
 
-            // Complete planet
-            if (state.userPosition.currentLocation) {
-              state.completePlanet(state.userPosition.currentLocation);
+            // Complete the planet directly
+            if (!state.completedPlanets.includes(destinationName)) {
+              state.completedPlanets.push(destinationName);
+              state.addXP(XP_REWARDS.PLANET_COMPLETION, 'planet_completion');
             }
           } else {
-            // Update current position incrementally
+            // Still traveling
             const dx = targetPos.x - currentPos.x;
             const dy = targetPos.y - currentPos.y;
             const dz = targetPos.z - currentPos.z;
-            const totalDistance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            const progress = distanceTraveledThisUpdate / totalDistance;
+            const progress = distanceTraveled / distanceRemaining;
 
             state.userPosition.currentCoordinates = {
               x: currentPos.x + dx * progress,
@@ -313,63 +372,27 @@ export const useStore = create<Store>()(
               z: currentPos.z + dz * progress,
             };
 
-            // Update last update time
             state.lastUpdateTime = now;
           }
         });
       },
 
-      startTimer: (habitId: HabitId, timerNotificationId: string) => {
+      /**
+       * Adds a specified amount of XP to the user's total.
+       */
+      addXP: (amount, source) => {
         set((state) => {
-          state.activeTimer = {
-            habitId,
-            startTime: new Date().toISOString(),
-            timerNotificationId,
-          };
-        });
-      },
-
-      cancelTimer: () => {
-        set((state) => {
-          state.activeTimer = undefined;
-        });
-      },
-
-      setSwipedHabit: (habitId?: HabitId) => {
-        set((state) => {
-          state.swipedHabitId = habitId;
-        });
-      },
-
-      resetAllSwipes: () => {
-        set((state) => {
-          state.swipedHabitId = undefined;
-        });
-      },
-
-      addXP: (
-        amount: number,
-        source: 'habit_completion' | 'planet_completion',
-      ) => {
-        set((state) => {
-          const xpGain: XPGain = {
+          state.xpHistory.push({
             amount,
             source,
             timestamp: new Date().toISOString(),
-          };
+          });
 
-          state.xpHistory.push(xpGain);
           state.userLevel.totalXP += amount;
           state.userLevel.level = calculateLevel(state.userLevel.totalXP);
           state.userLevel.currentXP = getCurrentLevelXP(
             state.userLevel.totalXP,
           );
-        });
-      },
-
-      clearData: () => {
-        set((state) => {
-          Object.assign(state, initialData);
         });
       },
     })),
@@ -380,119 +403,9 @@ export const useStore = create<Store>()(
   ),
 );
 
-/**
- * Hook that calculates the next speed, clears existing land notification, sets next notification using new speed, and completes habit
- */
-export function useCompleteHabit() {
-  const {
-    userPosition,
-    planetLandedNotificationId,
-    completeHabit: _completeHabit,
-  } = useStore();
-
-  const completeHabit = useCallback(
-    async (habitId: HabitId) => {
-      const isLaunching = userPosition.speed === 0;
-      const nextSpeed = isLaunching ? 50000 : userPosition.speed * 1.2;
-      const boostType = isLaunching ? ('LAUNCH' as const) : ('BOOST' as const);
-
-      if (planetLandedNotificationId) {
-        try {
-          await Notifications.cancelScheduledNotificationAsync(
-            planetLandedNotificationId,
-          );
-        } catch (e) {
-          console.warn('Failed to cancel notification', e);
-        }
-      }
-
-      const timeRemaining = getTimeRemaining(userPosition, nextSpeed);
-
-      try {
-        const id = await schedulePushNotification({
-          title: `You have landed on ${userPosition.target!.name}!`,
-          hours: timeRemaining,
-        });
-
-        useStore.setState({ planetLandedNotificationId: id });
-      } catch (e) {
-        console.warn('Failed to schedule notification', e);
-      }
-
-      _completeHabit(habitId, nextSpeed, boostType);
-    },
-    [userPosition, planetLandedNotificationId, _completeHabit],
-  );
-
-  return completeHabit;
-}
-
-export function useStartTimer() {
-  const { startTimer, habits, activeTimer } = useStore();
-
-  const fn = useCallback(
-    async (habitId: HabitId) => {
-      if (activeTimer) {
-        Alert.alert(
-          'Timer Already Active',
-          'Another timer is already running. Please stop it before starting a new one.',
-        );
-
-        return;
-      }
-
-      const habit = habits.find((h) => h.id === habitId);
-
-      console.log(habit?.timerLength);
-
-      if (!habit || !habit.timerLength) {
-        Alert.alert('Timer Error', 'Habit not found or timer length not set');
-        return;
-      }
-
-      const timerId = await schedulePushNotification({
-        title: `Your timer for ${habit.title} is up!`,
-        hours: minutesToHours(habit.timerLength),
-      });
-
-      startTimer(habitId, timerId);
-    },
-    [startTimer, habits, activeTimer],
-  );
-
-  return fn;
-}
-
-/**
- * User pressed cancel
- */
-export function useCancelTimer() {
-  const { activeTimer } = useStore();
-
-  const fn = useCallback(async () => {
-    const timerId = activeTimer?.timerNotificationId;
-
-    if (timerId) {
-      await Notifications.cancelScheduledNotificationAsync(timerId);
-    }
-
-    useStore.setState({ activeTimer: undefined });
-  }, [activeTimer?.timerNotificationId]);
-
-  return fn;
-}
-
-export function useExpireTimer() {
-  const fn = useCallback(() => {
-    useStore.setState({ activeTimer: undefined });
-  }, []);
-
-  return fn;
-}
-
-export const useIsSetupFinished = () => useStore().isSetupFinished;
-export const useIsSetupInProgress = () => !useStore().isSetupFinished;
-export const useUserLevel = () => useStore().userLevel;
+// =================================================================
+// SELECTOR HOOKS (for reading state)
+// =================================================================
 
 function getCurrentPosition(position: UserPosition) {
   return (
@@ -505,25 +418,27 @@ function getTimeRemaining(
   position: UserPosition,
   speed: number = position.speed,
 ) {
-  if (!position.target) {
+  if (!position.target || speed === 0) {
     return 0 as Hour;
   }
 
-  const timeRemaining =
-    calculateDistance(getCurrentPosition(position), position.target.position) /
-    speed;
+  const distance = calculateDistance(
+    getCurrentPosition(position),
+    position.target.position,
+  );
 
-  return timeRemaining as Hour;
+  return (distance / speed) as Hour;
 }
 
-export function useTimeRemaining() {
-  const { userPosition } = useStore();
-
+export const useIsSetupFinished = () =>
+  useStore((state) => state.isSetupFinished);
+export const useUserLevel = () => useStore((state) => state.userLevel);
+export const useTimeRemaining = () => {
+  const userPosition = useStore((state) => state.userPosition);
   return getTimeRemaining(userPosition);
-}
+};
 
-export function useIsTraveling() {
-  const { userPosition } = useStore();
-
-  return userPosition.target !== undefined && userPosition.speed > 0;
-}
+export const useIsTraveling = () =>
+  useStore(
+    (state) => !!state.userPosition.target && state.userPosition.speed > 0,
+  );

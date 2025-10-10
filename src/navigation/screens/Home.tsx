@@ -14,20 +14,19 @@ import { JourneyDisplay } from '../../components/JourneyDisplay';
 import { LevelProgressBar } from '../../components/LevelProgressBar';
 import { PlanetSelectionModal } from '../../components/PlanetSelectionModal';
 import { colors, fonts, fontSizes } from '../../styles/theme';
-import {
-  Habit,
-  HabitId,
-  useCompleteHabit,
-  useStartTimer,
-  useStore,
-} from '../../utils/store';
+import { Habit, HabitId, useStore } from '../../utils/store';
 import { Minute } from '../../utils/units';
 
 export function Home() {
-  const { habits, editHabit, addHabit, clearData, resetAllSwipes } = useStore();
-
-  const completeHabit = useCompleteHabit();
-  const startTimer = useStartTimer();
+  const {
+    habits,
+    editHabit,
+    addHabit,
+    clearData,
+    resetAllSwipes,
+    startTimer,
+    completeHabit,
+  } = useStore();
 
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);

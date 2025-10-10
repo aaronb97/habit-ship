@@ -17,12 +17,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTimer } from 'react-timer-hook';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import {
-  Habit,
-  useCancelTimer,
-  useExpireTimer,
-  useStore,
-} from '../utils/store';
+import { Habit, useStore } from '../utils/store';
 import { XP_REWARDS } from '../types';
 
 type HabitItemProps = {
@@ -62,11 +57,14 @@ export function HabitItem({
 }: HabitItemProps) {
   const isCompleted = isHabitCompletedToday(habit);
   const completionCountText = formatCompletionCount(habit.completions.length);
-  const { activeTimer, removeHabit, swipedHabitId, setSwipedHabit } =
-    useStore();
-
-  const cancelTimer = useCancelTimer();
-  const expireTimer = useExpireTimer();
+  const {
+    activeTimer,
+    removeHabit,
+    swipedHabitId,
+    setSwipedHabit,
+    cancelTimer,
+    expireTimer,
+  } = useStore();
 
   const isActiveTimer = activeTimer?.habitId === habit.id;
   const translateX = useSharedValue(0);
