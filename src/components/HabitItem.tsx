@@ -118,8 +118,7 @@ export function HabitItem({
   function getTimerExpiryTimestamp() {
     if (!activeTimer) return new Date();
     return new Date(
-      new Date(activeTimer.startTime).getTime() +
-        habit.timerLength! * 60 * 1000,
+      new Date(activeTimer.startTime).getTime() + habit.timerLength! * 1000,
     );
   }
 
@@ -142,8 +141,9 @@ export function HabitItem({
 
   useEffect(() => {
     if (isActiveTimer) {
-      const totalSeconds = habit.timerLength! * 60;
-      const progress = 1 - (totalMilliseconds - 1000) / (totalSeconds * 1000);
+      const progress =
+        1 - (totalMilliseconds - 1000) / (habit.timerLength! * 1000);
+
       timerProgress.value = withTiming(progress, {
         duration: 1000,
         easing: Easing.linear,
@@ -217,6 +217,8 @@ export function HabitItem({
         easing: Easing.out(Easing.quad),
       }),
     );
+
+    console.log(wipeProgress.value);
 
     // Animate timer button from left to right during wipe
     if (habit.timerLength) {
