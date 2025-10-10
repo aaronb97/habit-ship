@@ -2,7 +2,6 @@ import { useNavigation } from '@react-navigation/native';
 import { useCallback, useEffect, useState } from 'react';
 import {
   Animated,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
@@ -11,6 +10,7 @@ import {
 } from 'react-native';
 import TimerSelection from '../../components/TimerSelection';
 import { colors, fonts, fontSizes } from '../../styles/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function SetupFirstHabit() {
   const navigation = useNavigation();

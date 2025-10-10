@@ -2,7 +2,6 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { useCallback, useEffect, useState } from 'react';
 import {
   Animated,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -13,6 +12,7 @@ import { usePlanets } from '../../hooks/usePlanets';
 import { RootStackParamList } from '..';
 import { colors, fonts, fontSizes } from '../../styles/theme';
 import { useStore } from '../../utils/store';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function SetupFirstPlanet() {
   const navigation = useNavigation();

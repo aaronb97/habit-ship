@@ -1,6 +1,7 @@
-import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { colors, fonts } from '../../styles/theme';
 import { useStore } from '../../utils/store';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function Dev() {
   const store = useStore();
