@@ -12,6 +12,8 @@ const timerOptions: { label: string; value: number | 'custom' }[] = [
   { label: 'Custom', value: 'custom' },
 ];
 
+const defaultValues = [5 * 60, 10 * 60, 20 * 60, 30 * 60, 60 * 60];
+
 interface TimerSelectionProps {
   onTimerChange: (seconds: number) => void;
   initialTimer?: number;
@@ -24,6 +26,8 @@ const TimerSelection: React.FC<TimerSelectionProps> = ({
   const [selectedTimer, setSelectedTimer] = useState<number | null>(
     initialTimer || null,
   );
+
+  console.log(selectedTimer);
 
   useEffect(() => {
     setSelectedTimer(initialTimer || null);
@@ -74,7 +78,7 @@ const TimerSelection: React.FC<TimerSelectionProps> = ({
     if (
       option.value === 'custom' &&
       typeof selectedTimer === 'number' &&
-      ![5, 10, 20, 30, 60].includes(selectedTimer)
+      !defaultValues.includes(selectedTimer)
     ) {
       return true;
     }
@@ -89,7 +93,7 @@ const TimerSelection: React.FC<TimerSelectionProps> = ({
     if (
       option.value === 'custom' &&
       typeof selectedTimer === 'number' &&
-      ![5 * 60, 10 * 60, 20 * 60, 30 * 60, 60 * 60].includes(selectedTimer)
+      !defaultValues.includes(selectedTimer)
     ) {
       return `${Math.floor(selectedTimer / 60)} min`;
     }
