@@ -9,7 +9,6 @@ import {
   View,
 } from 'react-native';
 import { usePlanets } from '../hooks/usePlanets';
-import { planets } from '../planets';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { useIsTraveling, useStore } from '../utils/store';
 import { PlanetListItem } from './PlanetListItem';
@@ -23,10 +22,12 @@ export function PlanetSelectionModal({
   visible,
   onClose,
 }: PlanetSelectionModalProps) {
-  const { userPosition, setDestination } = useStore();
-  const [selectedPlanet, setSelectedPlanet] = useState(
-    userPosition.target?.name || planets[0].name,
-  );
+  const { setDestination } = useStore();
+  const [selectedPlanet, setSelectedPlanet] = useState('');
+
+  if (!visible && selectedPlanet) {
+    setSelectedPlanet('');
+  }
 
   const isTraveling = useIsTraveling();
 
@@ -71,8 +72,18 @@ export function PlanetSelectionModal({
             <Text style={styles.cancelButton}>Cancel</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Select Planet</Text>
-          <TouchableOpacity onPress={handleStartNewJourney}>
-            <Text style={styles.startButton}>Start</Text>
+          <TouchableOpacity
+            disabled={selectedPlanet === ''}
+            onPress={handleStartNewJourney}
+          >
+            <Text
+              style={[
+                styles.startButton,
+                selectedPlanet === '' && styles.disabled,
+              ]}
+            >
+              Start
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -127,6 +138,10 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.medium,
     color: colors.primaryText,
+  },
+  disabled: {
+    opacity: 0.5,
+    color: colors.grey,
   },
   scrollView: {
     flex: 1,
