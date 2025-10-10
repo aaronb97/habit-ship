@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { planets } from '../planets';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import {
@@ -11,11 +11,7 @@ import {
 import { formatSecondsAsDaysAndHours } from '../utils/units';
 import { ProgressBar } from './ProgressBar';
 
-interface JourneyDisplayProps {
-  onPlanetPress?: () => void;
-}
-
-export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
+export function JourneyDisplay() {
   const { userPosition, updateTravelPosition, clearData } = useStore();
 
   // Update position every second (which also triggers re-render for time remaining)
@@ -66,15 +62,11 @@ export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
 
   return (
     <View style={styles.journeyDisplayContainer}>
-      <TouchableOpacity
-        style={styles.planetInfoContainer}
-        activeOpacity={0.7}
-        onPress={onPlanetPress}
-      >
+      <View style={styles.planetInfoContainer}>
         <Text style={styles.planetTitle}>{planet.name}</Text>
         {!isTraveling && <Text style={styles.statusText}>Landed</Text>}
         {isTraveling && <Text style={styles.statusText}>En Route</Text>}
-      </TouchableOpacity>
+      </View>
 
       {isTraveling && (
         <>

@@ -1,6 +1,6 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Home } from './screens/Home';
-import { Map } from './screens/Map';
+import { Planets } from './screens/Map';
 import { Dev } from './screens/Dev';
 import { colors } from '../styles/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,11 +34,11 @@ export function TabNavigator() {
       />
       <Tab.Screen
         name="MapTab"
-        component={Map}
+        component={Planets}
         options={{
-          title: 'Map',
+          title: 'Planets',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="map" size={size} color={color} />
+            <Ionicons name="planet" size={size} color={color} />
           ),
         }}
       />

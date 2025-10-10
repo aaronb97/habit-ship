@@ -7,18 +7,18 @@ interface PlanetListItemProps {
   planet: Planet;
   distance: number; // Distance in km from current position
   isSelected?: boolean;
-  onPress: () => void;
   disabledReason?: string; // Reason why planet cannot be selected
   isVisited?: boolean; // Whether the planet has been visited/completed
+  onPress?: () => void;
 }
 
 export function PlanetListItem({
   planet,
   distance,
   isSelected,
-  onPress,
   disabledReason,
   isVisited,
+  onPress,
 }: PlanetListItemProps) {
   const userLevel = useUserLevel();
   const isLocked = userLevel.level < planet.minLevel;

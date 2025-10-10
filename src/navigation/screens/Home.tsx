@@ -12,7 +12,6 @@ import { EditHabitModal } from '../../components/EditHabitModal';
 import { HabitItem } from '../../components/HabitItem';
 import { JourneyDisplay } from '../../components/JourneyDisplay';
 import { LevelProgressBar } from '../../components/LevelProgressBar';
-import { PlanetSelectionModal } from '../../components/PlanetSelectionModal';
 import { colors, fonts, fontSizes } from '../../styles/theme';
 import { Habit, HabitId, useStore } from '../../utils/store';
 
@@ -28,7 +27,6 @@ export function Home() {
 
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showPlanetModal, setShowPlanetModal] = useState(false);
 
   const handleCreate = (habit: {
     title: string;
@@ -74,7 +72,7 @@ export function Home() {
           keyExtractor={(item) => item.id}
           ListHeaderComponent={
             <>
-              <JourneyDisplay onPlanetPress={() => setShowPlanetModal(true)} />
+              <JourneyDisplay />
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Daily Habits</Text>
                 {habits.length < 5 ? (
@@ -100,11 +98,6 @@ export function Home() {
         visible={showCreateModal}
         onCreate={handleCreate}
         onClose={() => setShowCreateModal(false)}
-      />
-
-      <PlanetSelectionModal
-        visible={showPlanetModal}
-        onClose={() => setShowPlanetModal(false)}
       />
     </SafeAreaView>
   );
