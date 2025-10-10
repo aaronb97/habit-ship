@@ -1,19 +1,12 @@
 import { useState } from 'react';
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { usePlanets } from '../../hooks/usePlanets';
-import { colors, fonts, fontSizes } from '../../styles/theme';
+import { colors } from '../../styles/theme';
 import { useIsTraveling, useStore } from '../../utils/store';
 import { PlanetListItem } from '../../components/PlanetListItem';
-
+ import { SolarSystemMap } from '../../components/SolarSystemMap';
 type ViewMode = 'list' | 'map';
 
 export function Planets() {
@@ -120,8 +113,7 @@ export function Planets() {
         </ScrollView>
       ) : (
         <View style={styles.mapContainer}>
-          <Text style={styles.mapText}>Under Construction</Text>
-          <Text style={styles.mapSubtext}>Map view coming soon</Text>
+          <SolarSystemMap />
         </View>
       )}
     </SafeAreaView>
@@ -172,16 +164,5 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  mapText: {
-    fontFamily: fonts.semiBold,
-    fontSize: fontSizes.xlarge,
-    color: colors.text,
-  },
-  mapSubtext: {
-    fontFamily: fonts.regular,
-    fontSize: fontSizes.medium,
-    color: colors.grey,
-    marginTop: 8,
   },
 });
