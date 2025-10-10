@@ -1,27 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import { Minute } from '../utils/units';
 
-const timerOptions: { label: string; value: Minute | 'custom' }[] = [
-  { label: '5 minutes', value: 5 as Minute },
-  { label: '10 minutes', value: 10 as Minute },
-  { label: '20 minutes', value: 20 as Minute },
-  { label: '30 minutes', value: 30 as Minute },
-  { label: '1 hour', value: 60 as Minute },
+// Timer values are now in seconds
+const timerOptions: { label: string; value: number | 'custom' }[] = [
+  { label: '5 minutes', value: 5 * 60 },
+  { label: '10 minutes', value: 10 * 60 },
+  { label: '20 minutes', value: 20 * 60 },
+  { label: '30 minutes', value: 30 * 60 },
+  { label: '1 hour', value: 60 * 60 },
   { label: 'Custom', value: 'custom' },
 ];
 
 interface TimerSelectionProps {
-  onTimerChange: (minutes: Minute) => void;
-  initialTimer?: Minute;
+  onTimerChange: (seconds: number) => void;
+  initialTimer?: number;
 }
 
 const TimerSelection: React.FC<TimerSelectionProps> = ({
   onTimerChange,
   initialTimer,
 }) => {
-  const [selectedTimer, setSelectedTimer] = useState<Minute | null>(
+  const [selectedTimer, setSelectedTimer] = useState<number | null>(
     initialTimer || null,
   );
 
@@ -29,11 +29,11 @@ const TimerSelection: React.FC<TimerSelectionProps> = ({
     setSelectedTimer(initialTimer || null);
   }, [initialTimer]);
 
-  const handlePress = (value: Minute | 'custom') => {
+  const handlePress = (value: number | 'custom') => {
     // If the pressed button is already selected, deselect it.
     if (value !== 'custom' && value === selectedTimer) {
       setSelectedTimer(null);
-      onTimerChange(0 as Minute);
+      onTimerChange(0);
       return;
     }
 
@@ -51,8 +51,9 @@ const TimerSelection: React.FC<TimerSelectionProps> = ({
             onPress: (text: string | undefined) => {
               const minutes = parseInt(text || '0', 10);
               if (!isNaN(minutes) && minutes > 0) {
-                setSelectedTimer(minutes as Minute);
-                onTimerChange(minutes as Minute);
+                const seconds = minutes * 60;
+                setSelectedTimer(seconds);
+                onTimerChange(seconds);
               }
             },
           },
@@ -88,9 +89,9 @@ const TimerSelection: React.FC<TimerSelectionProps> = ({
     if (
       option.value === 'custom' &&
       typeof selectedTimer === 'number' &&
-      ![5, 10, 20, 30, 60].includes(selectedTimer)
+      ![5 * 60, 10 * 60, 20 * 60, 30 * 60, 60 * 60].includes(selectedTimer)
     ) {
-      return `${selectedTimer} min`;
+      return `${Math.floor(selectedTimer / 60)} min`;
     }
 
     return option.label;

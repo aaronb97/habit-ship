@@ -8,23 +8,11 @@ import {
   useStore,
   useTimeRemaining,
 } from '../utils/store';
+import { formatSecondsAsDaysAndHours } from '../utils/units';
 import { ProgressBar } from './ProgressBar';
 
 interface JourneyDisplayProps {
   onPlanetPress?: () => void;
-}
-
-function formatTime(hours: number): string {
-  if (hours < 1) {
-    const minutes = Math.floor(hours * 60);
-    return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
-  } else if (hours < 24) {
-    return `${hours.toFixed(1)} hour${hours !== 1 ? 's' : ''}`;
-  } else {
-    const days = Math.floor(hours / 24);
-    const remainingHours = Math.floor(hours % 24);
-    return `${days} day${days !== 1 ? 's' : ''} ${remainingHours}h`;
-  }
 }
 
 export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
@@ -113,7 +101,7 @@ export function JourneyDisplay({ onPlanetPress }: JourneyDisplayProps) {
             <View style={styles.progressRow}>
               <Text style={styles.progressLabel}>Time Remaining</Text>
               <Text style={styles.progressValue}>
-                {formatTime(timeRemaining)}
+                {formatSecondsAsDaysAndHours(timeRemaining)}
               </Text>
             </View>
           </View>

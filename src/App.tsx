@@ -11,7 +11,7 @@ import { Asset } from 'expo-asset';
 import { createURL } from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useMemo, useEffect } from 'react';
-import { StatusBar, Platform } from 'react-native';
+import { StatusBar, Platform, Appearance } from 'react-native';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
@@ -24,6 +24,8 @@ void Asset.loadAsync([...NavigationAssets]);
 void SplashScreen.preventAutoHideAsync();
 
 const prefix = createURL('/');
+
+Appearance.setColorScheme('dark');
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({

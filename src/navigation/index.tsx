@@ -11,7 +11,6 @@ import { SetupFirstHabit } from './screens/SetupFirstHabit';
 import { SetupFirstPlanet } from './screens/SetupFirstPlanet';
 import { WelcomeTransition } from './screens/WelcomeTransition';
 import { useIsSetupFinished } from '../utils/store';
-import { Minute } from '../utils/units';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -92,7 +91,7 @@ export type RootStackParamList = {
     habit: {
       title: string;
       description?: string;
-      timerLength?: Minute;
+      timerLength?: number; // in seconds
     };
   };
   WelcomeTransition: undefined;

@@ -15,7 +15,6 @@ import {
   calculateLevel,
   getCurrentLevelXP,
 } from '../types';
-import { Minute, minutesToHours, Hour } from './units';
 
 // =================================================================
 // TYPES
@@ -28,7 +27,7 @@ export type Habit = {
   title: string;
   description?: string;
   completions: string[];
-  timerLength?: Minute;
+  timerLength?: number; // in seconds
 };
 
 // =================================================================
@@ -83,7 +82,7 @@ type Store = {
   addHabit: (habit: {
     title: string;
     description?: string;
-    timerLength?: Minute;
+    timerLength?: number; // in seconds
   }) => void;
 
   editHabit: (
@@ -207,7 +206,7 @@ export const useStore = create<Store>()(
           try {
             newNotificationId = await schedulePushNotification({
               title: `You have landed on ${userPosition.target.name}!`,
-              hours: timeRemaining,
+              seconds: timeRemaining,
             });
           } catch (e) {
             console.warn('Failed to schedule notification', e);
@@ -266,7 +265,7 @@ export const useStore = create<Store>()(
         try {
           const timerId = await schedulePushNotification({
             title: `Your timer for ${habit.title} is up!`,
-            hours: minutesToHours(habit.timerLength),
+            seconds: habit.timerLength,
           });
 
           set({
@@ -417,9 +416,9 @@ function getCurrentPosition(position: UserPosition) {
 function getTimeRemaining(
   position: UserPosition,
   speed: number = position.speed,
-) {
+): number {
   if (!position.target || speed === 0) {
-    return 0 as Hour;
+    return 0;
   }
 
   const distance = calculateDistance(
@@ -427,7 +426,9 @@ function getTimeRemaining(
     position.target.position,
   );
 
-  return (distance / speed) as Hour;
+  // distance is in km, speed is in km/h, so result is in hours
+  // convert to seconds
+  return (distance / speed) * 3600;
 }
 
 export const useIsSetupFinished = () =>

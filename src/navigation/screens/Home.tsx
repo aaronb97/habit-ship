@@ -15,7 +15,6 @@ import { LevelProgressBar } from '../../components/LevelProgressBar';
 import { PlanetSelectionModal } from '../../components/PlanetSelectionModal';
 import { colors, fonts, fontSizes } from '../../styles/theme';
 import { Habit, HabitId, useStore } from '../../utils/store';
-import { Minute } from '../../utils/units';
 
 export function Home() {
   const {
@@ -35,7 +34,7 @@ export function Home() {
   const handleCreate = (habit: {
     title: string;
     description: string;
-    timerLength?: Minute;
+    timerLength?: number;
   }) => {
     addHabit(habit);
     setShowCreateModal(false);
@@ -43,7 +42,7 @@ export function Home() {
 
   const handleEditSave = (
     habitId: HabitId,
-    updates: { title: string; description: string; timerLength?: Minute },
+    updates: { title: string; description: string; timerLength?: number },
   ) => {
     editHabit(habitId, updates);
     setEditingHabit(null);

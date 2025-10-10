@@ -10,14 +10,13 @@ import {
 import { colors, fonts, fontSizes } from '../styles/theme';
 import TimerSelection from './TimerSelection';
 import { Habit, HabitId } from '../utils/store';
-import { Minute } from '../utils/units';
 
 interface EditHabitModalProps {
   habit: Habit | null;
   onClose: () => void;
   onSave: (
     habitId: HabitId,
-    updates: { title: string; description: string; timerLength?: Minute },
+    updates: { title: string; description: string; timerLength?: number },
   ) => void;
 }
 
@@ -28,7 +27,7 @@ export function EditHabitModal({
 }: EditHabitModalProps) {
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
-  const [editTimerLength, setEditTimerLength] = useState(0 as Minute);
+  const [editTimerLength, setEditTimerLength] = useState(0);
 
   const isFormValid = editTitle.trim() !== '';
 
@@ -36,7 +35,7 @@ export function EditHabitModal({
     if (habit) {
       setEditTitle(habit.title || '');
       setEditDescription(habit.description || '');
-      setEditTimerLength(habit.timerLength || (0 as Minute));
+      setEditTimerLength(habit.timerLength || 0);
     }
   }, [habit]);
 

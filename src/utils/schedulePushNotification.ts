@@ -1,14 +1,13 @@
 import * as Notifications from 'expo-notifications';
-import { Hour } from './units';
 
 export async function schedulePushNotification({
   title,
   body,
-  hours,
+  seconds,
 }: {
   title: string;
   body?: string;
-  hours: Hour;
+  seconds: number;
 }) {
   return Notifications.scheduleNotificationAsync({
     content: {
@@ -17,7 +16,7 @@ export async function schedulePushNotification({
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-      seconds: hours * 60 * 60,
+      seconds,
     },
   });
 }
