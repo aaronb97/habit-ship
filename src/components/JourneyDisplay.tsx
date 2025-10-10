@@ -24,8 +24,13 @@ export function JourneyDisplay() {
   }, [updateTravelPosition]);
 
   // Determine what to display
-  const displayLocation =
-    userPosition.target?.name || userPosition.currentLocation;
+  const displayLocation = (() => {
+    if (userPosition.target && userPosition.speed > 0) {
+      return userPosition.target.name;
+    }
+
+    return userPosition.currentLocation;
+  })();
 
   const isTraveling = useIsTraveling();
 
@@ -63,9 +68,9 @@ export function JourneyDisplay() {
   return (
     <View style={styles.journeyDisplayContainer}>
       <View style={styles.planetInfoContainer}>
+        {!isTraveling && <Text style={styles.statusText}>Welcome to </Text>}
+        {isTraveling && <Text style={styles.statusText}>En route to </Text>}
         <Text style={styles.planetTitle}>{planet.name}</Text>
-        {!isTraveling && <Text style={styles.statusText}>Landed</Text>}
-        {isTraveling && <Text style={styles.statusText}>En Route</Text>}
       </View>
 
       {isTraveling && (

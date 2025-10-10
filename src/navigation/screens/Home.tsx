@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  Alert,
   FlatList,
   StyleSheet,
   Text,
@@ -12,6 +13,7 @@ import { EditHabitModal } from '../../components/EditHabitModal';
 import { HabitItem } from '../../components/HabitItem';
 import { JourneyDisplay } from '../../components/JourneyDisplay';
 import { LevelProgressBar } from '../../components/LevelProgressBar';
+import { PlanetSelectionModal } from '../../components/PlanetSelectionModal';
 import { colors, fonts, fontSizes } from '../../styles/theme';
 import { Habit, HabitId, useStore } from '../../utils/store';
 
@@ -23,10 +25,13 @@ export function Home() {
     resetAllSwipes,
     startTimer,
     completeHabit,
+    userPosition,
   } = useStore();
 
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showPlanetModal, setShowPlanetModal] = useState(false);
+  const [hasShownLandingPrompt, setHasShownLandingPrompt] = useState(false);
 
   const handleCreate = (habit: {
     title: string;
@@ -44,6 +49,33 @@ export function Home() {
     editHabit(habitId, updates);
     setEditingHabit(null);
   };
+
+  // Show congratulations when user lands on a planet (speed === 0 && no target)
+  useEffect(() => {
+    const isLanded = userPosition.speed === 0 && !userPosition.target;
+    
+    if (isLanded && !hasShownLandingPrompt) {
+      setHasShownLandingPrompt(true);
+      Alert.alert(
+        '🎉 Congratulations!',
+        `You have landed on ${userPosition.currentLocation}! Please select your next destination to continue your journey.`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowPlanetModal(true);
+            },
+          },
+        ],
+        { cancelable: false },
+      );
+    }
+    
+    // Reset the flag when user starts traveling again
+    if (!isLanded && hasShownLandingPrompt) {
+      setHasShownLandingPrompt(false);
+    }
+  }, [userPosition.speed, userPosition.target, userPosition.currentLocation, hasShownLandingPrompt]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -98,6 +130,11 @@ export function Home() {
         visible={showCreateModal}
         onCreate={handleCreate}
         onClose={() => setShowCreateModal(false)}
+      />
+
+      <PlanetSelectionModal
+        visible={showPlanetModal}
+        onClose={() => setShowPlanetModal(false)}
       />
     </SafeAreaView>
   );

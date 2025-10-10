@@ -1,11 +1,9 @@
-import { useState } from 'react';
 import {
   Alert,
   Modal,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { usePlanets } from '../hooks/usePlanets';
@@ -23,21 +21,14 @@ export function PlanetSelectionModal({
   onClose,
 }: PlanetSelectionModalProps) {
   const { setDestination } = useStore();
-  const [selectedPlanet, setSelectedPlanet] = useState('');
-
-  if (!visible && selectedPlanet) {
-    setSelectedPlanet('');
-  }
-
   const isTraveling = useIsTraveling();
-
   const planetsWithDistance = usePlanets();
 
-  const handleStartNewJourney = () => {
+  const handleSetDestination = (planetName: string) => {
     if (isTraveling) {
       Alert.alert(
         'Change Destination',
-        'You are currently traveling. Changing your destination will reset your journey. Are you sure you want to continue?',
+        'You are currently traveling. Changing your destination will reset your speed. Are you sure you want to continue?',
         [
           {
             text: 'Cancel',
@@ -47,15 +38,30 @@ export function PlanetSelectionModal({
             text: 'Change Destination',
             style: 'destructive',
             onPress: () => {
-              setDestination(selectedPlanet);
+              setDestination(planetName);
               onClose();
             },
           },
         ],
       );
     } else {
-      setDestination(selectedPlanet);
-      onClose();
+      Alert.alert(
+        'Set Destination',
+        `Set ${planetName} as your destination?`,
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Set Destination',
+            onPress: () => {
+              setDestination(planetName);
+              onClose();
+            },
+          },
+        ],
+      );
     }
   };
 
@@ -64,27 +70,10 @@ export function PlanetSelectionModal({
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
-      onRequestClose={onClose}
     >
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose}>
-            <Text style={styles.cancelButton}>Cancel</Text>
-          </TouchableOpacity>
           <Text style={styles.title}>Select Planet</Text>
-          <TouchableOpacity
-            disabled={selectedPlanet === ''}
-            onPress={handleStartNewJourney}
-          >
-            <Text
-              style={[
-                styles.startButton,
-                selectedPlanet === '' && styles.disabled,
-              ]}
-            >
-              Start
-            </Text>
-          </TouchableOpacity>
         </View>
 
         <ScrollView
@@ -97,10 +86,9 @@ export function PlanetSelectionModal({
                 key={planet.name}
                 planet={planet}
                 distance={distance}
-                isSelected={selectedPlanet === planet.name}
                 disabledReason={disabledReason}
                 isVisited={isVisited}
-                onPress={() => setSelectedPlanet(planet.name)}
+                onPress={() => handleSetDestination(planet.name)}
               />
             ),
           )}
@@ -116,32 +104,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    alignItems: 'center',
   },
   title: {
     fontFamily: fonts.bold,
     fontSize: fontSizes.large,
     color: colors.text,
-  },
-  cancelButton: {
-    fontFamily: fonts.medium,
-    fontSize: fontSizes.medium,
-    color: colors.grey,
-  },
-  startButton: {
-    fontFamily: fonts.semiBold,
-    fontSize: fontSizes.medium,
-    color: colors.primaryText,
-  },
-  disabled: {
-    opacity: 0.5,
-    color: colors.grey,
   },
   scrollView: {
     flex: 1,
