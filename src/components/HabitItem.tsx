@@ -333,9 +333,9 @@ export function HabitItem({
         onPress={handleStartTimer}
       >
         <MaterialIcons name="timer" size={20} color={colors.white} />
-        <Text
-          style={styles.actionButtonText}
-        >{`${habit.timerLength} min`}</Text>
+        <Text style={styles.actionButtonText}>{`${
+          habit.timerLength / 60
+        } min`}</Text>
       </TouchableOpacity>
     </Animated.View>
   ) : null;
