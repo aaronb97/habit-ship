@@ -1,5 +1,5 @@
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Animated,
   SafeAreaView,
@@ -9,14 +9,10 @@ import {
   View,
 } from 'react-native';
 import { PlanetListItem } from '../../components/PlanetListItem';
+import { usePlanets } from '../../hooks/usePlanets';
 import { RootStackParamList } from '..';
-import { planets } from '../../planets';
 import { colors, fonts, fontSizes } from '../../styles/theme';
-import {
-  calculateDistance,
-  getPlanetPosition,
-  useStore,
-} from '../../utils/store';
+import { useStore } from '../../utils/store';
 
 export function SetupFirstPlanet() {
   const navigation = useNavigation();
@@ -27,18 +23,9 @@ export function SetupFirstPlanet() {
     useRoute<RouteProp<RootStackParamList, 'SetupFirstPlanet'>>().params;
 
   // Calculate distances and sort planets (exclude Earth from initial selection)
-  const planetsWithDistance = useMemo(() => {
-    const currentCoords = getPlanetPosition('Earth');
-
-    return planets
-      .filter((planet) => planet.name !== 'Earth') // Don't show Earth on initial screen
-      .map((planet) => {
-        const planetCoords = getPlanetPosition(planet.name);
-        const distance = calculateDistance(currentCoords, planetCoords);
-        return { planet, distance };
-      })
-      .sort((a, b) => a.distance - b.distance);
-  }, []);
+  const planetsWithDistance = usePlanets().filter(
+    (p) => p.planet.name !== 'Earth', // Don't show Earth on initial screen
+  );
 
   // Animation values
   const titleOpacity = useState(new Animated.Value(0))[0];

@@ -8,14 +8,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { usePlanets } from '../hooks/usePlanets';
 import { planets } from '../planets';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import {
-  calculateDistance,
-  getPlanetPosition,
-  useIsTraveling,
-  useStore,
-} from '../utils/store';
+import { useIsTraveling, useStore } from '../utils/store';
 import { PlanetListItem } from './PlanetListItem';
 
 interface PlanetSelectionModalProps {
@@ -27,46 +23,14 @@ export function PlanetSelectionModal({
   visible,
   onClose,
 }: PlanetSelectionModalProps) {
-  const { userPosition, setDestination, completedPlanets } = useStore();
+  const { userPosition, setDestination } = useStore();
   const [selectedPlanet, setSelectedPlanet] = useState(
     userPosition.target?.name || planets[0].name,
   );
 
   const isTraveling = useIsTraveling();
 
-  // Calculate distances and sort planets
-  const currentCoords = userPosition.currentCoordinates || {
-    x: 0,
-    y: 0,
-    z: 0,
-  };
-
-  const planetsWithDistance = planets
-    .filter(
-      (planet) => isTraveling || planet.name !== userPosition.currentLocation,
-    )
-    .map((planet) => {
-      const planetCoords = getPlanetPosition(planet.name);
-      const distance = calculateDistance(currentCoords, planetCoords);
-
-      // Determine if planet should be disabled and why
-      let disabledReason: string | undefined;
-
-      if (
-        planet.name === userPosition.currentLocation &&
-        userPosition.speed === 0
-      ) {
-        disabledReason = 'You are currently on this planet';
-      } else if (planet.name === userPosition.target?.name) {
-        disabledReason = 'You are already traveling to this planet';
-      }
-
-      // Check if planet has been visited
-      const isVisited = completedPlanets.includes(planet.name) || false;
-
-      return { planet, distance, disabledReason, isVisited };
-    })
-    .sort((a, b) => a.distance - b.distance);
+  const planetsWithDistance = usePlanets();
 
   const handleStartNewJourney = () => {
     if (isTraveling) {

@@ -15,6 +15,7 @@ import {
   calculateLevel,
   getCurrentLevelXP,
 } from '../types';
+import { useShallow } from 'zustand/shallow';
 
 // =================================================================
 // TYPES
@@ -423,6 +424,12 @@ function getCurrentPosition(position: UserPosition) {
   return (
     position.currentCoordinates ??
     getPlanetPosition(position.currentLocation ?? 'Earth')
+  );
+}
+
+export function useCurrentPosition() {
+  return useStore(
+    useShallow((state) => getCurrentPosition(state.userPosition)),
   );
 }
 
