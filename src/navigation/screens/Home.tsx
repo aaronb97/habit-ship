@@ -21,7 +21,6 @@ export function Home() {
     habits,
     editHabit,
     addHabit,
-    clearData,
     resetAllSwipes,
     startTimer,
     completeHabit,
@@ -85,14 +84,6 @@ export function Home() {
                 ) : null}
               </View>
             </>
-          }
-          ListFooterComponent={
-            <TouchableOpacity
-              style={styles.revertButton}
-              onPress={() => clearData()}
-            >
-              <Text style={styles.revertButtonText}>Revert Setup</Text>
-            </TouchableOpacity>
           }
           contentContainerStyle={styles.listContentContainer}
           showsVerticalScrollIndicator={false}
@@ -195,14 +186,5 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.medium,
     color: colors.primaryText,
-  },
-  revertButton: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  revertButtonText: {
-    fontFamily: fonts.regular,
-    fontSize: fontSizes.medium,
-    color: colors.grey,
   },
 });
