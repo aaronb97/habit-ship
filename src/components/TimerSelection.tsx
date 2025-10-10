@@ -27,8 +27,6 @@ const TimerSelection: React.FC<TimerSelectionProps> = ({
     initialTimer || null,
   );
 
-  console.log(selectedTimer);
-
   useEffect(() => {
     setSelectedTimer(initialTimer || null);
   }, [initialTimer]);
