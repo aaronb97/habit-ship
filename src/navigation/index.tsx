@@ -5,7 +5,7 @@ import {
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { colors, fonts } from '../styles/theme';
-import { Home } from './screens/Home';
+import { TabNavigator } from './TabNavigator';
 import { NotFound } from './screens/NotFound';
 import { SetupFirstHabit } from './screens/SetupFirstHabit';
 import { SetupFirstPlanet } from './screens/SetupFirstPlanet';
@@ -58,11 +58,9 @@ export function Navigation({ theme, linking, onReady }: NavigationProps) {
         ) : (
           <Stack.Screen
             name="Home"
-            component={Home}
+            component={TabNavigator}
             options={{
-              title: '',
-              headerTransparent: true,
-              headerShadowVisible: false,
+              headerShown: false,
             }}
           />
         )}
