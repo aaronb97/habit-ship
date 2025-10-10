@@ -1,7 +1,6 @@
 import { planets } from '../planets';
 import {
   calculateDistance,
-  getPlanetPosition,
   useCurrentPosition,
   useIsTraveling,
   useStore,
@@ -29,7 +28,7 @@ export function usePlanets(): PlanetWithDistance[] {
       return true;
     })
     .map((planet) => {
-      const planetCoords = getPlanetPosition(planet.name);
+      const planetCoords = planet.getCurrentPosition();
       const distance = calculateDistance(currentPosition, planetCoords);
 
       // Determine if planet should be disabled and why

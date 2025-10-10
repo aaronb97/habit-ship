@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 
-import { planets } from '../planets';
+import { earth, planets } from '../planets';
 import { schedulePushNotification } from './schedulePushNotification';
 import {
   Coordinates,
@@ -41,18 +41,11 @@ export function calculateDistance(a: Coordinates, b: Coordinates): number {
   );
 }
 
-export function getPlanetPosition(
-  planetName: string,
-  date = new Date().toISOString().split('T')[0],
-): Coordinates {
+export function getPlanetPosition(planetName: string): Coordinates {
   const planet = planets.find((p) => p.name === planetName);
   if (!planet) throw new Error(`Planet ${planetName} not found`);
-  const position =
-    planet.dailyPositions[date] ??
-    planet.dailyPositions[Object.keys(planet.dailyPositions).at(-1) as string];
 
-  const [x, y, z] = position;
-  return { x, y, z };
+  return planet.getCurrentPosition();
 }
 
 // =================================================================
@@ -423,7 +416,9 @@ export const useStore = create<Store>()(
 function getCurrentPosition(position: UserPosition) {
   return (
     position.currentCoordinates ??
-    getPlanetPosition(position.currentLocation ?? 'Earth')
+    (
+      planets.find((p) => p.name === position.currentLocation) ?? earth
+    ).getCurrentPosition()
   );
 }
 
