@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 
-import { earth, planets } from '../planets';
+import { earth, moon, planets } from '../planets';
 import { schedulePushNotification } from './schedulePushNotification';
 import { getCurrentTime, getCurrentDate } from './time';
 import {
@@ -93,6 +93,7 @@ type Store = {
     amount: number,
     source: 'habit_completion' | 'planet_completion',
   ) => void;
+  quickReset: () => void;
   clearData: () => void;
 
   completeHabit: (habitId: HabitId) => Promise<void>;
@@ -172,6 +173,30 @@ export const useStore = create<Store>()(
       },
       setSwipedHabit: (habitId) => set({ swipedHabitId: habitId }),
       resetAllSwipes: () => set({ swipedHabitId: undefined }),
+      quickReset: () => {
+        set({
+          ...initialData,
+          isSetupFinished: true,
+          habits: [
+            {
+              id: '0' as HabitId,
+              title: 'Morning Meditation',
+              description: 'Sample description',
+              completions: [],
+              timerLength: 600,
+            },
+          ],
+          userPosition: {
+            currentLocation: 'Earth',
+            speed: 0,
+            target: {
+              name: 'The Moon',
+              position: moon.getCurrentPosition(),
+            },
+          },
+          idCount: 1,
+        });
+      },
       clearData: () => set(initialData),
 
       // --- Complex/Async Actions ---

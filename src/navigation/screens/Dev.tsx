@@ -6,14 +6,13 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { colors, fonts } from '../../styles/theme';
-import { useStore, HabitId } from '../../utils/store';
+import { useStore } from '../../utils/store';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { moon } from '../../planets';
 import { advanceTime, getCurrentDate } from '../../utils/time';
 
 export function Dev() {
   const store = useStore();
-  const { clearData, updateTravelPosition } = useStore();
+  const { clearData, quickReset, updateTravelPosition } = useStore();
 
   const handleAdvanceTime = (hours: number) => {
     const { userPosition } = useStore.getState();
@@ -32,38 +31,7 @@ export function Dev() {
   };
 
   const handleQuickReset = () => {
-    useStore.setState({
-      isSetupFinished: true,
-      habits: [
-        {
-          id: '0' as HabitId,
-          title: 'Morning Meditation',
-          description: 'Sample description',
-          completions: [],
-          timerLength: 600,
-        },
-      ],
-      userPosition: {
-        currentLocation: 'Earth',
-        speed: 0,
-        target: {
-          name: 'The Moon',
-          position: moon.getCurrentPosition(),
-        },
-      },
-      completedPlanets: ['Earth'],
-      userLevel: {
-        level: 1,
-        currentXP: 0,
-        totalXP: 0,
-      },
-      xpHistory: [],
-      idCount: 1,
-      swipedHabitId: undefined,
-      activeTimer: undefined,
-      lastUpdateTime: undefined,
-      planetLandedNotificationId: undefined,
-    });
+    quickReset();
   };
 
   return (

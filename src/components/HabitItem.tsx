@@ -62,6 +62,7 @@ export function HabitItem({
     setSwipedHabit,
     cancelTimer,
     expireTimer,
+    timeOffset,
   } = useStore();
 
   const isActiveTimer = activeTimer?.habitId === habit.id;
@@ -105,7 +106,9 @@ export function HabitItem({
   function getTimerExpiryTimestamp() {
     if (!activeTimer) return getCurrentDate();
     return new Date(
-      new Date(activeTimer.startTime).getTime() + habit.timerLength! * 1000,
+      new Date(activeTimer.startTime).getTime() -
+        timeOffset +
+        habit.timerLength! * 1000,
     );
   }
 
