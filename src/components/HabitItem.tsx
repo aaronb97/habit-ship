@@ -16,6 +16,7 @@ import Animated, {
 import { useTimer } from 'react-timer-hook';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { Habit, useStore } from '../utils/store';
+import { getCurrentDate } from '../utils/time';
 
 type HabitItemProps = {
   habit: Habit;
@@ -40,7 +41,7 @@ const isHabitCompletedToday = (habit: Habit) => {
     habit.completions[habit.completions.length - 1],
   );
 
-  const today = new Date();
+  const today = getCurrentDate();
   return lastCompletion.toDateString() === today.toDateString();
 };
 
@@ -102,7 +103,7 @@ export function HabitItem({
   };
 
   function getTimerExpiryTimestamp() {
-    if (!activeTimer) return new Date();
+    if (!activeTimer) return getCurrentDate();
     return new Date(
       new Date(activeTimer.startTime).getTime() + habit.timerLength! * 1000,
     );

@@ -6,6 +6,7 @@ import { immer } from 'zustand/middleware/immer';
 
 import { earth, planets } from '../planets';
 import { schedulePushNotification } from './schedulePushNotification';
+import { getCurrentTime, getCurrentDate } from './time';
 import {
   Coordinates,
   UserLevel,
@@ -68,6 +69,7 @@ type Store = {
   swipedHabitId?: HabitId;
   lastUpdateTime?: number;
   planetLandedNotificationId?: string;
+  timeOffset: number;
 
   // Actions
   setIsSetupFinished: (value: boolean) => void;
@@ -118,6 +120,7 @@ const initialData = {
   activeTimer: undefined,
   lastUpdateTime: undefined,
   planetLandedNotificationId: undefined,
+  timeOffset: 0,
 } satisfies Partial<Store>;
 
 export const useStore = create<Store>()(
@@ -212,7 +215,7 @@ export const useStore = create<Store>()(
         set((state) => {
           const habitToComplete = state.habits.find((h) => h.id === habitId);
           if (habitToComplete) {
-            habitToComplete.completions.push(new Date().toISOString());
+            habitToComplete.completions.push(getCurrentDate().toISOString());
           }
 
           state.userPosition.speed = nextSpeed;
@@ -222,8 +225,8 @@ export const useStore = create<Store>()(
           }
 
           if (boostType === 'LAUNCH' && state.userPosition.target) {
-            state.userPosition.launchTime = new Date().toISOString();
-            state.lastUpdateTime = Date.now();
+            state.userPosition.launchTime = getCurrentDate().toISOString();
+            state.lastUpdateTime = getCurrentTime();
             const currentPos = getCurrentPosition(state.userPosition);
             const targetPos = state.userPosition.target.position;
             state.userPosition.initialDistance = calculateDistance(
@@ -266,7 +269,7 @@ export const useStore = create<Store>()(
           set({
             activeTimer: {
               habitId,
-              startTime: new Date().toISOString(),
+              startTime: getCurrentDate().toISOString(),
               timerNotificationId: timerId,
             },
           });
@@ -332,7 +335,7 @@ export const useStore = create<Store>()(
 
         if (!target || !launchTime || !currentCoordinates) return;
 
-        const now = Date.now();
+        const now = getCurrentTime();
         const lastUpdate = lastUpdateTime || now;
         const hoursElapsed = (now - lastUpdate) / 3600000;
         const distanceTraveled = speed * hoursElapsed;
@@ -391,7 +394,7 @@ export const useStore = create<Store>()(
           state.xpHistory.push({
             amount,
             source,
-            timestamp: new Date().toISOString(),
+            timestamp: getCurrentDate().toISOString(),
           });
 
           state.userLevel.totalXP += amount;

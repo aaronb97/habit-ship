@@ -9,10 +9,27 @@ import { colors, fonts } from '../../styles/theme';
 import { useStore, HabitId } from '../../utils/store';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { moon } from '../../planets';
+import { advanceTime, getCurrentDate } from '../../utils/time';
 
 export function Dev() {
   const store = useStore();
-  const { clearData } = useStore();
+  const { clearData, updateTravelPosition } = useStore();
+
+  const handleAdvanceTime = (hours: number) => {
+    const { userPosition } = useStore.getState();
+
+    if (!userPosition.target || userPosition.speed === 0) {
+      alert('Not currently traveling. Start a journey first!');
+      return;
+    }
+
+    // Advance the system time
+    const millisecondsToAdvance = hours * 3600000;
+    advanceTime(millisecondsToAdvance);
+
+    // Update position based on new time
+    updateTravelPosition();
+  };
 
   const handleQuickReset = () => {
     useStore.setState({
@@ -75,6 +92,56 @@ export function Dev() {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Time Advancement</Text>
+          <View style={styles.timeDisplay}>
+            <Text style={styles.timeLabel}>Real System Time:</Text>
+            <Text style={styles.timeValue}>{new Date().toLocaleString()}</Text>
+            <Text style={styles.timeLabel}>Offset Time:</Text>
+            <Text style={styles.timeValue}>
+              {getCurrentDate().toLocaleString()}
+            </Text>
+            <Text style={styles.timeLabel}>Time Offset:</Text>
+            <Text style={styles.timeValue}>
+              {store.timeOffset === 0
+                ? 'None'
+                : `+${(store.timeOffset / 3600000).toFixed(2)} hours`}
+            </Text>
+          </View>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={styles.timeButton}
+              onPress={() => handleAdvanceTime(1)}
+            >
+              <Text style={styles.timeButtonText}>+1h</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.timeButton}
+              onPress={() => handleAdvanceTime(6)}
+            >
+              <Text style={styles.timeButtonText}>+6h</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.timeButton}
+              onPress={() => handleAdvanceTime(12)}
+            >
+              <Text style={styles.timeButtonText}>+12h</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.timeButton}
+              onPress={() => handleAdvanceTime(24)}
+            >
+              <Text style={styles.timeButtonText}>+1d</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.timeButton}
+              onPress={() => handleAdvanceTime(8760)}
+            >
+              <Text style={styles.timeButtonText}>+1y</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Store State</Text>
           <Text style={styles.code}>{JSON.stringify(store, null, 2)}</Text>
         </View>
@@ -123,7 +190,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: {
-    fontSize: 14,
+    fontSize: 10,
     fontFamily: fonts.semiBold,
     color: colors.white,
   },
@@ -132,5 +199,47 @@ const styles = StyleSheet.create({
   },
   dangerButtonText: {
     color: colors.white,
+  },
+  sectionDescription: {
+    fontSize: 14,
+    fontFamily: fonts.regular,
+    color: colors.text,
+    marginBottom: 10,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  timeButton: {
+    flex: 1,
+    backgroundColor: colors.accent,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  timeButtonText: {
+    fontSize: 12,
+    fontFamily: fonts.semiBold,
+    color: colors.white,
+  },
+  timeDisplay: {
+    backgroundColor: colors.card,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  timeLabel: {
+    fontSize: 12,
+    fontFamily: fonts.semiBold,
+    color: colors.text,
+    marginTop: 4,
+  },
+  timeValue: {
+    fontSize: 14,
+    fontFamily: fonts.regular,
+    color: colors.primaryText,
+    marginBottom: 4,
   },
 });

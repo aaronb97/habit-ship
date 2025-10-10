@@ -3,6 +3,7 @@ import moonPositions from './positions/moon.json';
 import mercuryPositions from './positions/mercury.json';
 import venusPositions from './positions/venus.json';
 import marsPositions from './positions/mars.json';
+import { getCurrentDate } from './utils/time';
 
 export class Planet {
   public name: string;
@@ -23,7 +24,7 @@ export class Planet {
   }
 
   getCurrentPosition() {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getCurrentDate().toISOString().split('T')[0];
     const [x, y, z] =
       this.dailyPositions[today] ?? Object.values(this.dailyPositions).at(-1);
 
