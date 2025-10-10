@@ -67,6 +67,7 @@ type Store = {
   activeTimer?: {
     habitId: HabitId;
     startTime: string;
+    timerNotificationId: string;
   };
   swipedHabitId?: HabitId;
   lastUpdateTime?: number;
@@ -318,11 +319,12 @@ export const useStore = create<Store>()(
         });
       },
 
-      startTimer: (habitId: HabitId) => {
+      startTimer: (habitId: HabitId, timerNotificationId: string) => {
         set((state) => {
           state.activeTimer = {
             habitId,
             startTime: new Date().toISOString(),
+            timerNotificationId,
           };
         });
       },
@@ -457,6 +459,33 @@ export function useStartTimer() {
     },
     [startTimer, habits, activeTimer],
   );
+
+  return fn;
+}
+
+/**
+ * User pressed cancel
+ */
+export function useCancelTimer() {
+  const { activeTimer } = useStore();
+
+  const fn = useCallback(async () => {
+    const timerId = activeTimer?.timerNotificationId;
+
+    if (timerId) {
+      await Notifications.cancelScheduledNotificationAsync(timerId);
+    }
+
+    useStore.setState({ activeTimer: undefined });
+  }, [activeTimer?.timerNotificationId]);
+
+  return fn;
+}
+
+export function useExpireTimer() {
+  const fn = useCallback(() => {
+    useStore.setState({ activeTimer: undefined });
+  }, []);
 
   return fn;
 }
