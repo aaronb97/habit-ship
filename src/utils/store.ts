@@ -213,13 +213,14 @@ export const useStore = create<Store>()(
           }
         }
 
+        get().addXP(XP_REWARDS.HABIT_COMPLETION, 'habit_completion');
+
         set((state) => {
           const habitToComplete = state.habits.find((h) => h.id === habitId);
           if (habitToComplete) {
             habitToComplete.completions.push(new Date().toISOString());
           }
 
-          state.addXP(XP_REWARDS.HABIT_COMPLETION, 'habit_completion');
           state.userPosition.speed = nextSpeed;
 
           if (newNotificationId) {
@@ -314,11 +315,14 @@ export const useStore = create<Store>()(
        * It's often better to have a dedicated `completePlanet` action.
        */
       completePlanet: (planetName: string) => {
+        const { completedPlanets } = get();
+        if (completedPlanets.includes(planetName)) return;
+
         set((state) => {
-          if (state.completedPlanets.includes(planetName)) return;
           state.completedPlanets.push(planetName);
-          state.addXP(XP_REWARDS.PLANET_COMPLETION, 'planet_completion');
         });
+
+        get().addXP(XP_REWARDS.PLANET_COMPLETION, 'planet_completion');
       },
 
       /**
@@ -326,25 +330,29 @@ export const useStore = create<Store>()(
        * completes the planet and resets travel state.
        */
       updateTravelPosition: () => {
-        set((state) => {
-          const { lastUpdateTime } = state;
-          const { target, launchTime, currentCoordinates, speed } =
-            state.userPosition;
+        const {
+          lastUpdateTime,
+          userPosition: { target, launchTime, currentCoordinates, speed },
+          completedPlanets,
+        } = get();
 
-          if (!target || !launchTime || !currentCoordinates) return;
+        if (!target || !launchTime || !currentCoordinates) return;
 
-          const now = Date.now();
-          const lastUpdate = lastUpdateTime || now;
-          const hoursElapsed = (now - lastUpdate) / 3600000;
-          const distanceTraveled = speed * hoursElapsed;
+        const now = Date.now();
+        const lastUpdate = lastUpdateTime || now;
+        const hoursElapsed = (now - lastUpdate) / 3600000;
+        const distanceTraveled = speed * hoursElapsed;
 
-          const targetPos = target.position;
-          const currentPos = currentCoordinates;
-          const distanceRemaining = calculateDistance(currentPos, targetPos);
+        const targetPos = target.position;
+        const currentPos = currentCoordinates;
+        const distanceRemaining = calculateDistance(currentPos, targetPos);
 
-          if (distanceTraveled >= distanceRemaining) {
-            // Arrived
-            const destinationName = target.name;
+        if (distanceTraveled >= distanceRemaining) {
+          // Arrived
+          const destinationName = target.name;
+          const isNewPlanet = !completedPlanets.includes(destinationName);
+
+          set((state) => {
             state.userPosition.currentLocation = destinationName;
             state.userPosition.currentCoordinates = undefined;
             state.userPosition.target = undefined;
@@ -354,17 +362,22 @@ export const useStore = create<Store>()(
             state.lastUpdateTime = undefined;
 
             // Complete the planet directly
-            if (!state.completedPlanets.includes(destinationName)) {
+            if (isNewPlanet) {
               state.completedPlanets.push(destinationName);
-              state.addXP(XP_REWARDS.PLANET_COMPLETION, 'planet_completion');
             }
-          } else {
-            // Still traveling
-            const dx = targetPos.x - currentPos.x;
-            const dy = targetPos.y - currentPos.y;
-            const dz = targetPos.z - currentPos.z;
-            const progress = distanceTraveled / distanceRemaining;
+          });
 
+          if (isNewPlanet) {
+            get().addXP(XP_REWARDS.PLANET_COMPLETION, 'planet_completion');
+          }
+        } else {
+          // Still traveling
+          const dx = targetPos.x - currentPos.x;
+          const dy = targetPos.y - currentPos.y;
+          const dz = targetPos.z - currentPos.z;
+          const progress = distanceTraveled / distanceRemaining;
+
+          set((state) => {
             state.userPosition.currentCoordinates = {
               x: currentPos.x + dx * progress,
               y: currentPos.y + dy * progress,
@@ -372,8 +385,8 @@ export const useStore = create<Store>()(
             };
 
             state.lastUpdateTime = now;
-          }
-        });
+          });
+        }
       },
 
       /**
