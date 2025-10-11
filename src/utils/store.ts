@@ -76,6 +76,7 @@ type Store = {
   // Actions
   setIsSetupFinished: (value: boolean) => void;
   setDestination: (planetName: string) => void;
+  warpTo: (planetName: string) => void;
   updateTravelPosition: () => void;
   addHabit: (habit: {
     title: string;
@@ -171,6 +172,26 @@ export const useStore = create<Store>()(
           };
 
           state.userPosition.speed = 0;
+        });
+      },
+      warpTo: (planetName) => {
+        const { planetLandedNotificationId } = get();
+        if (planetLandedNotificationId) {
+          Notifications.cancelScheduledNotificationAsync(
+            planetLandedNotificationId,
+          ).catch((e) => console.warn('Failed to cancel notification', e));
+        }
+
+        set((state) => {
+          // Instantly move to the specified planet and clear any travel state
+          state.userPosition.currentLocation = planetName;
+          state.userPosition.currentCoordinates = undefined;
+          state.userPosition.target = undefined;
+          state.userPosition.speed = 0;
+          state.userPosition.launchTime = undefined;
+          state.userPosition.initialDistance = undefined;
+          state.lastUpdateTime = undefined;
+          state.planetLandedNotificationId = undefined;
         });
       },
       setSwipedHabit: (habitId) => set({ swipedHabitId: habitId }),

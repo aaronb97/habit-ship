@@ -9,10 +9,11 @@ import { colors, fonts } from '../../styles/theme';
 import { useStore } from '../../utils/store';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { advanceTime, getCurrentDate } from '../../utils/time';
+import { cBodies, Planet } from '../../planets';
 
 export function Dev() {
   const store = useStore();
-  const { clearData, quickReset, updateTravelPosition } = useStore();
+  const { clearData, quickReset, updateTravelPosition, warpTo } = useStore();
 
   const handleAdvanceTime = (hours: number) => {
     const { userPosition } = useStore.getState();
@@ -57,6 +58,23 @@ export function Dev() {
               Revert Setup (Clear All Data)
             </Text>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Warp To Planet</Text>
+          <View style={styles.buttonGrid}>
+            {cBodies
+              .filter((b) => b instanceof Planet)
+              .map((p) => (
+                <TouchableOpacity
+                  key={p.name}
+                  style={styles.warpButton}
+                  onPress={() => warpTo(p.name)}
+                >
+                  <Text style={styles.warpButtonText}>{p.name}</Text>
+                </TouchableOpacity>
+              ))}
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -141,6 +159,11 @@ const styles = StyleSheet.create({
     color: colors.primaryText,
     marginBottom: 10,
   },
+  buttonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
   code: {
     fontSize: 12,
     fontFamily: fonts.regular,
@@ -188,6 +211,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   timeButtonText: {
+    fontSize: 12,
+    fontFamily: fonts.semiBold,
+    color: colors.white,
+  },
+  warpButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  warpButtonText: {
     fontSize: 12,
     fontFamily: fonts.semiBold,
     color: colors.white,
