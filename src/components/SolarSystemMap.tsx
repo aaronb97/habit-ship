@@ -112,7 +112,7 @@ function createRocketMesh(): THREE.Group {
   return group;
 }
 
-const EARTH_SCENE_RADIUS = 0.5; // Keep Earth's visual radius the same as before
+const CBODY_RADIUS_MULTIPLIER = 0.3;
 // Nonlinear compression exponent for apparent size scaling.
 const SIZE_EXPONENT = 0.4;
 
@@ -465,7 +465,7 @@ export function SolarSystemMap() {
         // Earth's displayed size remains unchanged. The Sun is kept modest for readability.
         const ratioToEarth = p.radiusKm / earth.radiusKm;
         const clampedRatio = apparentScaleRatio(ratioToEarth);
-        const visualRadius = EARTH_SCENE_RADIUS * clampedRatio;
+        const visualRadius = CBODY_RADIUS_MULTIPLIER * clampedRatio;
 
         const mesh = createPlanetMesh(
           p.name,
