@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import earthPositions from './positions/earth.json';
 import moonPositions from './positions/moon.json';
 import mercuryPositions from './positions/mercury.json';
@@ -31,6 +32,7 @@ interface BaseCBodyOptions {
 interface PlanetOptions extends BaseCBodyOptions {
   dailyPositions: Record<string, number[]>;
   color: number;
+  orbitalPeriodDays: number;
 }
 
 interface LandablePlanetOptions extends PlanetOptions {
@@ -48,12 +50,14 @@ export class Planet implements CBody {
   public dailyPositions: Record<string, [number, number, number]>;
   public color: number;
   public radiusKm: number;
+  public orbitalPeriodDays: number;
 
   constructor(options: PlanetOptions) {
     this.name = options.name;
     this.description = options.description;
     this.color = options.color;
     this.radiusKm = options.radiusKm;
+    this.orbitalPeriodDays = options.orbitalPeriodDays;
     this.dailyPositions = options.dailyPositions as Record<
       string,
       [number, number, number]
@@ -121,6 +125,7 @@ export const earth = new LandablePlanet({
   color: 0x6b93d6,
   dailyPositions: earthPositions,
   radiusKm: 6371,
+  orbitalPeriodDays: 365.256,
 });
 export const moon = new LandablePlanet({
   name: 'The Moon',
@@ -129,6 +134,7 @@ export const moon = new LandablePlanet({
   color: 0xc0c0c0,
   dailyPositions: moonPositions,
   radiusKm: 1737.4,
+  orbitalPeriodDays: 27.321661,
 });
 export const mercury = new LandablePlanet({
   name: 'Mercury',
@@ -137,6 +143,7 @@ export const mercury = new LandablePlanet({
   color: 0x8c7853,
   dailyPositions: mercuryPositions,
   radiusKm: 2439.7,
+  orbitalPeriodDays: 87.969,
 });
 export const venus = new LandablePlanet({
   name: 'Venus',
@@ -145,50 +152,63 @@ export const venus = new LandablePlanet({
   color: 0xffc649,
   dailyPositions: venusPositions,
   radiusKm: 6051.8,
+  orbitalPeriodDays: 224.701,
 });
 export const mars = new LandablePlanet({
   name: 'Mars',
   description: 'The Red Planet',
   minLevel: 1,
   color: 0xcd5c5c,
+  // @ts-ignore
   dailyPositions: marsPositions,
   radiusKm: 3389.5,
+  orbitalPeriodDays: 686.98,
 });
 export const jupiter = new UnlandablePlanet({
   name: 'Jupiter',
   description: 'The largest planet in our solar system',
   color: 0xd8ca9d,
+  // @ts-ignore
   dailyPositions: jupiterPositions,
   radiusKm: 69911,
+  orbitalPeriodDays: 4332.589,
 });
 export const saturn = new UnlandablePlanet({
   name: 'Saturn',
   description: 'The ringed planet',
   color: 0xfad5a5,
+  // @ts-ignore
   dailyPositions: saturnPositions,
   radiusKm: 58232,
+  orbitalPeriodDays: 10759.22,
 });
 export const uranus = new UnlandablePlanet({
   name: 'Uranus',
   description: 'The ice giant tilted on its side',
   color: 0x4fd0e7,
+  // @ts-ignore
   dailyPositions: uranusPositions,
   radiusKm: 25362,
+  orbitalPeriodDays: 30685.4,
 });
 export const neptune = new UnlandablePlanet({
   name: 'Neptune',
   description: 'The windiest planet in our solar system',
   color: 0x4b70dd,
+  // @ts-ignore
   dailyPositions: neptunePositions,
   radiusKm: 24622,
+  orbitalPeriodDays: 60190,
 });
 export const pluto = new LandablePlanet({
   name: 'Pluto',
   description: 'The dwarf planet at the edge of our solar system',
   minLevel: 5,
   color: 0xa0522d,
+  // @ts-ignore
   dailyPositions: plutoPositions,
   radiusKm: 1188.3,
+  orbitalPeriodDays: 90560,
 });
 
 export const cBodies: CBody[] = [

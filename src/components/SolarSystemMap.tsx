@@ -14,6 +14,8 @@ import { useCurrentPosition, useStore } from '../utils/store';
 
 // Scale real KM to scene units (keeps numbers in a reasonable range)
 const KM_TO_SCENE = 1 / 1e7; // 10,000,000 km => 1 scene unit
+// Maximum trail length capped at 125 years (in days)
+const MAX_TRAIL_DAYS = Math.floor(125 * 365.25);
 
 function toVec3([x, y, z]: Coordinates): THREE.Vector3 {
   return new THREE.Vector3(x * KM_TO_SCENE, y * KM_TO_SCENE, z * KM_TO_SCENE);
@@ -366,7 +368,9 @@ export function SolarSystemMap() {
         scene.add(mesh);
 
         if (p instanceof Planet) {
-          const trailPoints = getTrailForPlanet(p, 60); // last 60 days
+          const periodDays = Math.round(p.orbitalPeriodDays);
+          const daysBack = Math.min(periodDays, MAX_TRAIL_DAYS);
+          const trailPoints = getTrailForPlanet(p, daysBack);
           const trail = createTrailLine(trailPoints, p.color);
           if (trail) scene.add(trail);
         }
