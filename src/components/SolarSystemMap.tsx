@@ -7,10 +7,10 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { PinchGestureHandlerEventPayload } from 'react-native-gesture-handler';
 
 import { colors } from '../styles/theme';
-import { planets as PLANETS, Planet } from '../planets';
+import { planets as PLANETS, Planet, earth } from '../planets';
 import { Coordinates } from '../types';
 import { getCurrentDate } from '../utils/time';
-import { useCurrentPosition } from '../utils/store';
+import { useCurrentPosition, useStore } from '../utils/store';
 
 // Scale real KM to scene units (keeps numbers in a reasonable range)
 const KM_TO_SCENE = 1 / 1e7; // 10,000,000 km => 1 scene unit
@@ -116,7 +116,44 @@ function createTrailLine(
 ): THREE.Line | undefined {
   if (points.length < 2) return undefined;
   const geom = new THREE.BufferGeometry().setFromPoints(points);
-  const mat = new THREE.LineBasicMaterial({ color, linewidth: 1 });
+
+  // Build a per-vertex alpha attribute that fades from 0 (oldest)
+  // to ~0.85 (newest, closest to the body) to simulate motion.
+  const n = points.length;
+  const alphas = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const t = n > 1 ? i / (n - 1) : 1; // 0 .. 1 from oldest to newest
+    const eased = t * t; // ease-in for smoother tail
+    alphas[i] = 0.85 * eased; // 0 -> 0.85
+  }
+  geom.setAttribute('alpha', new THREE.Float32BufferAttribute(alphas, 1));
+
+  // Color as uniform; fragment shader uses per-vertex alpha.
+  const mat = new THREE.ShaderMaterial({
+    uniforms: {
+      uColor: { value: new THREE.Color(color) },
+    },
+    vertexShader: `
+      attribute float alpha;
+      varying float vAlpha;
+      void main() {
+        vAlpha = alpha;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      precision mediump float;
+      uniform vec3 uColor;
+      varying float vAlpha;
+      void main() {
+        gl_FragColor = vec4(uColor, vAlpha);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.NormalBlending,
+  });
+
   const line = new THREE.Line(geom, mat);
   return line;
 }
@@ -124,12 +161,19 @@ function createTrailLine(
 export function SolarSystemMap() {
   const { width, height } = useWindowDimensions();
   const currentPosition = useCurrentPosition();
+  const targetPosition = useStore((s) => s.userPosition.target?.position);
 
   // Keep latest current position in a ref so animation loop can read it without re-creating
   const latestUserPos = useRef<Coordinates>(currentPosition);
   useEffect(() => {
     latestUserPos.current = currentPosition;
   }, [currentPosition]);
+
+  // Keep latest target position in a ref for use inside the render loop
+  const latestTargetPos = useRef<Coordinates | undefined>(targetPosition);
+  useEffect(() => {
+    latestTargetPos.current = targetPosition;
+  }, [targetPosition]);
 
   // Refs for scene graph
   const rendererRef = useRef<Renderer | null>(null);
@@ -143,25 +187,79 @@ export function SolarSystemMap() {
 
   // Simple orbit state (spherical coordinates around origin)
   const radiusRef = useRef(50);
-  const yawRef = useRef(2); // horizontal angle, radians
-  const pitchRef = useRef(2); // vertical angle, radians
+  const yawRef = useRef(2); // phase angle for orbit within the plane
+  const pitchRef = useRef(2); // unused in planar orbit, retained for future controls
 
   const updateCamera = useCallback(() => {
     const camera = cameraRef.current;
     if (!camera) return;
+
     const r = radiusRef.current;
-    const yaw = yawRef.current;
-    const pitch = pitchRef.current;
+    const theta = yawRef.current; // orbit angle within the plane
 
-    const x = r * Math.cos(pitch) * Math.sin(yaw);
-    const y = r * Math.sin(pitch);
-    const z = r * Math.cos(pitch) * Math.cos(yaw);
+    // Positions in scene units
+    const sun = new THREE.Vector3(0, 0, 0);
+    const user = rocketRef.current
+      ? rocketRef.current.position.clone()
+      : toVec3(latestUserPos.current);
+    const target = toVec3(
+      latestTargetPos.current ?? earth.getCurrentPosition(),
+    );
 
-    camera.position.set(x, y, z);
+    // Center of orbit: the user's position.
+    const center = user.clone();
 
-    if (rocketRef.current) {
-      camera.lookAt(rocketRef.current.position);
+    // Plane normal defined by the three points (sun, user, target)
+    let n = new THREE.Vector3();
+    {
+      const a = user.clone().sub(sun);
+      const b = target.clone().sub(sun);
+      n.copy(a.cross(b));
     }
+
+    // Handle degeneracy (collinear or very small normal)
+    if (n.lengthSq() < 1e-8) {
+      const a = user.clone().sub(sun);
+      const helper =
+        Math.abs(a.y) < 0.9
+          ? new THREE.Vector3(0, 1, 0)
+          : new THREE.Vector3(1, 0, 0);
+      n.copy(a.clone().cross(helper));
+      if (n.lengthSq() < 1e-8) n.set(0, 1, 0);
+    }
+    n.normalize();
+
+    // Orthonormal basis (U, V) spanning the plane
+    let U = target.clone().sub(center);
+    if (U.lengthSq() < 1e-8) {
+      const helper =
+        Math.abs(n.y) < 0.9
+          ? new THREE.Vector3(0, 1, 0)
+          : new THREE.Vector3(1, 0, 0);
+      U = helper.clone().cross(n);
+    }
+    U.normalize();
+    const V = n.clone().cross(U).normalize();
+
+    // Height above the plane (parallel and above). Scale with radius for consistent framing.
+    const height = r * 0.35;
+
+    // Circular path within the plane
+    const circleOffset = U.clone()
+      .multiplyScalar(Math.cos(theta) * r)
+      .add(V.clone().multiplyScalar(Math.sin(theta) * r));
+
+    const desiredPos = center
+      .clone()
+      .add(n.clone().multiplyScalar(height))
+      .add(circleOffset);
+
+    camera.position.copy(desiredPos);
+    // Keep camera "up" aligned to plane normal to minimize roll
+    camera.up.copy(n);
+
+    // Look at the center of the plane to keep sun, user, and target framed
+    camera.lookAt(center);
   }, []);
 
   // Pan gesture removed per request; camera now auto-rotates in the render loop.
@@ -288,7 +386,7 @@ export function SolarSystemMap() {
           }
         });
 
-        // 4) Auto-rotate camera around origin
+        // 4) Auto-rotate camera around the computed plane
         yawRef.current += 0.003;
         updateCamera();
 
