@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, useWindowDimensions, StyleSheet } from 'react-native';
 import { GLView, type ExpoWebGLRenderingContext } from 'expo-gl';
-import { Renderer } from 'expo-three';
+import { Renderer, TextureLoader } from 'expo-three';
 import * as THREE from 'three';
+import { Asset } from 'expo-asset';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { PinchGestureHandlerEventPayload } from 'react-native-gesture-handler';
 
@@ -333,6 +334,37 @@ export function SolarSystemMap() {
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(colors.background);
       sceneRef.current = scene;
+
+      // Sky sphere: wrap the scene with a starfield texture
+      try {
+        const spaceAsset = Asset.fromModule(
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          require('../../assets/cbodies/space.jpg'),
+        );
+
+        await spaceAsset.downloadAsync();
+
+        const loader = new TextureLoader();
+        const spaceTexture = await loader.loadAsync(
+          spaceAsset.localUri ?? spaceAsset.uri,
+        );
+
+        // Ensure correct color space for sRGB textures
+        spaceTexture.colorSpace = THREE.SRGBColorSpace;
+
+        const skyGeometry = new THREE.SphereGeometry(1800, 48, 48);
+        const skyMaterial = new THREE.MeshBasicMaterial({
+          map: spaceTexture,
+          side: THREE.BackSide,
+          depthWrite: false,
+        });
+
+        const skyMesh = new THREE.Mesh(skyGeometry, skyMaterial);
+
+        scene.add(skyMesh);
+      } catch (e) {
+        console.warn('[SolarSystemMap] Failed to load sky texture', e);
+      }
 
       const camera = new THREE.PerspectiveCamera(
         60,
