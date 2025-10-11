@@ -12,6 +12,7 @@ module.exports = {
   rules: {
     'sort-imports': ['off'],
     'import/order': ['off'],
+    '@stylistic/padding-line-between-statements': ['warn'],
   },
   settings: {
     'import/ignore': ['react-native'],
