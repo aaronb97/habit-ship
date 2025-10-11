@@ -9,7 +9,7 @@ export class Planet {
   public name: string;
   public description: string;
   public minLevel: number;
-  public dailyPositions: Record<string, number[]>;
+  public dailyPositions: Record<string, [number, number, number]>;
 
   constructor(options: {
     name: string;
@@ -20,11 +20,14 @@ export class Planet {
     this.name = options.name;
     this.description = options.description;
     this.minLevel = options.minLevel;
-    this.dailyPositions = options.dailyPositions;
+    this.dailyPositions = options.dailyPositions as Record<
+      string,
+      [number, number, number]
+    >;
   }
 
   getCurrentPosition() {
-    const today = getCurrentDate().toISOString().split('T')[0];
+    const today = getCurrentDate().toISOString().split('T')[0]!;
     let coords = this.dailyPositions[today];
 
     if (!coords) {

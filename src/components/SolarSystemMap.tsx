@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, Text, useWindowDimensions, StyleSheet } from 'react-native';
+import { View, useWindowDimensions, StyleSheet } from 'react-native';
 import { GLView, type ExpoWebGLRenderingContext } from 'expo-gl';
 import { Renderer } from 'expo-three';
 import * as THREE from 'three';
@@ -20,7 +20,7 @@ function toVec3({ x, y, z }: Coordinates): THREE.Vector3 {
 }
 
 function getDateKey(date: Date): string {
-  return date.toISOString().split('T')[0];
+  return date.toISOString().split('T')[0]!;
 }
 
 function getTrailForPlanet(planet: Planet, daysBack: number): THREE.Vector3[] {
@@ -32,7 +32,7 @@ function getTrailForPlanet(planet: Planet, daysBack: number): THREE.Vector3[] {
     d.setDate(d.getDate() - i);
     const key = getDateKey(d);
     if (Object.prototype.hasOwnProperty.call(planet.dailyPositions, key)) {
-      const coords = planet.dailyPositions[key] as number[];
+      const coords = planet.dailyPositions[key]!;
       points.push(
         new THREE.Vector3(
           coords[0] * KM_TO_SCENE,
@@ -46,7 +46,7 @@ function getTrailForPlanet(planet: Planet, daysBack: number): THREE.Vector3[] {
   // Always include today's (current) position at the end if available
   const todayKey = getDateKey(today);
   if (Object.prototype.hasOwnProperty.call(planet.dailyPositions, todayKey)) {
-    const todayCoords = planet.dailyPositions[todayKey] as number[];
+    const todayCoords = planet.dailyPositions[todayKey]!;
     points.push(
       new THREE.Vector3(
         todayCoords[0] * KM_TO_SCENE,
@@ -339,14 +339,6 @@ export function SolarSystemMap() {
       const sun = new THREE.Mesh(sunGeom, sunMat);
       sun.position.set(0, 0, 0);
       scene.add(sun);
-
-      // Debug axes to ensure something is visible even without planets
-      const axes = new THREE.AxesHelper(5);
-      scene.add(axes);
-      const grid = new THREE.GridHelper(100, 20, 0x444444, 0x222222);
-      (grid.material as THREE.Material).transparent = true;
-      grid.position.y = -2;
-      scene.add(grid);
 
       // Rocket (user)
       const rocket = createRocketMesh();

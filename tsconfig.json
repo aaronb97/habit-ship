@@ -2,11 +2,8 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "moduleResolution": "bundler",
-    "strict": true
+    "strict": true,
+    "noUncheckedIndexedAccess": true
   },
-  "include": [
-    "src/**/*",
-    "*.ts",
-    "*.tsx"
-  ]
+  "include": ["src/**/*", "*.ts", "*.tsx"]
 }
