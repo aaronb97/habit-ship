@@ -1,9 +1,5 @@
 // Coordinate system types
-export type Coordinates = {
-  x: number;
-  y: number;
-  z: number;
-};
+export type Coordinates = [number, number, number];
 
 export type DailyPosition = {
   date: string; // YYYY-MM-DD format
@@ -70,7 +66,7 @@ export const XP_REWARDS = {
 export function calculateLevel(totalXP: number): number {
   let level = 1;
   for (let i = 2; i <= 20; i++) {
-    if (totalXP >= XP_REQUIREMENTS[i]) {
+    if (totalXP >= XP_REQUIREMENTS[i]!) {
       level = i;
     } else {
       break;
@@ -81,12 +77,12 @@ export function calculateLevel(totalXP: number): number {
 }
 
 export function getXPForNextLevel(currentLevel: number): number {
-  return XP_REQUIREMENTS[currentLevel + 1] || XP_REQUIREMENTS[20];
+  return XP_REQUIREMENTS[currentLevel + 1]! || XP_REQUIREMENTS[20]!;
 }
 
 export function getCurrentLevelXP(totalXP: number): number {
   const level = calculateLevel(totalXP);
-  return totalXP - XP_REQUIREMENTS[level];
+  return totalXP - XP_REQUIREMENTS[level]!;
 }
 
 export function getXPToNextLevel(totalXP: number): number {
@@ -97,7 +93,7 @@ export function getXPToNextLevel(totalXP: number): number {
 
 export function getLevelProgress(totalXP: number): number {
   const level = calculateLevel(totalXP);
-  const currentLevelXP = XP_REQUIREMENTS[level];
+  const currentLevelXP = XP_REQUIREMENTS[level]!;
   const nextLevelXP = getXPForNextLevel(level);
   const progressXP = totalXP - currentLevelXP;
   const totalNeeded = nextLevelXP - currentLevelXP;

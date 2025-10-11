@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { planets } from '../planets';
+import { cBodies } from '../planets';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import {
   calculateDistance,
@@ -34,7 +34,7 @@ export function JourneyDisplay() {
 
   const isTraveling = useIsTraveling();
 
-  const planet = planets.find((p) => p.name === displayLocation);
+  const planet = cBodies.find((p) => p.name === displayLocation);
   const timeRemaining = useTimeRemaining();
 
   if (!planet) {

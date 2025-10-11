@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { usePlanets } from '../../hooks/usePlanets';
+import { useLandablePlanets } from '../../hooks/usePlanets';
 import { colors } from '../../styles/theme';
 import { useIsTraveling, useStore } from '../../utils/store';
 import { PlanetListItem } from '../../components/PlanetListItem';
@@ -21,7 +21,7 @@ export function Planets() {
   const [mapKey, setMapKey] = useState(0);
   const { setDestination } = useStore();
   const isTraveling = useIsTraveling();
-  const planetsWithDistance = usePlanets();
+  const planetsWithDistance = useLandablePlanets();
 
   const handleSetDestination = (planetName: string) => {
     if (isTraveling) {

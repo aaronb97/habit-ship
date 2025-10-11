@@ -7,7 +7,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { PinchGestureHandlerEventPayload } from 'react-native-gesture-handler';
 
 import { colors } from '../styles/theme';
-import { planets as PLANETS, Planet, earth } from '../planets';
+import { cBodies as PLANETS, Planet, earth } from '../planets';
 import { Coordinates } from '../types';
 import { getCurrentDate } from '../utils/time';
 import { useCurrentPosition, useStore } from '../utils/store';
@@ -15,7 +15,7 @@ import { useCurrentPosition, useStore } from '../utils/store';
 // Scale real KM to scene units (keeps numbers in a reasonable range)
 const KM_TO_SCENE = 1 / 1e7; // 10,000,000 km => 1 scene unit
 
-function toVec3({ x, y, z }: Coordinates): THREE.Vector3 {
+function toVec3([x, y, z]: Coordinates): THREE.Vector3 {
   return new THREE.Vector3(x * KM_TO_SCENE, y * KM_TO_SCENE, z * KM_TO_SCENE);
 }
 
@@ -333,38 +333,23 @@ export function SolarSystemMap() {
       sunLight.position.set(0, 0, 0);
       scene.add(sunLight);
 
-      // Sun (at origin)
-      const sunGeom = new THREE.SphereGeometry(2.0, 32, 32);
-      const sunMat = new THREE.MeshBasicMaterial({ color: 0xffd27f });
-      const sun = new THREE.Mesh(sunGeom, sunMat);
-      sun.position.set(0, 0, 0);
-      scene.add(sun);
-
       // Rocket (user)
       const rocket = createRocketMesh();
       rocketRef.current = rocket;
       scene.add(rocket);
 
-      // Planets + trails
-      const planetColorMap: Record<string, number> = {
-        Mercury: 0xb0b0b0,
-        Venus: 0xffdd99,
-        Earth: 0x6aa7ff,
-        'The Moon': 0xcccccc,
-        Mars: 0xff6a5e,
-      };
-
       PLANETS.forEach((p) => {
-        const color = planetColorMap[p.name] ?? 0xffffff;
-        const mesh = createPlanetMesh(p.name, color);
+        const mesh = createPlanetMesh(p.name, p.color);
         planetRefs.current[p.name] = mesh;
         const pos = p.getCurrentPosition();
         mesh.position.copy(toVec3(pos));
         scene.add(mesh);
 
-        const trailPoints = getTrailForPlanet(p, 60); // last 60 days
-        const trail = createTrailLine(trailPoints, color);
-        if (trail) scene.add(trail);
+        if (p instanceof Planet) {
+          const trailPoints = getTrailForPlanet(p, 60); // last 60 days
+          const trail = createTrailLine(trailPoints, p.color);
+          if (trail) scene.add(trail);
+        }
       });
 
       // Initial rocket position

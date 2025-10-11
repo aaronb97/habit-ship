@@ -1,12 +1,5 @@
-import {
-  Alert,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { usePlanets } from '../hooks/usePlanets';
+import { Alert, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useLandablePlanets } from '../hooks/usePlanets';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { useIsTraveling, useStore } from '../utils/store';
 import { PlanetListItem } from './PlanetListItem';
@@ -22,7 +15,7 @@ export function PlanetSelectionModal({
 }: PlanetSelectionModalProps) {
   const { setDestination } = useStore();
   const isTraveling = useIsTraveling();
-  const planetsWithDistance = usePlanets();
+  const planetsWithDistance = useLandablePlanets();
 
   const handleSetDestination = (planetName: string) => {
     if (isTraveling) {
@@ -45,23 +38,19 @@ export function PlanetSelectionModal({
         ],
       );
     } else {
-      Alert.alert(
-        'Set Destination',
-        `Set ${planetName} as your destination?`,
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
+      Alert.alert('Set Destination', `Set ${planetName} as your destination?`, [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Set Destination',
+          onPress: () => {
+            setDestination(planetName);
+            onClose();
           },
-          {
-            text: 'Set Destination',
-            onPress: () => {
-              setDestination(planetName);
-              onClose();
-            },
-          },
-        ],
-      );
+        },
+      ]);
     }
   };
 

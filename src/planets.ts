@@ -3,23 +3,39 @@ import moonPositions from './positions/moon.json';
 import mercuryPositions from './positions/mercury.json';
 import venusPositions from './positions/venus.json';
 import marsPositions from './positions/mars.json';
+import jupiterPositions from './positions/jupiter.json';
+import saturnPositions from './positions/saturn.json';
+import uranusPositions from './positions/uranus.json';
+import neptunePositions from './positions/neptune.json';
+import plutoPositions from './positions/pluto.json';
 import { getCurrentDate } from './utils/time';
 
-export class Planet {
+/**
+ * Short for celestial body
+ */
+export interface CBody {
+  name: string;
+  description: string;
+  color: number;
+
+  getCurrentPosition(): [number, number, number];
+}
+
+export class Planet implements CBody {
   public name: string;
   public description: string;
-  public minLevel: number;
   public dailyPositions: Record<string, [number, number, number]>;
+  public color: number;
 
   constructor(options: {
     name: string;
     description: string;
-    minLevel: number;
+    color: number;
     dailyPositions: Record<string, number[]>;
   }) {
     this.name = options.name;
     this.description = options.description;
-    this.minLevel = options.minLevel;
+    this.color = options.color;
     this.dailyPositions = options.dailyPositions as Record<
       string,
       [number, number, number]
@@ -28,47 +44,148 @@ export class Planet {
 
   getCurrentPosition() {
     const today = getCurrentDate().toISOString().split('T')[0]!;
-    let coords = this.dailyPositions[today];
+    const coords = this.dailyPositions[today];
 
     if (!coords) {
       const values = Object.values(this.dailyPositions);
-      coords = values[values.length - 1];
+      return values[values.length - 1]!;
     }
 
-    const [x = 0, y = 0, z = 0] = coords || [];
-    return { x, y, z };
+    return coords;
   }
 }
 
-export const earth = new Planet({
+export class LandablePlanet extends Planet {
+  public minLevel: number;
+
+  constructor(options: {
+    name: string;
+    description: string;
+    minLevel: number;
+    color: number;
+    dailyPositions: Record<string, number[]>;
+  }) {
+    super(options);
+    this.minLevel = options.minLevel;
+  }
+}
+
+export class UnlandablePlanet extends Planet {
+  constructor(options: {
+    name: string;
+    description: string;
+    color: number;
+    dailyPositions: Record<string, number[]>;
+  }) {
+    super(options);
+  }
+}
+
+export class Star implements CBody {
+  public name: string;
+  public description: string;
+  private position: [number, number, number];
+  public color: number;
+
+  constructor(options: {
+    name: string;
+    description: string;
+    color?: number;
+    position: [number, number, number];
+  }) {
+    this.name = options.name;
+    this.description = options.description;
+    this.color = options.color ?? 0xfff700;
+    this.position = options.position;
+  }
+
+  getCurrentPosition() {
+    return this.position;
+  }
+}
+
+export const sun = new Star({
+  name: 'Sun',
+  description: 'The star at the center of our solar system',
+  position: [0, 0, 0],
+});
+export const earth = new LandablePlanet({
   name: 'Earth',
   description: 'Home sweet home',
   minLevel: 1,
+  color: 0x6b93d6,
   dailyPositions: earthPositions,
 });
-export const moon = new Planet({
+export const moon = new LandablePlanet({
   name: 'The Moon',
   description: 'Our celestial companion',
   minLevel: 1,
+  color: 0xc0c0c0,
   dailyPositions: moonPositions,
 });
-export const mercury = new Planet({
+export const mercury = new LandablePlanet({
   name: 'Mercury',
   description: 'Closest planet to the Sun',
   minLevel: 1,
+  color: 0x8c7853,
   dailyPositions: mercuryPositions,
 });
-export const venus = new Planet({
+export const venus = new LandablePlanet({
   name: 'Venus',
   description: 'The morning star',
   minLevel: 1,
+  color: 0xffc649,
   dailyPositions: venusPositions,
 });
-export const mars = new Planet({
+export const mars = new LandablePlanet({
   name: 'Mars',
   description: 'The Red Planet',
   minLevel: 1,
+  color: 0xcd5c5c,
   dailyPositions: marsPositions,
 });
+export const jupiter = new UnlandablePlanet({
+  name: 'Jupiter',
+  description: 'The largest planet in our solar system',
+  color: 0xd8ca9d,
+  dailyPositions: jupiterPositions,
+});
+export const saturn = new UnlandablePlanet({
+  name: 'Saturn',
+  description: 'The ringed planet',
+  color: 0xfad5a5,
+  dailyPositions: saturnPositions,
+});
+export const uranus = new UnlandablePlanet({
+  name: 'Uranus',
+  description: 'The ice giant tilted on its side',
+  color: 0x4fd0e7,
+  dailyPositions: uranusPositions,
+});
+export const neptune = new UnlandablePlanet({
+  name: 'Neptune',
+  description: 'The windiest planet in our solar system',
+  color: 0x4b70dd,
+  dailyPositions: neptunePositions,
+});
+export const pluto = new LandablePlanet({
+  name: 'Pluto',
+  description: 'The dwarf planet at the edge of our solar system',
+  minLevel: 5,
+  color: 0xa0522d,
+  dailyPositions: plutoPositions,
+});
 
-export const planets: Planet[] = [earth, moon, mercury, venus, mars];
+export const cBodies: CBody[] = [
+  sun,
+  earth,
+  moon,
+  mercury,
+  venus,
+  mars,
+  jupiter,
+  saturn,
+  uranus,
+  neptune,
+  pluto,
+];

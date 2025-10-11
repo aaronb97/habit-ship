@@ -1,10 +1,10 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import { Planet } from '../planets';
 import { useUserLevel } from '../utils/store';
+import { LandablePlanet } from '../planets';
 
 interface PlanetListItemProps {
-  planet: Planet;
+  planet: LandablePlanet;
   distance: number; // Distance in km from current position
   isSelected?: boolean;
   disabledReason?: string; // Reason why planet cannot be selected

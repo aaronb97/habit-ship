@@ -38,7 +38,7 @@ const formatCompletionCount = (count: number): string | null => {
 const isHabitCompletedToday = (habit: Habit) => {
   if (habit.completions.length === 0) return false;
   const lastCompletion = new Date(
-    habit.completions[habit.completions.length - 1],
+    habit.completions[habit.completions.length - 1]!,
   );
 
   const today = getCurrentDate();

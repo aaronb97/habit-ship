@@ -1,4 +1,4 @@
-import { planets } from '../planets';
+import { cBodies, LandablePlanet, Planet } from '../planets';
 import {
   calculateDistance,
   useCurrentPosition,
@@ -7,10 +7,14 @@ import {
 } from '../utils/store';
 
 export interface PlanetWithDistance {
-  planet: (typeof planets)[0];
+  planet: Planet;
   distance: number;
   disabledReason?: string;
   isVisited: boolean;
+}
+
+export interface LandablePlanetWithDistance extends PlanetWithDistance {
+  planet: LandablePlanet;
 }
 
 export function usePlanets(): PlanetWithDistance[] {
@@ -18,7 +22,8 @@ export function usePlanets(): PlanetWithDistance[] {
   const isTraveling = useIsTraveling();
   const { userPosition, completedPlanets } = useStore();
 
-  const planetsWithDistance = planets
+  const planetsWithDistance = cBodies
+    .filter((planet) => planet instanceof Planet)
     .filter((planet) => {
       // Filter out current location when not traveling
       if (!isTraveling && planet.name === userPosition.currentLocation) {
@@ -51,4 +56,12 @@ export function usePlanets(): PlanetWithDistance[] {
     .sort((a, b) => a.distance - b.distance);
 
   return planetsWithDistance;
+}
+
+export function useLandablePlanets(): LandablePlanetWithDistance[] {
+  const planetsWithDistance = usePlanets();
+
+  return planetsWithDistance.filter(
+    (planet) => planet.planet instanceof LandablePlanet,
+  ) as LandablePlanetWithDistance[];
 }

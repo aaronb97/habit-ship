@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 
-import { earth, moon, planets } from '../planets';
+import { earth, moon, cBodies } from '../planets';
 import { schedulePushNotification } from './schedulePushNotification';
 import { getCurrentTime, getCurrentDate } from './time';
 import {
@@ -38,12 +38,14 @@ export type Habit = {
 
 export function calculateDistance(a: Coordinates, b: Coordinates): number {
   return Math.sqrt(
-    Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2) + Math.pow(b.z - a.z, 2),
+    Math.pow(b[0] - a[0], 2) +
+      Math.pow(b[1] - a[1], 2) +
+      Math.pow(b[2] - a[2], 2),
   );
 }
 
 export function getPlanetPosition(planetName: string): Coordinates {
-  const planet = planets.find((p) => p.name === planetName);
+  const planet = cBodies.find((p) => p.name === planetName);
   if (!planet) throw new Error(`Planet ${planetName} not found`);
 
   return planet.getCurrentPosition();
@@ -394,17 +396,17 @@ export const useStore = create<Store>()(
           }
         } else {
           // Still traveling
-          const dx = targetPos.x - currentPos.x;
-          const dy = targetPos.y - currentPos.y;
-          const dz = targetPos.z - currentPos.z;
+          const dx = targetPos[0] - currentPos[0];
+          const dy = targetPos[1] - currentPos[1];
+          const dz = targetPos[2] - currentPos[2];
           const progress = distanceTraveled / distanceRemaining;
 
           set((state) => {
-            state.userPosition.currentCoordinates = {
-              x: currentPos.x + dx * progress,
-              y: currentPos.y + dy * progress,
-              z: currentPos.z + dz * progress,
-            };
+            state.userPosition.currentCoordinates = [
+              currentPos[0] + dx * progress,
+              currentPos[1] + dy * progress,
+              currentPos[2] + dz * progress,
+            ];
 
             state.lastUpdateTime = now;
           });
@@ -445,7 +447,7 @@ function getCurrentPosition(position: UserPosition) {
   return (
     position.currentCoordinates ??
     (
-      planets.find((p) => p.name === position.currentLocation) ?? earth
+      cBodies.find((p) => p.name === position.currentLocation) ?? earth
     ).getCurrentPosition()
   );
 }

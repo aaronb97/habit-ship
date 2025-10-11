@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { PlanetListItem } from '../../components/PlanetListItem';
-import { usePlanets } from '../../hooks/usePlanets';
+import { useLandablePlanets } from '../../hooks/usePlanets';
 import { RootStackParamList } from '..';
 import { colors, fonts, fontSizes } from '../../styles/theme';
 import { useStore } from '../../utils/store';
@@ -23,7 +23,7 @@ export function SetupFirstPlanet() {
     useRoute<RouteProp<RootStackParamList, 'SetupFirstPlanet'>>().params;
 
   // Calculate distances and sort planets (exclude Earth from initial selection)
-  const planetsWithDistance = usePlanets().filter(
+  const planetsWithDistance = useLandablePlanets().filter(
     (p) => p.planet.name !== 'Earth', // Don't show Earth on initial screen
   );
 
