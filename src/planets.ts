@@ -25,9 +25,14 @@ export class Planet {
 
   getCurrentPosition() {
     const today = getCurrentDate().toISOString().split('T')[0];
-    const [x, y, z] =
-      this.dailyPositions[today] ?? Object.values(this.dailyPositions).at(-1);
+    let coords = this.dailyPositions[today];
 
+    if (!coords) {
+      const values = Object.values(this.dailyPositions);
+      coords = values[values.length - 1];
+    }
+
+    const [x = 0, y = 0, z = 0] = coords || [];
     return { x, y, z };
   }
 }

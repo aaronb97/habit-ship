@@ -1,13 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useWindowDimensions, StyleSheet } from 'react-native';
+import { View, Text, useWindowDimensions, StyleSheet } from 'react-native';
 import { GLView, type ExpoWebGLRenderingContext } from 'expo-gl';
 import { Renderer } from 'expo-three';
 import * as THREE from 'three';
-import {
-  Gesture,
-  GestureDetector,
-  GestureHandlerRootView,
-} from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import type { PinchGestureHandlerEventPayload } from 'react-native-gesture-handler';
 
 import { colors } from '../styles/theme';
 import { planets as PLANETS, Planet } from '../planets';
@@ -67,21 +64,27 @@ function createRocketMesh(): THREE.Group {
 
   // Body
   const bodyGeom = new THREE.CylinderGeometry(0.2, 0.2, 1.2, 16);
-  const bodyMat = new THREE.MeshStandardMaterial({ color: colors.accent });
+  const bodyMat = new THREE.MeshBasicMaterial({
+    color: parseInt(colors.accent.replace('#', '0x')),
+  });
   const body = new THREE.Mesh(bodyGeom, bodyMat);
   body.position.y = 0;
   group.add(body);
 
   // Nose
   const noseGeom = new THREE.ConeGeometry(0.22, 0.4, 16);
-  const noseMat = new THREE.MeshStandardMaterial({ color: colors.primary });
+  const noseMat = new THREE.MeshBasicMaterial({
+    color: parseInt(colors.primary.replace('#', '0x')),
+  });
   const nose = new THREE.Mesh(noseGeom, noseMat);
   nose.position.y = 0.8;
   group.add(nose);
 
   // Fins
   const finGeom = new THREE.BoxGeometry(0.05, 0.25, 0.25);
-  const finMat = new THREE.MeshStandardMaterial({ color: colors.cosmic });
+  const finMat = new THREE.MeshBasicMaterial({
+    color: parseInt(colors.cosmic.replace('#', '0x')),
+  });
   const fin1 = new THREE.Mesh(finGeom, finMat);
   fin1.position.set(0.18, -0.4, 0);
   const fin2 = fin1.clone();
@@ -101,7 +104,7 @@ function createRocketMesh(): THREE.Group {
 function createPlanetMesh(name: string, color: number): THREE.Mesh {
   const radius = 0.5; // uniform radius for now
   const geom = new THREE.SphereGeometry(radius, 24, 24);
-  const mat = new THREE.MeshStandardMaterial({ color });
+  const mat = new THREE.MeshBasicMaterial({ color });
   const mesh = new THREE.Mesh(geom, mat);
   mesh.name = name;
   return mesh;
@@ -140,8 +143,8 @@ export function SolarSystemMap() {
 
   // Simple orbit state (spherical coordinates around origin)
   const radiusRef = useRef(50);
-  const yawRef = useRef(0); // horizontal angle, radians
-  const pitchRef = useRef(0.3); // vertical angle, radians
+  const yawRef = useRef(2); // horizontal angle, radians
+  const pitchRef = useRef(2); // vertical angle, radians
 
   const updateCamera = useCallback(() => {
     const camera = cameraRef.current;
@@ -155,41 +158,19 @@ export function SolarSystemMap() {
     const z = r * Math.cos(pitch) * Math.cos(yaw);
 
     camera.position.set(x, y, z);
-    camera.lookAt(0, 0, 0);
+
+    if (rocketRef.current) {
+      camera.lookAt(rocketRef.current.position);
+    }
   }, []);
 
-  const panGesture = useMemo(() => {
-    let lastX = 0;
-    let lastY = 0;
-    const ROTATE_SPEED = 0.005; // radians per pixel
-
-    return Gesture.Pan()
-      .onStart((e) => {
-        lastX = e.x;
-        lastY = e.y;
-      })
-      .onUpdate((e) => {
-        const dx = e.x - lastX;
-        const dy = e.y - lastY;
-        lastX = e.x;
-        lastY = e.y;
-
-        yawRef.current -= dx * ROTATE_SPEED;
-        pitchRef.current -= dy * ROTATE_SPEED;
-        // clamp pitch to avoid flipping
-        const maxPitch = Math.PI / 2 - 0.05;
-        if (pitchRef.current > maxPitch) pitchRef.current = maxPitch;
-        if (pitchRef.current < -maxPitch) pitchRef.current = -maxPitch;
-
-        updateCamera();
-      });
-  }, [updateCamera]);
+  // Pan gesture removed per request; camera now auto-rotates in the render loop.
 
   const pinchGesture = useMemo(() => {
     const MIN_R = 10;
     const MAX_R = 200;
 
-    return Gesture.Pinch().onUpdate((e) => {
+    return Gesture.Pinch().onUpdate((e: PinchGestureHandlerEventPayload) => {
       const scale = e.scale; // 1 at start, >1 zoom out, <1 zoom in
       const newR = THREE.MathUtils.clamp(
         radiusRef.current / scale,
@@ -202,10 +183,7 @@ export function SolarSystemMap() {
     });
   }, [updateCamera]);
 
-  const composedGesture = useMemo(
-    () => Gesture.Simultaneous(panGesture, pinchGesture),
-    [panGesture, pinchGesture],
-  );
+  const composedGesture = useMemo(() => pinchGesture, [pinchGesture]);
 
   const onContextCreate = useCallback(
     async (gl: ExpoWebGLRenderingContext) => {
@@ -213,7 +191,15 @@ export function SolarSystemMap() {
 
       // Renderer
       const renderer = new Renderer({ gl });
-      renderer.setSize(width, height);
+      const { drawingBufferWidth, drawingBufferHeight } = gl;
+      console.log(
+        '[SolarSystemMap] onContextCreate',
+        drawingBufferWidth,
+        drawingBufferHeight,
+      );
+      renderer.setSize(drawingBufferWidth, drawingBufferHeight);
+      renderer.setClearColor(0x101018, 1);
+      renderer.setPixelRatio(1);
       rendererRef.current = renderer;
 
       // Scene & Camera
@@ -221,23 +207,37 @@ export function SolarSystemMap() {
       scene.background = new THREE.Color(colors.background);
       sceneRef.current = scene;
 
-      const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 2000);
+      const camera = new THREE.PerspectiveCamera(
+        60,
+        drawingBufferWidth / drawingBufferHeight,
+        0.1,
+        2000,
+      );
       cameraRef.current = camera;
+
       updateCamera();
 
       // Lights
-      const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+      const ambient = new THREE.AmbientLight(0xffffff, 0.8);
       scene.add(ambient);
       const sunLight = new THREE.PointLight(0xffffff, 1.2, 0, 2);
       sunLight.position.set(0, 0, 0);
       scene.add(sunLight);
 
       // Sun (at origin)
-      const sunGeom = new THREE.SphereGeometry(1.5, 32, 32);
+      const sunGeom = new THREE.SphereGeometry(2.0, 32, 32);
       const sunMat = new THREE.MeshBasicMaterial({ color: 0xffd27f });
       const sun = new THREE.Mesh(sunGeom, sunMat);
       sun.position.set(0, 0, 0);
       scene.add(sun);
+
+      // Debug axes to ensure something is visible even without planets
+      const axes = new THREE.AxesHelper(5);
+      scene.add(axes);
+      const grid = new THREE.GridHelper(100, 20, 0x444444, 0x222222);
+      (grid.material as THREE.Material).transparent = true;
+      grid.position.y = -2;
+      scene.add(grid);
 
       // Rocket (user)
       const rocket = createRocketMesh();
@@ -288,6 +288,10 @@ export function SolarSystemMap() {
           }
         });
 
+        // 4) Auto-rotate camera around origin
+        yawRef.current += 0.003;
+        updateCamera();
+
         renderer.render(scene, camera);
         gl.endFrameEXP();
         frameRef.current = requestAnimationFrame(renderLoop);
@@ -302,15 +306,18 @@ export function SolarSystemMap() {
   useEffect(() => {
     const renderer = rendererRef.current;
     const camera = cameraRef.current;
-    if (renderer && camera) {
-      renderer.setSize(width, height);
-      camera.aspect = width / height;
+    const gl = glRef.current;
+    if (renderer && camera && gl) {
+      const { drawingBufferWidth, drawingBufferHeight } = gl;
+      renderer.setSize(drawingBufferWidth, drawingBufferHeight);
+      camera.aspect = drawingBufferWidth / drawingBufferHeight;
       camera.updateProjectionMatrix();
     }
   }, [width, height]);
 
   // Cleanup
   useEffect(() => {
+    console.log('[SolarSystemMap] mounted');
     return () => {
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
       const scene = sceneRef.current;
@@ -338,11 +345,23 @@ export function SolarSystemMap() {
   }, []);
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <GestureDetector gesture={composedGesture}>
-        <GLView style={styles.gl} onContextCreate={onContextCreate} />
-      </GestureDetector>
-    </GestureHandlerRootView>
+    <GestureDetector gesture={composedGesture}>
+      <View style={styles.container}>
+        <View
+          pointerEvents="none"
+          style={{ position: 'absolute', top: 12, left: 12, zIndex: 2 }}
+        >
+          <Text style={{ color: 'white', fontWeight: 'bold' }}>
+            SolarSystemMap
+          </Text>
+        </View>
+        <GLView
+          style={styles.gl}
+          msaaSamples={0}
+          onContextCreate={onContextCreate}
+        />
+      </View>
+    </GestureDetector>
   );
 }
 
@@ -350,8 +369,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    width: '100%',
+    height: '100%',
+    alignSelf: 'stretch',
   },
   gl: {
     flex: 1,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'transparent',
   },
 });

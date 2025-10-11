@@ -15,6 +15,7 @@ import { StatusBar, Platform, Appearance } from 'react-native';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Navigation } from './navigation';
 import { colors } from './styles/theme';
 import { useIsSetupFinished } from './utils/store';
@@ -111,14 +112,14 @@ export function App() {
   }
 
   return (
-    <>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
       <Navigation
         theme={customTheme}
         linking={linking}
         onReady={onLayoutRootView}
       />
-    </>
+    </GestureHandlerRootView>
   );
 }
 

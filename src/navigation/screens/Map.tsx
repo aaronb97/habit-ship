@@ -1,17 +1,24 @@
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { usePlanets } from '../../hooks/usePlanets';
 import { colors } from '../../styles/theme';
 import { useIsTraveling, useStore } from '../../utils/store';
 import { PlanetListItem } from '../../components/PlanetListItem';
- import { SolarSystemMap } from '../../components/SolarSystemMap';
+import { SolarSystemMap } from '../../components/SolarSystemMap';
 type ViewMode = 'list' | 'map';
 
 export function Planets() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedPlanet, setSelectedPlanet] = useState('');
+  const [mapKey, setMapKey] = useState(0);
   const { setDestination } = useStore();
   const isTraveling = useIsTraveling();
   const planetsWithDistance = usePlanets();
@@ -37,23 +44,19 @@ export function Planets() {
         ],
       );
     } else {
-      Alert.alert(
-        'Set Destination',
-        `Set ${planetName} as your destination?`,
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
+      Alert.alert('Set Destination', `Set ${planetName} as your destination?`, [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Set Destination',
+          onPress: () => {
+            setDestination(planetName);
+            setSelectedPlanet('');
           },
-          {
-            text: 'Set Destination',
-            onPress: () => {
-              setDestination(planetName);
-              setSelectedPlanet('');
-            },
-          },
-        ],
-      );
+        },
+      ]);
     }
   };
 
@@ -113,7 +116,14 @@ export function Planets() {
         </ScrollView>
       ) : (
         <View style={styles.mapContainer}>
-          <SolarSystemMap />
+          <SolarSystemMap key={mapKey} />
+          <TouchableOpacity
+            style={styles.debugButton}
+            accessibilityLabel="Remount SolarSystemMap"
+            onPress={() => setMapKey((k) => k + 1)}
+          >
+            <Ionicons name="refresh" size={18} color={colors.white} />
+          </TouchableOpacity>
         </View>
       )}
     </SafeAreaView>
@@ -164,5 +174,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+  },
+  debugButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: colors.primary,
+    padding: 8,
+    borderRadius: 16,
+    zIndex: 10,
+    opacity: 0.9,
   },
 });
