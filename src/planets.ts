@@ -21,18 +21,33 @@ export interface CBody {
   getCurrentPosition(): [number, number, number];
 }
 
+interface BaseCBodyOptions {
+  name: string;
+  description: string;
+}
+
+interface PlanetOptions extends BaseCBodyOptions {
+  dailyPositions: Record<string, number[]>;
+  color: number;
+}
+
+interface LandablePlanetOptions extends PlanetOptions {
+  minLevel: number;
+  color: number;
+}
+
+interface StarOptions extends BaseCBodyOptions {
+  color?: number;
+  position: [number, number, number];
+}
+
 export class Planet implements CBody {
   public name: string;
   public description: string;
   public dailyPositions: Record<string, [number, number, number]>;
   public color: number;
 
-  constructor(options: {
-    name: string;
-    description: string;
-    color: number;
-    dailyPositions: Record<string, number[]>;
-  }) {
+  constructor(options: PlanetOptions) {
     this.name = options.name;
     this.description = options.description;
     this.color = options.color;
@@ -58,25 +73,14 @@ export class Planet implements CBody {
 export class LandablePlanet extends Planet {
   public minLevel: number;
 
-  constructor(options: {
-    name: string;
-    description: string;
-    minLevel: number;
-    color: number;
-    dailyPositions: Record<string, number[]>;
-  }) {
+  constructor(options: LandablePlanetOptions) {
     super(options);
     this.minLevel = options.minLevel;
   }
 }
 
 export class UnlandablePlanet extends Planet {
-  constructor(options: {
-    name: string;
-    description: string;
-    color: number;
-    dailyPositions: Record<string, number[]>;
-  }) {
+  constructor(options: PlanetOptions) {
     super(options);
   }
 }
@@ -87,12 +91,7 @@ export class Star implements CBody {
   private position: [number, number, number];
   public color: number;
 
-  constructor(options: {
-    name: string;
-    description: string;
-    color?: number;
-    position: [number, number, number];
-  }) {
+  constructor(options: StarOptions) {
     this.name = options.name;
     this.description = options.description;
     this.color = options.color ?? 0xfff700;
