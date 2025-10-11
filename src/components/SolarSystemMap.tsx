@@ -28,7 +28,7 @@ const KM_TO_SCENE = 1 / 1e7;
 // Average days per year including leap years for orbital calculations.
 const DAYS_PER_YEAR = 365.25;
 // Maximum trail lookback in years — limits geometry while showing history.
-const MAX_TRAIL_YEARS = 125;
+const MAX_TRAIL_YEARS = 100;
 // Maximum trail length in days derived from years above.
 const MAX_TRAIL_DAYS = Math.floor(MAX_TRAIL_YEARS * DAYS_PER_YEAR);
 
@@ -36,13 +36,13 @@ const MAX_TRAIL_DAYS = Math.floor(MAX_TRAIL_YEARS * DAYS_PER_YEAR);
 // Upper bound on number of line segments per trail; step size is increased to respect this.
 const TRAIL_MAX_SEGMENTS = 1000;
 // Maximum alpha (opacity) for the newest point in a trail.
-const TRAIL_MAX_ALPHA = 0.9;
+const TRAIL_MAX_ALPHA = 0.85;
 // Exponent for ease-in alpha ramp along trail (2 = quadratic ease-in).
-const TRAIL_EASE_EXPONENT = 1.2;
+const TRAIL_EASE_EXPONENT = 1.75;
 
 // Apparent size scaling (for visual clarity vs physical accuracy)
 // Base scaling factor for all celestial body radii on screen.
-const CBODY_RADIUS_MULTIPLIER = 0.2;
+const CBODY_RADIUS_MULTIPLIER = 0.05;
 // Nonlinear compression exponent to reduce giant/dwarf disparities relative to Earth.
 const SIZE_EXPONENT = 0.6;
 // Minimum ratio clamp to prevent degenerate sizes when numbers are tiny.
@@ -50,13 +50,13 @@ const MIN_SCALE_RATIO = 1e-6;
 
 // Orbit layout
 // Exaggerate separation of moons from their parent to avoid overlap with non-physical display radii.
-const ORBIT_OFFSET_MULTIPLIER = 50;
+const ORBIT_OFFSET_MULTIPLIER = 30;
 
 // Camera and orbit behavior
 // Max elevation angle away from the orbital plane (~63 degrees).
 const MAX_PITCH_RAD = 1.1;
 // Default camera radius from the orbit center (user position).
-const ORBIT_INITIAL_RADIUS = 5;
+const ORBIT_INITIAL_RADIUS = 1;
 // Default yaw angle at start.
 const ORBIT_INITIAL_YAW = 2;
 // Initial height as a fraction of the radius; pitch starts at asin of this value.
@@ -70,7 +70,7 @@ const SMOOTHING_RADIUS = 0.2;
 
 // Gesture settings
 // Min/max zoom radius for pinch gesture.
-const ZOOM_MIN_RADIUS = 2;
+const ZOOM_MIN_RADIUS = 0.5;
 const ZOOM_MAX_RADIUS = 200;
 // Drag across full screen width rotates yaw by 360°, across height rotates pitch by 180°.
 const PAN_YAW_ROTATION_PER_FULL_DRAG = 2 * Math.PI;
