@@ -28,6 +28,9 @@ function toVec3([x, y, z]: Coordinates): THREE.Vector3 {
   return new THREE.Vector3(x * KM_TO_SCENE, y * KM_TO_SCENE, z * KM_TO_SCENE);
 }
 
+// Max camera elevation above/below the orbital plane in radians (~63 degrees)
+const MAX_PITCH_RAD = 1.1;
+
 function getDateKey(date: Date): string {
   return date.toISOString().split('T')[0]!;
 }
@@ -288,12 +291,16 @@ export function SolarSystemMap() {
   const radiusRef = useRef(5);
   const radiusTargetRef = useRef(radiusRef.current);
   const yawRef = useRef(2); // phase angle for orbit within the plane
-  // const pitchRef = useRef(2); // unused in planar orbit, retained for future controls
+  // Elevation angle from the plane; default matches previous fixed height (~0.35 of radius)
+  const pitchRef = useRef(Math.asin(0.35));
   // Tweened camera orbit state
   const yawTargetRef = useRef(yawRef.current);
   const yawVelocityRef = useRef(0);
+  const pitchTargetRef = useRef(pitchRef.current);
+  const pitchVelocityRef = useRef(0);
   const isPanningRef = useRef(false);
   const lastPanXRef = useRef(0);
+  const lastPanYRef = useRef(0);
   const pinchStartRadiusRef = useRef(0);
 
   const updateCamera = useCallback(() => {
@@ -302,6 +309,11 @@ export function SolarSystemMap() {
 
     const r = radiusRef.current;
     const theta = yawRef.current; // orbit angle within the plane
+    const phi = THREE.MathUtils.clamp(
+      pitchRef.current,
+      -MAX_PITCH_RAD,
+      MAX_PITCH_RAD,
+    );
 
     // Positions in scene units
     const sun = new THREE.Vector3(0, 0, 0);
@@ -352,17 +364,17 @@ export function SolarSystemMap() {
     U.normalize();
     const V = n.clone().cross(U).normalize();
 
-    // Height above the plane (parallel and above). Scale with radius for consistent framing.
-    const _height = r * 0.35;
-
-    // Circular path within the plane
+    // Spherical placement: radius r from center, yaw around (U,V) plane by theta,
+    // elevation from plane by phi along normal n.
+    const rCos = r * Math.cos(phi);
+    const rSin = r * Math.sin(phi);
     const circleOffset = U.clone()
-      .multiplyScalar(Math.cos(theta) * r)
-      .add(V.clone().multiplyScalar(Math.sin(theta) * r));
+      .multiplyScalar(Math.cos(theta) * rCos)
+      .add(V.clone().multiplyScalar(Math.sin(theta) * rCos));
 
     const desiredPos = center
       .clone()
-      .add(n.clone().multiplyScalar(_height))
+      .add(n.clone().multiplyScalar(rSin))
       .add(circleOffset);
 
     camera.position.copy(desiredPos);
@@ -397,31 +409,51 @@ export function SolarSystemMap() {
   }, []);
 
   const panGesture = useMemo(() => {
-    const RAD_PER_PX = (2 * Math.PI) / Math.max(1, width);
+    const RAD_PER_PX_X = (2 * Math.PI) / Math.max(1, width);
+    const RAD_PER_PX_Y = Math.PI / Math.max(1, height);
     return Gesture.Pan()
       .onBegin(() => {
         isPanningRef.current = true;
         lastPanXRef.current = 0;
+        lastPanYRef.current = 0;
       })
       .onUpdate((e: PanGestureHandlerEventPayload) => {
         const dx = e.translationX - lastPanXRef.current;
+        const dy = e.translationY - lastPanYRef.current;
         lastPanXRef.current = e.translationX;
+        lastPanYRef.current = e.translationY;
         // Dragging right rotates clockwise (adjust sign as needed)
-        yawTargetRef.current -= dx * RAD_PER_PX;
+        yawTargetRef.current -= dx * RAD_PER_PX_X;
+        // Dragging up (negative dy) now decreases elevation (inverted)
+        pitchTargetRef.current = THREE.MathUtils.clamp(
+          pitchTargetRef.current + dy * RAD_PER_PX_Y,
+          -MAX_PITCH_RAD,
+          MAX_PITCH_RAD,
+        );
       })
       .onEnd((e) => {
         isPanningRef.current = false;
         lastPanXRef.current = 0;
+        lastPanYRef.current = 0;
         // Add a bit of inertial spin, convert px/s -> rad/frame and clamp
-        const pxPerFrame = e.velocityX / 60; // approx frames per second
-        const initial = -(pxPerFrame * RAD_PER_PX);
-        yawVelocityRef.current = THREE.MathUtils.clamp(initial, -0.2, 0.2);
+        const pxPerFrameX = e.velocityX / 60; // approx frames per second
+        const initialYaw = -(pxPerFrameX * RAD_PER_PX_X);
+        yawVelocityRef.current = THREE.MathUtils.clamp(initialYaw, -0.2, 0.2);
+
+        const pxPerFrameY = e.velocityY / 60;
+        const initialPitch = pxPerFrameY * RAD_PER_PX_Y;
+        pitchVelocityRef.current = THREE.MathUtils.clamp(
+          initialPitch,
+          -0.15,
+          0.15,
+        );
       })
       .onFinalize(() => {
         lastPanXRef.current = 0;
+        lastPanYRef.current = 0;
       })
       .runOnJS(true);
-  }, [width]);
+  }, [width, height]);
 
   const composedGesture = useMemo(
     () => Gesture.Simultaneous(pinchGesture, panGesture),
@@ -596,7 +628,7 @@ export function SolarSystemMap() {
           }
         });
 
-        // Camera orbit: auto-rotate when idle, apply inertia, and tween toward target yaw
+        // Camera orbit: auto-rotate when idle, apply inertia, and tween toward targets
         if (!isPanningRef.current && Math.abs(yawVelocityRef.current) < 1e-6) {
           yawTargetRef.current += 0.001;
         }
@@ -610,10 +642,28 @@ export function SolarSystemMap() {
           }
         }
 
+        if (Math.abs(pitchVelocityRef.current) > 1e-6) {
+          pitchTargetRef.current = THREE.MathUtils.clamp(
+            pitchTargetRef.current + pitchVelocityRef.current,
+            -MAX_PITCH_RAD,
+            MAX_PITCH_RAD,
+          );
+
+          pitchVelocityRef.current *= 0.92;
+          if (Math.abs(pitchVelocityRef.current) < 1e-6) {
+            pitchVelocityRef.current = 0;
+          }
+        }
+
         // Smoothly tween current yaw toward target yaw
         const YAW_SMOOTHING = 0.15;
         yawRef.current +=
           (yawTargetRef.current - yawRef.current) * YAW_SMOOTHING;
+
+        // Smoothly tween current pitch toward target pitch
+        const PITCH_SMOOTHING = 0.18;
+        pitchRef.current +=
+          (pitchTargetRef.current - pitchRef.current) * PITCH_SMOOTHING;
 
         // Smoothly tween current radius toward target radius (zoom smoothing)
         const RADIUS_SMOOTHING = 0.2;
