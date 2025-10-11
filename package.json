@@ -12,7 +12,7 @@
     "test": "vitest",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",
-    "convert-positions": "node scripts/convertPositions.js"
+    "convert-positions": "node scripts/convertPositions.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/poppins": "^0.4.0",
