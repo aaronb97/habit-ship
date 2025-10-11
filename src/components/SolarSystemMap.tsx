@@ -440,7 +440,7 @@ export function SolarSystemMap() {
         60,
         drawingBufferWidth / drawingBufferHeight,
         0.1,
-        2000,
+        20000,
       );
 
       cameraRef.current = camera;
