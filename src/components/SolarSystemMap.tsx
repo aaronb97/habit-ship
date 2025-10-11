@@ -456,14 +456,6 @@ export function SolarSystemMap() {
   return (
     <GestureDetector gesture={composedGesture}>
       <View style={styles.container}>
-        <View
-          pointerEvents="none"
-          style={{ position: 'absolute', top: 12, left: 12, zIndex: 2 }}
-        >
-          <Text style={{ color: 'white', fontWeight: 'bold' }}>
-            SolarSystemMap
-          </Text>
-        </View>
         <GLView
           style={styles.gl}
           msaaSamples={0}
