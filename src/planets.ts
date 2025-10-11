@@ -33,7 +33,6 @@ interface PlanetOptions extends BaseCBodyOptions {
 
 interface LandablePlanetOptions extends PlanetOptions {
   minLevel: number;
-  color: number;
 }
 
 interface StarOptions extends BaseCBodyOptions {
