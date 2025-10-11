@@ -3,6 +3,9 @@ import { View, useWindowDimensions, StyleSheet } from 'react-native';
 import { GLView, type ExpoWebGLRenderingContext } from 'expo-gl';
 import { Renderer, TextureLoader } from 'expo-three';
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 import { Asset } from 'expo-asset';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { PinchGestureHandlerEventPayload } from 'react-native-gesture-handler';
@@ -272,6 +275,8 @@ export function SolarSystemMap() {
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const frameRef = useRef<number | null>(null);
   const glRef = useRef<ExpoWebGLRenderingContext | null>(null);
+  const composerRef = useRef<EffectComposer | null>(null);
+  const outlinePassesRef = useRef<Record<string, OutlinePass>>({});
 
   const rocketRef = useRef<THREE.Group | null>(null);
   const planetRefs = useRef<Partial<Record<string, THREE.Mesh>>>({});
@@ -447,6 +452,13 @@ export function SolarSystemMap() {
 
       updateCamera();
 
+      // Post-processing composer and base render pass
+      const composer = new EffectComposer(renderer);
+      composer.setSize(drawingBufferWidth, drawingBufferHeight);
+      const renderPass = new RenderPass(scene, camera);
+      composer.addPass(renderPass);
+      composerRef.current = composer;
+
       // Lights
       const ambient = new THREE.AmbientLight(0xffffff, 0.05);
       scene.add(ambient);
@@ -485,8 +497,38 @@ export function SolarSystemMap() {
           const trailPoints = getTrailForPlanet(p, daysBack);
           const trail = createTrailLine(trailPoints, p.color);
           if (trail) scene.add(trail);
+
+          // Outline pass for this planet with its associated color
+          if (composerRef.current) {
+            const outlinePass = new OutlinePass(
+              new THREE.Vector2(drawingBufferWidth, drawingBufferHeight),
+              scene,
+              camera,
+              [mesh],
+            );
+
+            outlinePass.edgeStrength = 1.5;
+            outlinePass.edgeGlow = 1;
+            outlinePass.edgeThickness = 1.0;
+            outlinePass.pulsePeriod = 0.0;
+            outlinePass.visibleEdgeColor.set(p.color);
+            outlinePass.hiddenEdgeColor.set(p.color);
+            composerRef.current.addPass(outlinePass);
+            outlinePassesRef.current[p.name] = outlinePass;
+          }
         }
       });
+
+      // Make sure the last pass renders to screen
+      const allOutlinePasses = Object.values(outlinePassesRef.current);
+      if (allOutlinePasses.length > 0) {
+        allOutlinePasses.forEach((pass, idx) => {
+          pass.renderToScreen = idx === allOutlinePasses.length - 1;
+        });
+      } else {
+        // If no outline passes were added, render the base scene to screen
+        renderPass.renderToScreen = true;
+      }
 
       // Initial rocket position
       // const initial = toVec3(latestUserPos.current);
@@ -514,7 +556,12 @@ export function SolarSystemMap() {
         yawRef.current += 0.001;
         updateCamera();
 
-        renderer.render(scene, camera);
+        if (composerRef.current) {
+          composerRef.current.render();
+        } else {
+          renderer.render(scene, camera);
+        }
+
         gl.endFrameEXP();
         frameRef.current = requestAnimationFrame(renderLoop);
       };
@@ -534,6 +581,16 @@ export function SolarSystemMap() {
       renderer.setSize(drawingBufferWidth, drawingBufferHeight);
       camera.aspect = drawingBufferWidth / drawingBufferHeight;
       camera.updateProjectionMatrix();
+
+      const composer = composerRef.current;
+      if (composer) {
+        composer.setSize(drawingBufferWidth, drawingBufferHeight);
+      }
+
+      // Update outline pass resolution so edges stay crisp on resize
+      Object.values(outlinePassesRef.current).forEach((pass) => {
+        pass.resolution.set(drawingBufferWidth, drawingBufferHeight);
+      });
     }
   }, [width, height]);
 
@@ -573,6 +630,27 @@ export function SolarSystemMap() {
       }
 
       if (rendererRef.current) {
+        // Dispose postprocessing passes and composer
+        if (composerRef.current) {
+          try {
+            composerRef.current.dispose();
+          } catch (e) {
+            // ignore composer dispose errors
+          }
+
+          composerRef.current = null;
+        }
+
+        Object.values(outlinePassesRef.current).forEach((pass) => {
+          try {
+            pass.dispose();
+          } catch (e) {
+            // ignore outline pass dispose errors
+          }
+        });
+
+        outlinePassesRef.current = {};
+
         rendererRef.current.dispose();
       }
     };
