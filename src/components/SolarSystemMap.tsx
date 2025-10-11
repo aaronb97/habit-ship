@@ -67,6 +67,7 @@ function createRocketMesh(): THREE.Group {
   const bodyMat = new THREE.MeshBasicMaterial({
     color: parseInt(colors.accent.replace('#', '0x')),
   });
+
   const body = new THREE.Mesh(bodyGeom, bodyMat);
   body.position.y = 0;
   group.add(body);
@@ -76,6 +77,7 @@ function createRocketMesh(): THREE.Group {
   const noseMat = new THREE.MeshBasicMaterial({
     color: parseInt(colors.primary.replace('#', '0x')),
   });
+
   const nose = new THREE.Mesh(noseGeom, noseMat);
   nose.position.y = 0.8;
   group.add(nose);
@@ -85,6 +87,7 @@ function createRocketMesh(): THREE.Group {
   const finMat = new THREE.MeshBasicMaterial({
     color: parseInt(colors.cosmic.replace('#', '0x')),
   });
+
   const fin1 = new THREE.Mesh(finGeom, finMat);
   fin1.position.set(0.18, -0.4, 0);
   const fin2 = fin1.clone();
@@ -126,6 +129,7 @@ function createTrailLine(
     const eased = t * t; // ease-in for smoother tail
     alphas[i] = 0.85 * eased; // 0 -> 0.85
   }
+
   geom.setAttribute('alpha', new THREE.Float32BufferAttribute(alphas, 1));
 
   // Color as uniform; fragment shader uses per-vertex alpha.
@@ -188,7 +192,7 @@ export function SolarSystemMap() {
   // Simple orbit state (spherical coordinates around origin)
   const radiusRef = useRef(50);
   const yawRef = useRef(2); // phase angle for orbit within the plane
-  const pitchRef = useRef(2); // unused in planar orbit, retained for future controls
+  // const pitchRef = useRef(2); // unused in planar orbit, retained for future controls
 
   const updateCamera = useCallback(() => {
     const camera = cameraRef.current;
@@ -202,6 +206,7 @@ export function SolarSystemMap() {
     const user = rocketRef.current
       ? rocketRef.current.position.clone()
       : toVec3(latestUserPos.current);
+
     const target = toVec3(
       latestTargetPos.current ?? earth.getCurrentPosition(),
     );
@@ -210,7 +215,7 @@ export function SolarSystemMap() {
     const center = user.clone();
 
     // Plane normal defined by the three points (sun, user, target)
-    let n = new THREE.Vector3();
+    const n = new THREE.Vector3();
     {
       const a = user.clone().sub(sun);
       const b = target.clone().sub(sun);
@@ -224,9 +229,11 @@ export function SolarSystemMap() {
         Math.abs(a.y) < 0.9
           ? new THREE.Vector3(0, 1, 0)
           : new THREE.Vector3(1, 0, 0);
+
       n.copy(a.clone().cross(helper));
       if (n.lengthSq() < 1e-8) n.set(0, 1, 0);
     }
+
     n.normalize();
 
     // Orthonormal basis (U, V) spanning the plane
@@ -236,13 +243,15 @@ export function SolarSystemMap() {
         Math.abs(n.y) < 0.9
           ? new THREE.Vector3(0, 1, 0)
           : new THREE.Vector3(1, 0, 0);
+
       U = helper.clone().cross(n);
     }
+
     U.normalize();
     const V = n.clone().cross(U).normalize();
 
     // Height above the plane (parallel and above). Scale with radius for consistent framing.
-    const height = r * 0.35;
+    const _height = r * 0.35;
 
     // Circular path within the plane
     const circleOffset = U.clone()
@@ -251,7 +260,7 @@ export function SolarSystemMap() {
 
     const desiredPos = center
       .clone()
-      .add(n.clone().multiplyScalar(height))
+      .add(n.clone().multiplyScalar(_height))
       .add(circleOffset);
 
     camera.position.copy(desiredPos);
@@ -295,6 +304,7 @@ export function SolarSystemMap() {
         drawingBufferWidth,
         drawingBufferHeight,
       );
+
       renderer.setSize(drawingBufferWidth, drawingBufferHeight);
       renderer.setClearColor(0x101018, 1);
       renderer.setPixelRatio(1);
@@ -311,6 +321,7 @@ export function SolarSystemMap() {
         0.1,
         2000,
       );
+
       cameraRef.current = camera;
 
       updateCamera();
@@ -397,7 +408,7 @@ export function SolarSystemMap() {
 
       frameRef.current = requestAnimationFrame(renderLoop);
     },
-    [height, width, updateCamera],
+    [updateCamera],
   );
 
   // Resize handling
