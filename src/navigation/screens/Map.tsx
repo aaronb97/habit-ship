@@ -117,13 +117,15 @@ export function Planets() {
       ) : (
         <View style={styles.mapContainer}>
           <SolarSystemMap key={mapKey} />
-          <TouchableOpacity
-            style={styles.debugButton}
-            accessibilityLabel="Remount SolarSystemMap"
-            onPress={() => setMapKey((k) => k + 1)}
-          >
-            <Ionicons name="refresh" size={18} color={colors.white} />
-          </TouchableOpacity>
+          {__DEV__ && (
+            <TouchableOpacity
+              style={styles.debugButton}
+              accessibilityLabel="Remount SolarSystemMap"
+              onPress={() => setMapKey((k) => k + 1)}
+            >
+              <Ionicons name="refresh" size={18} color={colors.white} />
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </SafeAreaView>
