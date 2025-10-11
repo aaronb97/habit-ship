@@ -196,6 +196,7 @@ function createPlanetMesh(
 
   const mesh = new THREE.Mesh(geom, mat);
   mesh.name = name;
+  mesh.rotation.x = -Math.PI / 2;
   return mesh;
 }
 
