@@ -104,8 +104,21 @@ function createRocketMesh(): THREE.Group {
   return group;
 }
 
-function createPlanetMesh(name: string, color: number): THREE.Mesh {
-  const radius = 0.5; // uniform radius for now
+const EARTH_SCENE_RADIUS = 0.5; // Keep Earth's visual radius the same as before
+// Nonlinear compression exponent for apparent size scaling.
+const SIZE_EXPONENT = 0.4;
+
+function apparentScaleRatio(ratio: number): number {
+  // Prevent degenerate values; compress dynamic range using power law
+  const r = Math.max(ratio, 1e-6);
+  return Math.pow(r, SIZE_EXPONENT);
+}
+
+function createPlanetMesh(
+  name: string,
+  color: number,
+  radius: number,
+): THREE.Mesh {
   const geom = new THREE.SphereGeometry(radius, 24, 24);
   const mat = new THREE.MeshBasicMaterial({ color });
   const mesh = new THREE.Mesh(geom, mat);
@@ -339,7 +352,14 @@ export function SolarSystemMap() {
       scene.add(rocket);
 
       PLANETS.forEach((p) => {
-        const mesh = createPlanetMesh(p.name, p.color);
+        // Scale each body's visual radius according to its real radius (km) relative to Earth,
+        // apply an exponential clamp to compress extremes so giants shrink and dwarfs grow relatively.
+        // Earth's displayed size remains unchanged. The Sun is kept modest for readability.
+        const ratioToEarth = p.radiusKm / earth.radiusKm;
+        const clampedRatio = apparentScaleRatio(ratioToEarth);
+        const visualRadius = EARTH_SCENE_RADIUS * clampedRatio;
+
+        const mesh = createPlanetMesh(p.name, p.color, visualRadius);
         planetRefs.current[p.name] = mesh;
         const pos = p.getCurrentPosition();
         mesh.position.copy(toVec3(pos));
