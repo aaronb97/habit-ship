@@ -29,7 +29,11 @@ function getTrailForPlanet(planet: Planet, daysBack: number): THREE.Vector3[] {
   const points: THREE.Vector3[] = [];
   const today = getCurrentDate();
 
-  for (let i = daysBack; i >= 1; i--) {
+  // Sample with a dynamic step so we never exceed ~1000 segments.
+  // If stepping by 1 would produce >1000 segments, increase the step size.
+  const MAX_SEGMENTS = 1000;
+  const step = Math.max(1, Math.ceil(daysBack / MAX_SEGMENTS));
+  for (let i = daysBack; i >= 1; i -= step) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const key = getDateKey(d);
