@@ -66,6 +66,7 @@ function getTrailForPlanet(planet: Planet, daysBack: number): THREE.Vector3[] {
   return points;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function createRocketMesh(): THREE.Group {
   const group = new THREE.Group();
 
@@ -121,13 +122,78 @@ function apparentScaleRatio(ratio: number): number {
   return Math.pow(r, SIZE_EXPONENT);
 }
 
+// Map planet/star names to their texture assets in assets/cbodies
+// We use require() so Metro bundles the images and Expo Asset can resolve to a local URI.
+const BODY_TEXTURE_REQUIRE: Record<string, number> = {
+  Sun: require('../../assets/cbodies/sun.jpg'),
+  Earth: require('../../assets/cbodies/earth.jpg'),
+  'The Moon': require('../../assets/cbodies/moon.jpg'),
+  Mercury: require('../../assets/cbodies/mercury.jpg'),
+  Venus: require('../../assets/cbodies/venus.jpg'),
+  Mars: require('../../assets/cbodies/mars.jpg'),
+  Jupiter: require('../../assets/cbodies/jupiter.jpg'),
+  Saturn: require('../../assets/cbodies/saturn.jpg'),
+  Uranus: require('../../assets/cbodies/uranus.jpg'),
+  Neptune: require('../../assets/cbodies/neptune.jpg'),
+  Pluto: require('../../assets/cbodies/pluto.jpg'),
+};
+
+async function loadBodyTextures(
+  names: string[],
+): Promise<Record<string, THREE.Texture>> {
+  const textures: Record<string, THREE.Texture> = {};
+  const loader = new TextureLoader();
+
+  for (const name of names) {
+    const req = BODY_TEXTURE_REQUIRE[name];
+    if (!req) continue;
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const asset = Asset.fromModule(req);
+      await asset.downloadAsync();
+      const tex = await loader.loadAsync(asset.localUri ?? asset.uri);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 4;
+      textures[name] = tex;
+    } catch (e) {
+      console.warn(`[SolarSystemMap] Failed to load texture for ${name}`, e);
+    }
+  }
+
+  return textures;
+}
+
+type MappedMaterial =
+  | THREE.MeshBasicMaterial
+  | THREE.MeshLambertMaterial
+  | THREE.MeshPhongMaterial;
+
 function createPlanetMesh(
   name: string,
   color: number,
   radius: number,
+  texture?: THREE.Texture,
 ): THREE.Mesh {
   const geom = new THREE.SphereGeometry(radius, 24, 24);
-  const mat = new THREE.MeshBasicMaterial({ color });
+  let mat: THREE.Material;
+
+  if (texture) {
+    if (name === 'Sun') {
+      // Sun should appear self-lit
+      mat = new THREE.MeshBasicMaterial({ map: texture });
+    } else {
+      // Use diffuse lighting so the day side is lit and night side is dark
+      mat = new THREE.MeshLambertMaterial({ map: texture });
+    }
+  } else {
+    // No texture: keep Sun self-lit, planets use Lambert for shading
+    mat =
+      name === 'Sun'
+        ? new THREE.MeshBasicMaterial({ color })
+        : new THREE.MeshLambertMaterial({ color });
+  }
+
   const mesh = new THREE.Mesh(geom, mat);
   mesh.name = name;
   return mesh;
@@ -210,7 +276,7 @@ export function SolarSystemMap() {
   const planetRefs = useRef<Partial<Record<string, THREE.Mesh>>>({});
 
   // Simple orbit state (spherical coordinates around origin)
-  const radiusRef = useRef(50);
+  const radiusRef = useRef(5);
   const yawRef = useRef(2); // phase angle for orbit within the plane
   // const pitchRef = useRef(2); // unused in planar orbit, retained for future controls
 
@@ -366,6 +432,9 @@ export function SolarSystemMap() {
         console.warn('[SolarSystemMap] Failed to load sky texture', e);
       }
 
+      // Preload textures for bodies we know about
+      const texturesByName = await loadBodyTextures(PLANETS.map((p) => p.name));
+
       const camera = new THREE.PerspectiveCamera(
         60,
         drawingBufferWidth / drawingBufferHeight,
@@ -378,16 +447,16 @@ export function SolarSystemMap() {
       updateCamera();
 
       // Lights
-      const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+      const ambient = new THREE.AmbientLight(0xffffff, 0.05);
       scene.add(ambient);
-      const sunLight = new THREE.PointLight(0xffffff, 1.2, 0, 2);
+      const sunLight = new THREE.PointLight(0xffffff, 5, 0, 0.1);
       sunLight.position.set(0, 0, 0);
       scene.add(sunLight);
 
       // Rocket (user)
-      const rocket = createRocketMesh();
-      rocketRef.current = rocket;
-      scene.add(rocket);
+      // const rocket = createRocketMesh();
+      // rocketRef.current = rocket;
+      // scene.add(rocket);
 
       PLANETS.forEach((p) => {
         // Scale each body's visual radius according to its real radius (km) relative to Earth,
@@ -397,7 +466,13 @@ export function SolarSystemMap() {
         const clampedRatio = apparentScaleRatio(ratioToEarth);
         const visualRadius = EARTH_SCENE_RADIUS * clampedRatio;
 
-        const mesh = createPlanetMesh(p.name, p.color, visualRadius);
+        const mesh = createPlanetMesh(
+          p.name,
+          p.color,
+          visualRadius,
+          texturesByName[p.name],
+        );
+
         planetRefs.current[p.name] = mesh;
         const pos = p.getCurrentPosition();
         mesh.position.copy(toVec3(pos));
@@ -413,8 +488,8 @@ export function SolarSystemMap() {
       });
 
       // Initial rocket position
-      const initial = toVec3(latestUserPos.current);
-      rocket.position.copy(initial);
+      // const initial = toVec3(latestUserPos.current);
+      // rocket.position.copy(initial);
 
       // Animation loop
       const renderLoop = () => {
@@ -435,7 +510,7 @@ export function SolarSystemMap() {
         });
 
         // 4) Auto-rotate camera around the computed plane
-        yawRef.current += 0.003;
+        yawRef.current += 0.001;
         updateCamera();
 
         renderer.render(scene, camera);
@@ -472,9 +547,21 @@ export function SolarSystemMap() {
           if (obj instanceof THREE.Mesh) {
             obj.geometry.dispose();
             if (Array.isArray(obj.material)) {
-              obj.material.forEach((m) => m.dispose());
+              obj.material.forEach((m) => {
+                const mm = m as MappedMaterial;
+                if (mm.map) {
+                  mm.map.dispose();
+                }
+
+                m.dispose();
+              });
             } else {
-              obj.material.dispose();
+              const mm = obj.material as MappedMaterial;
+              if (mm.map) {
+                mm.map.dispose();
+              }
+
+              (obj.material as THREE.Material).dispose();
             }
           } else if (obj instanceof THREE.Line) {
             obj.geometry.dispose();
