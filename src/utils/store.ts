@@ -335,21 +335,6 @@ export const useStore = create<Store>()(
       },
 
       /**
-       * This is a placeholder for the more complex logic you had.
-       * It's often better to have a dedicated `completePlanet` action.
-       */
-      completePlanet: (planetName: string) => {
-        const { completedPlanets } = get();
-        if (completedPlanets.includes(planetName)) return;
-
-        set((state) => {
-          state.completedPlanets.push(planetName);
-        });
-
-        get().addXP(XP_REWARDS.PLANET_COMPLETION, 'planet_completion');
-      },
-
-      /**
        * Updates the user's position during travel. If destination is reached,
        * completes the planet and resets travel state.
        */

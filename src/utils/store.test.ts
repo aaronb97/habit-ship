@@ -1,6 +1,40 @@
+// Mocks must be defined before importing the store (persist/notifications)
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { useIsSetupInProgress, useStore } from './store';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('@react-native-async-storage/async-storage', () => {
+  let storage: Record<string, string> = {};
+  return {
+    default: {
+      getItem: vi.fn(async (key: string) => storage[key] ?? null),
+      setItem: vi.fn(async (key: string, value: string) => {
+        storage[key] = value;
+      }),
+      removeItem: vi.fn(async (key: string) => {
+        delete storage[key];
+      }),
+      clear: vi.fn(async () => {
+        storage = {};
+      }),
+    },
+  };
+});
+
+vi.mock('expo-notifications', () => {
+  return {
+    scheduleNotificationAsync: vi.fn(async () => 'mock-notification-id'),
+    cancelScheduledNotificationAsync: vi.fn(async () => undefined),
+    SchedulableTriggerInputTypes: { TIME_INTERVAL: 'timeInterval' },
+  };
+});
+
+import {
+  useIsSetupFinished,
+  useIsTraveling,
+  useTimeRemaining,
+  useStore,
+} from './store';
+import { advanceTime } from './time';
 
 describe('store', () => {
   beforeEach(() => {
@@ -8,7 +42,6 @@ describe('store', () => {
       isSetupFinished: false,
       habits: [],
       userPosition: {
-        state: 'landed',
         currentLocation: 'Earth',
         speed: 0,
       },
@@ -31,19 +64,17 @@ describe('store', () => {
     expect(result.current.isSetupFinished).toBe(true);
   });
 
-  it('should correctly reflect setup state in useIsSetupInProgress', () => {
+  it('should correctly reflect setup state in useIsSetupFinished', () => {
     const { result: store } = renderHook(() => useStore());
-    const { result: setupInProgress } = renderHook(() =>
-      useIsSetupInProgress(),
-    );
+    const { result: setupFinished } = renderHook(() => useIsSetupFinished());
 
-    expect(setupInProgress.current).toBe(true);
+    expect(setupFinished.current).toBe(false);
 
     act(() => {
       store.current.setIsSetupFinished(true);
     });
 
-    expect(setupInProgress.current).toBe(false);
+    expect(setupFinished.current).toBe(true);
   });
 
   it('should add a habit', () => {
@@ -54,8 +85,8 @@ describe('store', () => {
     });
 
     expect(result.current.habits).toHaveLength(1);
-    expect(result.current.habits[0].title).toBe('Drink Water');
-    expect(result.current.habits[0].completions).toEqual([]);
+    expect(result.current.habits[0]!.title).toBe('Drink Water');
+    expect(result.current.habits[0]!.completions).toEqual([]);
   });
 
   it('should generate unique IDs for habits', () => {
@@ -67,8 +98,8 @@ describe('store', () => {
     });
 
     expect(result.current.habits).toHaveLength(2);
-    expect(result.current.habits[0].id).not.toEqual(
-      result.current.habits[1].id,
+    expect(result.current.habits[0]!.id).not.toEqual(
+      result.current.habits[1]!.id,
     );
   });
 
@@ -79,13 +110,13 @@ describe('store', () => {
       result.current.addHabit({ title: 'Old Title' });
     });
 
-    const habitId = result.current.habits[0].id;
+    const habitId = result.current.habits[0]!.id;
 
     act(() => {
       result.current.editHabit(habitId, { title: 'New Title' });
     });
 
-    expect(result.current.habits[0].title).toBe('New Title');
+    expect(result.current.habits[0]!.title).toBe('New Title');
   });
 
   it('should delete a habit', () => {
@@ -95,7 +126,7 @@ describe('store', () => {
       result.current.addHabit({ title: 'Remove Me' });
     });
 
-    const habitId = result.current.habits[0].id;
+    const habitId = result.current.habits[0]!.id;
 
     act(() => {
       result.current.removeHabit(habitId);
@@ -104,60 +135,50 @@ describe('store', () => {
     expect(result.current.habits).toHaveLength(0);
   });
 
-  it('should complete a habit and launch with initial speed', () => {
+  it('should complete a habit and launch with initial speed', async () => {
     const { result } = renderHook(() => useStore());
+    const { result: traveling } = renderHook(() => useIsTraveling());
 
     act(() => {
       result.current.addHabit({ title: 'Daily Run' });
     });
 
-    const habitId = result.current.habits[0].id;
+    const habitId = result.current.habits[0]!.id;
 
     act(() => {
       result.current.setDestination('The Moon');
     });
 
-    act(() => {
-      result.current.completeHabit(habitId);
+    await act(async () => {
+      await result.current.completeHabit(habitId);
     });
 
-    expect(result.current.habits[0].completions).toHaveLength(1);
+    expect(result.current.habits[0]!.completions).toHaveLength(1);
     expect(result.current.userPosition.speed).toBe(50000);
-    expect(result.current.userPosition.state).toBe('traveling');
+    expect(traveling.current).toBe(true);
   });
 
-  it('should increase speed by 1.2x when completing habits while traveling', () => {
+  it('should increase speed by 1.2x when completing habits while traveling', async () => {
     const { result } = renderHook(() => useStore());
 
     act(() => {
       result.current.addHabit({ title: 'Speed Boost' });
     });
 
-    const habitId = result.current.habits[0].id;
+    const habitId = result.current.habits[0]!.id;
 
-    act(() => {
+    await act(async () => {
       result.current.setDestination('The Moon');
-      result.current.completeHabit(habitId); // Launch
+      await result.current.completeHabit(habitId); // Launch
     });
 
     const initialSpeed = result.current.userPosition.speed;
 
-    act(() => {
-      result.current.completeHabit(habitId); // Boost speed
+    await act(async () => {
+      await result.current.completeHabit(habitId); // Boost speed
     });
 
     expect(result.current.userPosition.speed).toBe(initialSpeed * 1.2);
-  });
-
-  it('should complete a planet only once', () => {
-    const { result } = renderHook(() => useStore());
-
-    act(() => {
-      result.current.completePlanet('Gliese 581g');
-      result.current.completePlanet('Gliese 581g');
-    });
-
-    expect(result.current.completedPlanets).toEqual(['Gliese 581g']);
   });
 
   it('should set destination correctly', () => {
@@ -167,52 +188,73 @@ describe('store', () => {
       result.current.setDestination('The Moon');
     });
 
-    expect(result.current.userPosition.targetPlanet).toBe('The Moon');
+    expect(result.current.userPosition.target?.name).toBe('The Moon');
     expect(result.current.userPosition.speed).toBe(0);
   });
 
   it('should update travel position when traveling', () => {
     const { result } = renderHook(() => useStore());
+    const { result: traveling } = renderHook(() => useIsTraveling());
 
     act(() => {
       result.current.addHabit({ title: 'Travel Test' });
     });
 
-    const habitId = result.current.habits[0].id;
+    const habitId = result.current.habits[0]!.id;
 
     act(() => {
       result.current.setDestination('The Moon');
-      result.current.completeHabit(habitId); // Launch
     });
+    // Use async act since completeHabit is async
 
-    expect(result.current.userPosition.state).toBe('traveling');
-    expect(result.current.userPosition.currentCoordinates).toBeDefined();
-    expect(result.current.userPosition.launchTime).toBeDefined();
+    return (async () => {
+      await act(async () => {
+        await result.current.completeHabit(habitId);
+      });
+
+      const prevCoords = result.current.userPosition.currentCoordinates;
+      expect(traveling.current).toBe(true);
+      expect(prevCoords).toBeDefined();
+      expect(result.current.userPosition.launchTime).toBeDefined();
+
+      // Advance time and update position
+      act(() => {
+        advanceTime(60 * 60 * 1000); // +1 hour
+        result.current.updateTravelPosition();
+      });
+
+      expect(result.current.userPosition.currentCoordinates).toBeDefined();
+    })();
   });
 
-  it('should land when reaching destination', () => {
+  it('should land when reaching destination', async () => {
     const { result } = renderHook(() => useStore());
+    const { result: traveling } = renderHook(() => useIsTraveling());
+    const { result: timeRemaining } = renderHook(() => useTimeRemaining());
 
     act(() => {
       result.current.addHabit({ title: 'Quick Trip' });
     });
 
-    const habitId = result.current.habits[0].id;
+    const habitId = result.current.habits[0]!.id;
 
-    act(() => {
+    await act(async () => {
       result.current.setDestination('The Moon');
-      result.current.completeHabit(habitId);
+      await result.current.completeHabit(habitId);
     });
 
-    // Simulate arrival by manually setting state as if enough time has passed
+    // Advance virtual time past the remaining travel time and update position
     act(() => {
-      result.current.userPosition.state = 'landed';
-      result.current.userPosition.currentLocation = 'The Moon';
-      result.current.userPosition.speed = 0;
+      const remainingSeconds = timeRemaining.current;
+      advanceTime((remainingSeconds + 1) * 1000);
+      result.current.updateTravelPosition();
     });
 
-    expect(result.current.userPosition.state).toBe('landed');
+    expect(traveling.current).toBe(false);
     expect(result.current.userPosition.currentLocation).toBe('The Moon');
+    expect(result.current.userPosition.target).toBeUndefined();
+    expect(result.current.userPosition.speed).toBe(0);
+    expect(result.current.completedPlanets.includes('The Moon')).toBe(true);
   });
 
   it('should clear all data', () => {
@@ -230,7 +272,9 @@ describe('store', () => {
 
     expect(result.current.isSetupFinished).toBe(false);
     expect(result.current.habits).toEqual([]);
-    expect(result.current.userPosition.state).toBe('landed');
     expect(result.current.userPosition.currentLocation).toBe('Earth');
+    expect(result.current.userPosition.speed).toBe(0);
+    expect(result.current.userPosition.target).toBeUndefined();
+    expect(result.current.completedPlanets).toEqual(['Earth']);
   });
 });
