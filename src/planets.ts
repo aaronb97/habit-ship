@@ -33,6 +33,8 @@ interface PlanetOptions extends BaseCBodyOptions {
   dailyPositions: Record<string, number[]>;
   color: number;
   orbitalPeriodDays: number;
+  /** Optional parent body this planet/satellite orbits (e.g., 'Earth' for the Moon) */
+  orbits?: string;
 }
 
 interface LandablePlanetOptions extends PlanetOptions {
@@ -51,6 +53,7 @@ export class Planet implements CBody {
   public color: number;
   public radiusKm: number;
   public orbitalPeriodDays: number;
+  public orbits?: string;
 
   constructor(options: PlanetOptions) {
     this.name = options.name;
@@ -62,6 +65,8 @@ export class Planet implements CBody {
       string,
       [number, number, number]
     >;
+
+    this.orbits = options.orbits;
   }
 
   getCurrentPosition() {
@@ -135,6 +140,7 @@ export const moon = new LandablePlanet({
   dailyPositions: moonPositions,
   radiusKm: 1737.4,
   orbitalPeriodDays: 27.321661,
+  orbits: 'Earth',
 });
 export const mercury = new LandablePlanet({
   name: 'Mercury',

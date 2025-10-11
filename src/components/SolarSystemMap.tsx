@@ -14,22 +14,148 @@ import type {
 } from 'react-native-gesture-handler';
 
 import { colors } from '../styles/theme';
-import { cBodies as PLANETS, Planet, earth } from '../planets';
+import { cBodies as PLANETS, Planet, earth, type CBody } from '../planets';
 import { Coordinates } from '../types';
 import { getCurrentDate } from '../utils/time';
 import { useCurrentPosition, useStore } from '../utils/store';
 
-// Scale real KM to scene units (keeps numbers in a reasonable range)
-const KM_TO_SCENE = 1 / 1e7; // 10,000,000 km => 1 scene unit
-// Maximum trail length capped at 125 years (in days)
-const MAX_TRAIL_DAYS = Math.floor(125 * 365.25);
+// ==========================
+// Constants — Easy Tweaking
+// ==========================
+// Units & scaling
+// Scale real KM to scene units (keeps numbers in a reasonable range). 10,000,000 km => 1 scene unit.
+const KM_TO_SCENE = 1 / 1e7;
+// Average days per year including leap years for orbital calculations.
+const DAYS_PER_YEAR = 365.25;
+// Maximum trail lookback in years — limits geometry while showing history.
+const MAX_TRAIL_YEARS = 125;
+// Maximum trail length in days derived from years above.
+const MAX_TRAIL_DAYS = Math.floor(MAX_TRAIL_YEARS * DAYS_PER_YEAR);
+
+// Trail rendering
+// Upper bound on number of line segments per trail; step size is increased to respect this.
+const TRAIL_MAX_SEGMENTS = 1000;
+// Maximum alpha (opacity) for the newest point in a trail.
+const TRAIL_MAX_ALPHA = 0.9;
+// Exponent for ease-in alpha ramp along trail (2 = quadratic ease-in).
+const TRAIL_EASE_EXPONENT = 1.2;
+
+// Apparent size scaling (for visual clarity vs physical accuracy)
+// Base scaling factor for all celestial body radii on screen.
+const CBODY_RADIUS_MULTIPLIER = 0.2;
+// Nonlinear compression exponent to reduce giant/dwarf disparities relative to Earth.
+const SIZE_EXPONENT = 0.6;
+// Minimum ratio clamp to prevent degenerate sizes when numbers are tiny.
+const MIN_SCALE_RATIO = 1e-6;
+
+// Orbit layout
+// Exaggerate separation of moons from their parent to avoid overlap with non-physical display radii.
+const ORBIT_OFFSET_MULTIPLIER = 50;
+
+// Camera and orbit behavior
+// Max elevation angle away from the orbital plane (~63 degrees).
+const MAX_PITCH_RAD = 1.1;
+// Default camera radius from the orbit center (user position).
+const ORBIT_INITIAL_RADIUS = 5;
+// Default yaw angle at start.
+const ORBIT_INITIAL_YAW = 2;
+// Initial height as a fraction of the radius; pitch starts at asin of this value.
+const ORBIT_DEFAULT_HEIGHT_RATIO = 0.35;
+// Idle autorotation speed (radians per frame) when user is not interacting.
+const AUTO_ROTATE_YAW_SPEED = 0.001;
+// Smoothing factors for tweening toward target yaw/pitch/radius.
+const SMOOTHING_YAW = 0.15;
+const SMOOTHING_PITCH = 0.18;
+const SMOOTHING_RADIUS = 0.2;
+
+// Gesture settings
+// Min/max zoom radius for pinch gesture.
+const ZOOM_MIN_RADIUS = 2;
+const ZOOM_MAX_RADIUS = 200;
+// Drag across full screen width rotates yaw by 360°, across height rotates pitch by 180°.
+const PAN_YAW_ROTATION_PER_FULL_DRAG = 2 * Math.PI;
+const PAN_PITCH_ROTATION_PER_FULL_DRAG = Math.PI;
+// Approximate frames per second used to convert gesture velocity (px/s) to per-frame values.
+const INERTIA_FRAMES_PER_SECOND = 60;
+// Clamp for inertial yaw/pitch velocity after pan end.
+const YAW_VELOCITY_CLAMP = 0.2;
+const PITCH_VELOCITY_CLAMP = 0.15;
+// Friction factor applied to inertial velocities each frame.
+const INERTIA_FRICTION = 0.92;
+// Threshold below which inertial velocities are snapped to zero.
+const INERTIA_STOP_EPSILON = 1e-6;
+
+// Renderer & scene
+// Clear color for the WebGL renderer.
+const RENDERER_CLEAR_COLOR = 0x101018;
+// Clear alpha for the renderer background.
+const RENDERER_CLEAR_ALPHA = 1;
+// Pixel ratio for the renderer (1 keeps things predictable across devices in GLView).
+const RENDERER_PIXEL_RATIO = 1;
+// MSAA samples for GLView; 0 disables to avoid unsupported configurations on some devices.
+const GL_MSAA_SAMPLES = 0;
+// Camera projection parameters.
+const CAMERA_FOV = 60;
+const CAMERA_NEAR = 0.1;
+const CAMERA_FAR = 20000;
+
+// Lighting
+// Low ambient to keep space dark while detailing planet shading.
+const AMBIENT_LIGHT_INTENSITY = 0.05;
+// Sun light intensity, infinite distance (0) and mild decay for falloff.
+const SUNLIGHT_INTENSITY = 5;
+const SUNLIGHT_DISTANCE = 0;
+const SUNLIGHT_DECAY = 0.1;
+
+// Sky dome
+// Radius and segments of the inverted sphere used as the starfield backdrop.
+const SKY_SPHERE_RADIUS = 1800;
+const SKY_SEGMENTS = 48;
+
+// Geometry quality
+// Number of segments used for planet spheres.
+const SPHERE_SEGMENTS = 24;
+
+// Material/texture knobs
+// Anisotropic filtering for textures (improves sharpness at glancing angles).
+const TEXTURE_ANISOTROPY = 4;
+
+// Mesh orientation
+// Rotate planet meshes so their equators are horizontal and textures align nicely.
+const PLANET_MESH_X_ROTATION = -Math.PI / 2;
+
+// Numerics
+// Squared-length threshold to detect near-degenerate plane normals.
+const PLANE_NORMAL_EPS = 1e-8;
+// Threshold when choosing a helper axis for cross products (avoid near-parallel vectors).
+const HELPER_AXIS_THRESHOLD = 0.9;
+
+// Post-processing outline
+// Controls for the OutlinePass used to accent selected meshes.
+const OUTLINE_EDGE_STRENGTH = 1.5;
+const OUTLINE_EDGE_GLOW = 1.0;
+const OUTLINE_EDGE_THICKNESS = 1.0;
+const OUTLINE_PULSE_PERIOD = 0.0;
+
+// Rocket prototype (not currently rendered, kept for future use)
+const ROCKET_SEGMENTS = 16; // Cylinder/cone segment count
+const ROCKET_BODY_RADIUS = 0.2;
+const ROCKET_BODY_HEIGHT = 1.2;
+const ROCKET_NOSE_RADIUS = 0.22;
+const ROCKET_NOSE_HEIGHT = 0.4;
+const ROCKET_FIN_THICKNESS = 0.05;
+const ROCKET_FIN_HEIGHT = 0.25;
+const ROCKET_FIN_WIDTH = 0.25;
+const ROCKET_FIN_OFFSET_X = 0.18;
+const ROCKET_FIN_OFFSET_Y = -0.4;
+const ROCKET_FIN_OFFSET_Z = 0.18;
+const ROCKET_ORIENTATION_Z = Math.PI;
+// Vertical offset of the rocket nose relative to the group's origin.
+const ROCKET_NOSE_Y = 0.8;
 
 function toVec3([x, y, z]: Coordinates): THREE.Vector3 {
   return new THREE.Vector3(x * KM_TO_SCENE, y * KM_TO_SCENE, z * KM_TO_SCENE);
 }
-
-// Max camera elevation above/below the orbital plane in radians (~63 degrees)
-const MAX_PITCH_RAD = 1.1;
 
 function getDateKey(date: Date): string {
   return date.toISOString().split('T')[0]!;
@@ -41,8 +167,68 @@ function getTrailForPlanet(planet: Planet, daysBack: number): THREE.Vector3[] {
 
   // Sample with a dynamic step so we never exceed ~1000 segments.
   // If stepping by 1 would produce >1000 segments, increase the step size.
-  const MAX_SEGMENTS = 1000;
-  const step = Math.max(1, Math.ceil(daysBack / MAX_SEGMENTS));
+  const step = Math.max(1, Math.ceil(daysBack / TRAIL_MAX_SEGMENTS));
+
+  const drawOrbitAroundParent = Boolean(planet.orbits);
+  const parent = drawOrbitAroundParent
+    ? PLANETS.find((b) => b.name === planet.orbits)
+    : undefined;
+
+  // Scale offsets so the ring matches the visually exaggerated separation applied in
+  // adjustPositionForOrbits
+
+  if (drawOrbitAroundParent && parent && parent instanceof Planet) {
+    // Anchor the moon's trail around the parent's CURRENT position,
+    // using historical relative offsets (moon - parent) for each day.
+    const parentAnchor = toVec3(parent.getCurrentPosition());
+
+    for (let i = daysBack; i >= 1; i -= step) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = getDateKey(d);
+
+      const childHas = Object.prototype.hasOwnProperty.call(
+        planet.dailyPositions,
+        key,
+      );
+
+      const parentHas = Object.prototype.hasOwnProperty.call(
+        parent.dailyPositions,
+        key,
+      );
+
+      if (childHas && parentHas) {
+        const childKm = planet.dailyPositions[key]!;
+        const parentKm = parent.dailyPositions[key]!;
+
+        const offset = toVec3([
+          (childKm[0] - parentKm[0]) * ORBIT_OFFSET_MULTIPLIER,
+          (childKm[1] - parentKm[1]) * ORBIT_OFFSET_MULTIPLIER,
+          (childKm[2] - parentKm[2]) * ORBIT_OFFSET_MULTIPLIER,
+        ]);
+
+        points.push(parentAnchor.clone().add(offset));
+      }
+    }
+
+    // Include today's point
+    const todayKey = getDateKey(today);
+    const childToday = planet.dailyPositions[todayKey];
+    const parentToday = parent.dailyPositions[todayKey];
+    if (childToday && parentToday) {
+      const offset = toVec3([
+        (childToday[0] - parentToday[0]) * ORBIT_OFFSET_MULTIPLIER,
+        (childToday[1] - parentToday[1]) * ORBIT_OFFSET_MULTIPLIER,
+        (childToday[2] - parentToday[2]) * ORBIT_OFFSET_MULTIPLIER,
+      ]);
+
+      points.push(parentAnchor.clone().add(offset));
+    }
+
+    return points;
+  }
+
+  // Default: heliocentric trail (for planets orbiting the Sun)
   for (let i = daysBack; i >= 1; i -= step) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
@@ -80,7 +266,13 @@ function createRocketMesh(): THREE.Group {
   const group = new THREE.Group();
 
   // Body
-  const bodyGeom = new THREE.CylinderGeometry(0.2, 0.2, 1.2, 16);
+  const bodyGeom = new THREE.CylinderGeometry(
+    ROCKET_BODY_RADIUS,
+    ROCKET_BODY_RADIUS,
+    ROCKET_BODY_HEIGHT,
+    ROCKET_SEGMENTS,
+  );
+
   const bodyMat = new THREE.MeshBasicMaterial({
     color: parseInt(colors.accent.replace('#', '0x')),
   });
@@ -90,45 +282,70 @@ function createRocketMesh(): THREE.Group {
   group.add(body);
 
   // Nose
-  const noseGeom = new THREE.ConeGeometry(0.22, 0.4, 16);
+  const noseGeom = new THREE.ConeGeometry(
+    ROCKET_NOSE_RADIUS,
+    ROCKET_NOSE_HEIGHT,
+    ROCKET_SEGMENTS,
+  );
+
   const noseMat = new THREE.MeshBasicMaterial({
     color: parseInt(colors.primary.replace('#', '0x')),
   });
 
   const nose = new THREE.Mesh(noseGeom, noseMat);
-  nose.position.y = 0.8;
+  nose.position.y = ROCKET_NOSE_Y;
   group.add(nose);
 
   // Fins
-  const finGeom = new THREE.BoxGeometry(0.05, 0.25, 0.25);
+  const finGeom = new THREE.BoxGeometry(
+    ROCKET_FIN_THICKNESS,
+    ROCKET_FIN_HEIGHT,
+    ROCKET_FIN_WIDTH,
+  );
+
   const finMat = new THREE.MeshBasicMaterial({
     color: parseInt(colors.cosmic.replace('#', '0x')),
   });
 
   const fin1 = new THREE.Mesh(finGeom, finMat);
-  fin1.position.set(0.18, -0.4, 0);
+  fin1.position.set(ROCKET_FIN_OFFSET_X, ROCKET_FIN_OFFSET_Y, 0);
   const fin2 = fin1.clone();
-  fin2.position.set(-0.18, -0.4, 0);
+  fin2.position.set(-ROCKET_FIN_OFFSET_X, ROCKET_FIN_OFFSET_Y, 0);
   const fin3 = fin1.clone();
-  fin3.position.set(0, -0.4, 0.18);
+  fin3.position.set(0, ROCKET_FIN_OFFSET_Y, ROCKET_FIN_OFFSET_Z);
   const fin4 = fin1.clone();
-  fin4.position.set(0, -0.4, -0.18);
+  fin4.position.set(0, ROCKET_FIN_OFFSET_Y, -ROCKET_FIN_OFFSET_Z);
   group.add(fin1, fin2, fin3, fin4);
 
   // Orient rocket to point "up"
-  group.rotation.z = Math.PI; // point nose upward in +Y
+  group.rotation.z = ROCKET_ORIENTATION_Z; // point nose upward in +Y
 
   return group;
 }
 
-const CBODY_RADIUS_MULTIPLIER = 0.3;
-// Nonlinear compression exponent for apparent size scaling.
-const SIZE_EXPONENT = 0.4;
-
 function apparentScaleRatio(ratio: number): number {
   // Prevent degenerate values; compress dynamic range using power law
-  const r = Math.max(ratio, 1e-6);
+  const r = Math.max(ratio, MIN_SCALE_RATIO);
   return Math.pow(r, SIZE_EXPONENT);
+}
+
+// If a body orbits a parent, push it outward along the parent->child direction
+// to avoid visual overlap given our non-physical display radii.
+function adjustPositionForOrbits(
+  body: CBody,
+  basePosition: THREE.Vector3,
+): THREE.Vector3 {
+  if (body instanceof Planet && body.orbits) {
+    const parent = PLANETS.find((b) => b.name === body.orbits);
+    if (parent) {
+      const parentPos = toVec3(parent.getCurrentPosition());
+      const dir = basePosition.clone().sub(parentPos);
+
+      return parentPos.add(dir.multiplyScalar(ORBIT_OFFSET_MULTIPLIER));
+    }
+  }
+
+  return basePosition;
 }
 
 // Map planet/star names to their texture assets in assets/cbodies
@@ -163,7 +380,7 @@ async function loadBodyTextures(
       await asset.downloadAsync();
       const tex = await loader.loadAsync(asset.localUri ?? asset.uri);
       tex.colorSpace = THREE.SRGBColorSpace;
-      tex.anisotropy = 4;
+      tex.anisotropy = TEXTURE_ANISOTROPY;
       textures[name] = tex;
     } catch (e) {
       console.warn(`[SolarSystemMap] Failed to load texture for ${name}`, e);
@@ -184,7 +401,12 @@ function createPlanetMesh(
   radius: number,
   texture?: THREE.Texture,
 ): THREE.Mesh {
-  const geom = new THREE.SphereGeometry(radius, 24, 24);
+  const geom = new THREE.SphereGeometry(
+    radius,
+    SPHERE_SEGMENTS,
+    SPHERE_SEGMENTS,
+  );
+
   let mat: THREE.Material;
 
   if (texture) {
@@ -205,7 +427,7 @@ function createPlanetMesh(
 
   const mesh = new THREE.Mesh(geom, mat);
   mesh.name = name;
-  mesh.rotation.x = -Math.PI / 2;
+  mesh.rotation.x = PLANET_MESH_X_ROTATION;
   return mesh;
 }
 
@@ -217,13 +439,13 @@ function createTrailLine(
   const geom = new THREE.BufferGeometry().setFromPoints(points);
 
   // Build a per-vertex alpha attribute that fades from 0 (oldest)
-  // to ~0.85 (newest, closest to the body) to simulate motion.
+  // to ~TRAIL_MAX_ALPHA (newest, closest to the body) to simulate motion.
   const n = points.length;
   const alphas = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     const t = n > 1 ? i / (n - 1) : 1; // 0 .. 1 from oldest to newest
-    const eased = t * t; // ease-in for smoother tail
-    alphas[i] = 0.85 * eased; // 0 -> 0.85
+    const eased = Math.pow(t, TRAIL_EASE_EXPONENT); // ease-in for smoother tail
+    alphas[i] = TRAIL_MAX_ALPHA * eased; // 0 -> TRAIL_MAX_ALPHA
   }
 
   geom.setAttribute('alpha', new THREE.Float32BufferAttribute(alphas, 1));
@@ -288,11 +510,11 @@ export function SolarSystemMap() {
   const planetRefs = useRef<Partial<Record<string, THREE.Mesh>>>({});
 
   // Simple orbit state (spherical coordinates around origin)
-  const radiusRef = useRef(5);
+  const radiusRef = useRef(ORBIT_INITIAL_RADIUS);
   const radiusTargetRef = useRef(radiusRef.current);
-  const yawRef = useRef(2); // phase angle for orbit within the plane
-  // Elevation angle from the plane; default matches previous fixed height (~0.35 of radius)
-  const pitchRef = useRef(Math.asin(0.35));
+  const yawRef = useRef(ORBIT_INITIAL_YAW); // phase angle for orbit within the plane
+  // Elevation angle from the plane; default matches previous fixed height (~ORBIT_DEFAULT_HEIGHT_RATIO of radius)
+  const pitchRef = useRef(Math.asin(ORBIT_DEFAULT_HEIGHT_RATIO));
   // Tweened camera orbit state
   const yawTargetRef = useRef(yawRef.current);
   const yawVelocityRef = useRef(0);
@@ -337,24 +559,24 @@ export function SolarSystemMap() {
     }
 
     // Handle degeneracy (collinear or very small normal)
-    if (n.lengthSq() < 1e-8) {
+    if (n.lengthSq() < PLANE_NORMAL_EPS) {
       const a = user.clone().sub(sun);
       const helper =
-        Math.abs(a.y) < 0.9
+        Math.abs(a.y) < HELPER_AXIS_THRESHOLD
           ? new THREE.Vector3(0, 1, 0)
           : new THREE.Vector3(1, 0, 0);
 
       n.copy(a.clone().cross(helper));
-      if (n.lengthSq() < 1e-8) n.set(0, 1, 0);
+      if (n.lengthSq() < PLANE_NORMAL_EPS) n.set(0, 1, 0);
     }
 
     n.normalize();
 
     // Orthonormal basis (U, V) spanning the plane
     let U = target.clone().sub(center);
-    if (U.lengthSq() < 1e-8) {
+    if (U.lengthSq() < PLANE_NORMAL_EPS) {
       const helper =
-        Math.abs(n.y) < 0.9
+        Math.abs(n.y) < HELPER_AXIS_THRESHOLD
           ? new THREE.Vector3(0, 1, 0)
           : new THREE.Vector3(1, 0, 0);
 
@@ -388,9 +610,6 @@ export function SolarSystemMap() {
   // Gestures: pinch to zoom radius; pan to spin camera around the orbit plane
 
   const pinchGesture = useMemo(() => {
-    const MIN_R = 2;
-    const MAX_R = 200;
-
     return Gesture.Pinch()
       .onBegin(() => {
         pinchStartRadiusRef.current = radiusTargetRef.current;
@@ -399,8 +618,8 @@ export function SolarSystemMap() {
         const scale = e.scale; // 1 at start, >1 zoom out, <1 zoom in
         const newR = THREE.MathUtils.clamp(
           pinchStartRadiusRef.current / scale,
-          MIN_R,
-          MAX_R,
+          ZOOM_MIN_RADIUS,
+          ZOOM_MAX_RADIUS,
         );
 
         radiusTargetRef.current = newR;
@@ -409,8 +628,8 @@ export function SolarSystemMap() {
   }, []);
 
   const panGesture = useMemo(() => {
-    const RAD_PER_PX_X = (2 * Math.PI) / Math.max(1, width);
-    const RAD_PER_PX_Y = Math.PI / Math.max(1, height);
+    const RAD_PER_PX_X = PAN_YAW_ROTATION_PER_FULL_DRAG / Math.max(1, width);
+    const RAD_PER_PX_Y = PAN_PITCH_ROTATION_PER_FULL_DRAG / Math.max(1, height);
     return Gesture.Pan()
       .onBegin(() => {
         isPanningRef.current = true;
@@ -436,16 +655,20 @@ export function SolarSystemMap() {
         lastPanXRef.current = 0;
         lastPanYRef.current = 0;
         // Add a bit of inertial spin, convert px/s -> rad/frame and clamp
-        const pxPerFrameX = e.velocityX / 60; // approx frames per second
+        const pxPerFrameX = e.velocityX / INERTIA_FRAMES_PER_SECOND; // approx frames per second
         const initialYaw = -(pxPerFrameX * RAD_PER_PX_X);
-        yawVelocityRef.current = THREE.MathUtils.clamp(initialYaw, -0.2, 0.2);
+        yawVelocityRef.current = THREE.MathUtils.clamp(
+          initialYaw,
+          -YAW_VELOCITY_CLAMP,
+          YAW_VELOCITY_CLAMP,
+        );
 
-        const pxPerFrameY = e.velocityY / 60;
+        const pxPerFrameY = e.velocityY / INERTIA_FRAMES_PER_SECOND;
         const initialPitch = pxPerFrameY * RAD_PER_PX_Y;
         pitchVelocityRef.current = THREE.MathUtils.clamp(
           initialPitch,
-          -0.15,
-          0.15,
+          -PITCH_VELOCITY_CLAMP,
+          PITCH_VELOCITY_CLAMP,
         );
       })
       .onFinalize(() => {
@@ -474,8 +697,8 @@ export function SolarSystemMap() {
       );
 
       renderer.setSize(drawingBufferWidth, drawingBufferHeight);
-      renderer.setClearColor(0x101018, 1);
-      renderer.setPixelRatio(1);
+      renderer.setClearColor(RENDERER_CLEAR_COLOR, RENDERER_CLEAR_ALPHA);
+      renderer.setPixelRatio(RENDERER_PIXEL_RATIO);
       rendererRef.current = renderer;
 
       // Scene & Camera
@@ -500,7 +723,12 @@ export function SolarSystemMap() {
         // Ensure correct color space for sRGB textures
         spaceTexture.colorSpace = THREE.SRGBColorSpace;
 
-        const skyGeometry = new THREE.SphereGeometry(1800, 48, 48);
+        const skyGeometry = new THREE.SphereGeometry(
+          SKY_SPHERE_RADIUS,
+          SKY_SEGMENTS,
+          SKY_SEGMENTS,
+        );
+
         const skyMaterial = new THREE.MeshBasicMaterial({
           map: spaceTexture,
           side: THREE.BackSide,
@@ -518,10 +746,10 @@ export function SolarSystemMap() {
       const texturesByName = await loadBodyTextures(PLANETS.map((p) => p.name));
 
       const camera = new THREE.PerspectiveCamera(
-        60,
+        CAMERA_FOV,
         drawingBufferWidth / drawingBufferHeight,
-        0.1,
-        20000,
+        CAMERA_NEAR,
+        CAMERA_FAR,
       );
 
       cameraRef.current = camera;
@@ -536,9 +764,15 @@ export function SolarSystemMap() {
       composerRef.current = composer;
 
       // Lights
-      const ambient = new THREE.AmbientLight(0xffffff, 0.05);
+      const ambient = new THREE.AmbientLight(0xffffff, AMBIENT_LIGHT_INTENSITY);
       scene.add(ambient);
-      const sunLight = new THREE.PointLight(0xffffff, 5, 0, 0.1);
+      const sunLight = new THREE.PointLight(
+        0xffffff,
+        SUNLIGHT_INTENSITY,
+        SUNLIGHT_DISTANCE,
+        SUNLIGHT_DECAY,
+      );
+
       sunLight.position.set(0, 0, 0);
       scene.add(sunLight);
 
@@ -563,8 +797,9 @@ export function SolarSystemMap() {
         );
 
         planetRefs.current[p.name] = mesh;
-        const pos = p.getCurrentPosition();
-        mesh.position.copy(toVec3(pos));
+        const basePos = toVec3(p.getCurrentPosition());
+        const adjustedPos = adjustPositionForOrbits(p, basePos);
+        mesh.position.copy(adjustedPos);
         scene.add(mesh);
 
         if (p instanceof Planet) {
@@ -583,10 +818,10 @@ export function SolarSystemMap() {
               [mesh],
             );
 
-            outlinePass.edgeStrength = 1.5;
-            outlinePass.edgeGlow = 1;
-            outlinePass.edgeThickness = 1.0;
-            outlinePass.pulsePeriod = 0.0;
+            outlinePass.edgeStrength = OUTLINE_EDGE_STRENGTH;
+            outlinePass.edgeGlow = OUTLINE_EDGE_GLOW;
+            outlinePass.edgeThickness = OUTLINE_EDGE_THICKNESS;
+            outlinePass.pulsePeriod = OUTLINE_PULSE_PERIOD;
             outlinePass.visibleEdgeColor.set(p.color);
             outlinePass.hiddenEdgeColor.set(p.color);
             composerRef.current.addPass(outlinePass);
@@ -623,52 +858,53 @@ export function SolarSystemMap() {
         PLANETS.forEach((p) => {
           const mesh = planetRefs.current[p.name];
           if (mesh) {
-            const pos = p.getCurrentPosition();
-            mesh.position.copy(toVec3(pos));
+            const basePos = toVec3(p.getCurrentPosition());
+            const adjustedPos = adjustPositionForOrbits(p, basePos);
+            mesh.position.copy(adjustedPos);
           }
         });
 
         // Camera orbit: auto-rotate when idle, apply inertia, and tween toward targets
-        if (!isPanningRef.current && Math.abs(yawVelocityRef.current) < 1e-6) {
-          yawTargetRef.current += 0.001;
+        if (
+          !isPanningRef.current &&
+          Math.abs(yawVelocityRef.current) < INERTIA_STOP_EPSILON
+        ) {
+          yawTargetRef.current += AUTO_ROTATE_YAW_SPEED;
         }
 
         // Apply inertial spin from pan end
-        if (Math.abs(yawVelocityRef.current) > 1e-6) {
+        if (Math.abs(yawVelocityRef.current) > INERTIA_STOP_EPSILON) {
           yawTargetRef.current += yawVelocityRef.current;
-          yawVelocityRef.current *= 0.92; // friction
-          if (Math.abs(yawVelocityRef.current) < 1e-6) {
+          yawVelocityRef.current *= INERTIA_FRICTION; // friction
+          if (Math.abs(yawVelocityRef.current) < INERTIA_STOP_EPSILON) {
             yawVelocityRef.current = 0;
           }
         }
 
-        if (Math.abs(pitchVelocityRef.current) > 1e-6) {
+        if (Math.abs(pitchVelocityRef.current) > INERTIA_STOP_EPSILON) {
           pitchTargetRef.current = THREE.MathUtils.clamp(
             pitchTargetRef.current + pitchVelocityRef.current,
             -MAX_PITCH_RAD,
             MAX_PITCH_RAD,
           );
 
-          pitchVelocityRef.current *= 0.92;
-          if (Math.abs(pitchVelocityRef.current) < 1e-6) {
+          pitchVelocityRef.current *= INERTIA_FRICTION;
+          if (Math.abs(pitchVelocityRef.current) < INERTIA_STOP_EPSILON) {
             pitchVelocityRef.current = 0;
           }
         }
 
         // Smoothly tween current yaw toward target yaw
-        const YAW_SMOOTHING = 0.15;
         yawRef.current +=
-          (yawTargetRef.current - yawRef.current) * YAW_SMOOTHING;
+          (yawTargetRef.current - yawRef.current) * SMOOTHING_YAW;
 
         // Smoothly tween current pitch toward target pitch
-        const PITCH_SMOOTHING = 0.18;
         pitchRef.current +=
-          (pitchTargetRef.current - pitchRef.current) * PITCH_SMOOTHING;
+          (pitchTargetRef.current - pitchRef.current) * SMOOTHING_PITCH;
 
         // Smoothly tween current radius toward target radius (zoom smoothing)
-        const RADIUS_SMOOTHING = 0.2;
         radiusRef.current +=
-          (radiusTargetRef.current - radiusRef.current) * RADIUS_SMOOTHING;
+          (radiusTargetRef.current - radiusRef.current) * SMOOTHING_RADIUS;
 
         updateCamera();
 
@@ -777,7 +1013,7 @@ export function SolarSystemMap() {
       <View style={styles.container}>
         <GLView
           style={styles.gl}
-          msaaSamples={0}
+          msaaSamples={GL_MSAA_SAMPLES}
           onContextCreate={onContextCreate}
         />
       </View>
