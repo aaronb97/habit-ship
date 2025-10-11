@@ -8,7 +8,10 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 import { Asset } from 'expo-asset';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import type { PinchGestureHandlerEventPayload } from 'react-native-gesture-handler';
+import type {
+  PinchGestureHandlerEventPayload,
+  PanGestureHandlerEventPayload,
+} from 'react-native-gesture-handler';
 
 import { colors } from '../styles/theme';
 import { cBodies as PLANETS, Planet, earth } from '../planets';
@@ -283,8 +286,15 @@ export function SolarSystemMap() {
 
   // Simple orbit state (spherical coordinates around origin)
   const radiusRef = useRef(5);
+  const radiusTargetRef = useRef(radiusRef.current);
   const yawRef = useRef(2); // phase angle for orbit within the plane
   // const pitchRef = useRef(2); // unused in planar orbit, retained for future controls
+  // Tweened camera orbit state
+  const yawTargetRef = useRef(yawRef.current);
+  const yawVelocityRef = useRef(0);
+  const isPanningRef = useRef(false);
+  const lastPanXRef = useRef(0);
+  const pinchStartRadiusRef = useRef(0);
 
   const updateCamera = useCallback(() => {
     const camera = cameraRef.current;
@@ -363,26 +373,60 @@ export function SolarSystemMap() {
     camera.lookAt(center);
   }, []);
 
-  // Pan gesture removed per request; camera now auto-rotates in the render loop.
+  // Gestures: pinch to zoom radius; pan to spin camera around the orbit plane
 
   const pinchGesture = useMemo(() => {
-    const MIN_R = 10;
+    const MIN_R = 2;
     const MAX_R = 200;
 
-    return Gesture.Pinch().onUpdate((e: PinchGestureHandlerEventPayload) => {
-      const scale = e.scale; // 1 at start, >1 zoom out, <1 zoom in
-      const newR = THREE.MathUtils.clamp(
-        radiusRef.current / scale,
-        MIN_R,
-        MAX_R,
-      );
+    return Gesture.Pinch()
+      .onBegin(() => {
+        pinchStartRadiusRef.current = radiusTargetRef.current;
+      })
+      .onUpdate((e: PinchGestureHandlerEventPayload) => {
+        const scale = e.scale; // 1 at start, >1 zoom out, <1 zoom in
+        const newR = THREE.MathUtils.clamp(
+          pinchStartRadiusRef.current / scale,
+          MIN_R,
+          MAX_R,
+        );
 
-      radiusRef.current = newR;
-      updateCamera();
-    });
-  }, [updateCamera]);
+        radiusTargetRef.current = newR;
+      })
+      .runOnJS(true);
+  }, []);
 
-  const composedGesture = useMemo(() => pinchGesture, [pinchGesture]);
+  const panGesture = useMemo(() => {
+    const RAD_PER_PX = (2 * Math.PI) / Math.max(1, width);
+    return Gesture.Pan()
+      .onBegin(() => {
+        isPanningRef.current = true;
+        lastPanXRef.current = 0;
+      })
+      .onUpdate((e: PanGestureHandlerEventPayload) => {
+        const dx = e.translationX - lastPanXRef.current;
+        lastPanXRef.current = e.translationX;
+        // Dragging right rotates clockwise (adjust sign as needed)
+        yawTargetRef.current -= dx * RAD_PER_PX;
+      })
+      .onEnd((e) => {
+        isPanningRef.current = false;
+        lastPanXRef.current = 0;
+        // Add a bit of inertial spin, convert px/s -> rad/frame and clamp
+        const pxPerFrame = e.velocityX / 60; // approx frames per second
+        const initial = -(pxPerFrame * RAD_PER_PX);
+        yawVelocityRef.current = THREE.MathUtils.clamp(initial, -0.2, 0.2);
+      })
+      .onFinalize(() => {
+        lastPanXRef.current = 0;
+      })
+      .runOnJS(true);
+  }, [width]);
+
+  const composedGesture = useMemo(
+    () => Gesture.Simultaneous(pinchGesture, panGesture),
+    [pinchGesture, panGesture],
+  );
 
   const onContextCreate = useCallback(
     async (gl: ExpoWebGLRenderingContext) => {
@@ -552,8 +596,30 @@ export function SolarSystemMap() {
           }
         });
 
-        // 4) Auto-rotate camera around the computed plane
-        yawRef.current += 0.001;
+        // Camera orbit: auto-rotate when idle, apply inertia, and tween toward target yaw
+        if (!isPanningRef.current && Math.abs(yawVelocityRef.current) < 1e-6) {
+          yawTargetRef.current += 0.001;
+        }
+
+        // Apply inertial spin from pan end
+        if (Math.abs(yawVelocityRef.current) > 1e-6) {
+          yawTargetRef.current += yawVelocityRef.current;
+          yawVelocityRef.current *= 0.92; // friction
+          if (Math.abs(yawVelocityRef.current) < 1e-6) {
+            yawVelocityRef.current = 0;
+          }
+        }
+
+        // Smoothly tween current yaw toward target yaw
+        const YAW_SMOOTHING = 0.15;
+        yawRef.current +=
+          (yawTargetRef.current - yawRef.current) * YAW_SMOOTHING;
+
+        // Smoothly tween current radius toward target radius (zoom smoothing)
+        const RADIUS_SMOOTHING = 0.2;
+        radiusRef.current +=
+          (radiusTargetRef.current - radiusRef.current) * RADIUS_SMOOTHING;
+
         updateCamera();
 
         if (composerRef.current) {
