@@ -522,6 +522,8 @@ export function SolarSystemMap() {
     latestUserPosStateRef.current = userPosState;
   }, [userPosState]);
 
+  const { showTrails, showTextures } = useStore();
+
   // Local frame-based interpolation so the user moves smoothly even between store updates
   const lastFrameTimeRef = useRef<number | null>(null);
   const displayTravelOffsetRef = useRef<number>(0); // km added since last store update
@@ -818,8 +820,10 @@ export function SolarSystemMap() {
         console.warn('[SolarSystemMap] Failed to load sky texture', e);
       }
 
-      // Preload textures for bodies we know about
-      const texturesByName = await loadBodyTextures(PLANETS.map((p) => p.name));
+      // Conditionally preload textures (initial setting only)
+      const texturesByName = showTextures
+        ? await loadBodyTextures(PLANETS.map((p) => p.name))
+        : {};
 
       const camera = new THREE.PerspectiveCamera(
         CAMERA_FOV,
@@ -865,11 +869,15 @@ export function SolarSystemMap() {
         const clampedRatio = apparentScaleRatio(ratioToEarth);
         const visualRadius = CBODY_RADIUS_MULTIPLIER * clampedRatio;
 
+        const initialTexture = showTextures
+          ? texturesByName[p.name]
+          : undefined;
+
         const mesh = createPlanetMesh(
           p.name,
           p.color,
           visualRadius,
-          texturesByName[p.name],
+          initialTexture,
         );
 
         planetRefs.current[p.name] = mesh;
@@ -881,9 +889,12 @@ export function SolarSystemMap() {
         if (p instanceof Planet) {
           const periodDays = Math.round(p.orbitalPeriodDays);
           const daysBack = Math.min(periodDays, MAX_TRAIL_DAYS);
-          const trailPoints = getTrailForPlanet(p, daysBack);
-          const trail = createTrailLine(trailPoints, p.color);
-          if (trail) scene.add(trail);
+
+          if (showTrails) {
+            const trailPoints = getTrailForPlanet(p, daysBack);
+            const trail = createTrailLine(trailPoints, p.color);
+            if (trail) scene.add(trail);
+          }
 
           // Outline pass for this planet with its associated color
           if (composerRef.current) {
@@ -998,7 +1009,7 @@ export function SolarSystemMap() {
 
       frameRef.current = requestAnimationFrame(renderLoop);
     },
-    [updateCamera, computeDisplayUserPos],
+    [showTextures, updateCamera, showTrails, computeDisplayUserPos],
   );
 
   // Resize handling

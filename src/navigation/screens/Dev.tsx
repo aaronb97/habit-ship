@@ -4,6 +4,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Switch,
 } from 'react-native';
 import { colors, fonts } from '../../styles/theme';
 import { useStore } from '../../utils/store';
@@ -74,6 +75,24 @@ export function Dev() {
                   <Text style={styles.warpButtonText}>{p.name}</Text>
                 </TouchableOpacity>
               ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Rendering Toggles</Text>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Planet Trails</Text>
+            <Switch
+              value={!!store.showTrails}
+              onValueChange={(v) => store.setShowTrails(v)}
+            />
+          </View>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Planet Textures</Text>
+            <Switch
+              value={!!store.showTextures}
+              onValueChange={(v) => store.setShowTextures(v)}
+            />
           </View>
         </View>
 
@@ -232,6 +251,21 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.card,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  toggleLabel: {
+    fontSize: 14,
+    fontFamily: fonts.regular,
+    color: colors.primaryText,
   },
   timeLabel: {
     fontSize: 12,

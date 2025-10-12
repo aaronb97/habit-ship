@@ -72,6 +72,9 @@ type Store = {
   lastUpdateTime?: number;
   planetLandedNotificationId?: string;
   timeOffset: number;
+  // Render/debug toggles
+  showTrails: boolean;
+  showTextures: boolean;
 
   // Actions
   setIsSetupFinished: (value: boolean) => void;
@@ -98,6 +101,8 @@ type Store = {
   ) => void;
   quickReset: () => void;
   clearData: () => void;
+  setShowTrails: (value: boolean) => void;
+  setShowTextures: (value: boolean) => void;
 
   completeHabit: (habitId: HabitId) => Promise<void>;
   startTimer: (habitId: HabitId) => Promise<boolean>; // Returns true on success, false on failure
@@ -125,6 +130,8 @@ const initialData = {
   lastUpdateTime: undefined,
   planetLandedNotificationId: undefined,
   timeOffset: 0,
+  showTrails: true,
+  showTextures: true,
 } satisfies Partial<Store>;
 
 export const useStore = create<Store>()(
@@ -196,6 +203,8 @@ export const useStore = create<Store>()(
       },
       setSwipedHabit: (habitId) => set({ swipedHabitId: habitId }),
       resetAllSwipes: () => set({ swipedHabitId: undefined }),
+      setShowTrails: (value) => set({ showTrails: value }),
+      setShowTextures: (value) => set({ showTextures: value }),
       quickReset: () => {
         set({
           ...initialData,
