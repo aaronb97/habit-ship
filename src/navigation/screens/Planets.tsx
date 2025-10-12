@@ -1,24 +1,11 @@
-import { useState } from 'react';
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { useLandablePlanets } from '../../hooks/usePlanets';
 import { colors } from '../../styles/theme';
 import { useIsTraveling, useStore } from '../../utils/store';
 import { PlanetListItem } from '../../components/PlanetListItem';
-import { SolarSystemMap } from '../../components/SolarSystemMap';
-type ViewMode = 'list' | 'map';
 
 export function Planets() {
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [selectedPlanet, setSelectedPlanet] = useState('');
-  const [mapKey, setMapKey] = useState(0);
   const { setDestination } = useStore();
   const isTraveling = useIsTraveling();
   const planetsWithDistance = useLandablePlanets();
@@ -38,7 +25,6 @@ export function Planets() {
             style: 'destructive',
             onPress: () => {
               setDestination(planetName);
-              setSelectedPlanet('');
             },
           },
         ],
@@ -53,7 +39,6 @@ export function Planets() {
           text: 'Set Destination',
           onPress: () => {
             setDestination(planetName);
-            setSelectedPlanet('');
           },
         },
       ]);
@@ -62,72 +47,19 @@ export function Planets() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.segmentedControl}>
-          <TouchableOpacity
-            style={[
-              styles.segment,
-              styles.segmentLeft,
-              viewMode === 'list' && styles.segmentActive,
-            ]}
-            onPress={() => setViewMode('list')}
-          >
-            <Ionicons
-              name="list"
-              size={20}
-              color={viewMode === 'list' ? colors.white : colors.grey}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.segment,
-              styles.segmentRight,
-              viewMode === 'map' && styles.segmentActive,
-            ]}
-            onPress={() => setViewMode('map')}
-          >
-            <Ionicons
-              name="map"
-              size={20}
-              color={viewMode === 'map' ? colors.white : colors.grey}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {viewMode === 'list' ? (
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {planetsWithDistance.map(
-            ({ planet, distance, disabledReason, isVisited }) => (
-              <PlanetListItem
-                key={planet.name}
-                planet={planet}
-                distance={distance}
-                isSelected={selectedPlanet === planet.name}
-                disabledReason={disabledReason}
-                isVisited={isVisited}
-                onPress={() => handleSetDestination(planet.name)}
-              />
-            ),
-          )}
-        </ScrollView>
-      ) : (
-        <View style={styles.mapContainer}>
-          <SolarSystemMap key={mapKey} />
-          {__DEV__ && (
-            <TouchableOpacity
-              style={styles.debugButton}
-              accessibilityLabel="Remount SolarSystemMap"
-              onPress={() => setMapKey((k) => k + 1)}
-            >
-              <Ionicons name="refresh" size={18} color={colors.white} />
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
+      <View style={styles.header} />
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {planetsWithDistance.map(({ planet, distance, disabledReason, isVisited }) => (
+          <PlanetListItem
+            key={planet.name}
+            planet={planet}
+            distance={distance}
+            disabledReason={disabledReason}
+            isVisited={isVisited}
+            onPress={() => handleSetDestination(planet.name)}
+          />
+        ))}
+      </ScrollView>
     </SafeAreaView>
   );
 }

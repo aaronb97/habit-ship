@@ -18,6 +18,7 @@ import { cBodies as PLANETS, Planet, earth, type CBody } from '../planets';
 import { Coordinates } from '../types';
 import { getCurrentDate, getCurrentTime } from '../utils/time';
 import { useCurrentPosition, useStore } from '../utils/store';
+import { useIsFocused } from '@react-navigation/native';
 
 // ==========================
 // Constants — Easy Tweaking
@@ -486,6 +487,14 @@ function createTrailLine(
   return line;
 }
 
+function withPerformance<T>(title: string, fn: () => T): T {
+  const start = performance.now();
+  const result = fn();
+  const end = performance.now();
+  console.log(`${title}: ${end - start}ms`);
+  return result;
+}
+
 export function SolarSystemMap() {
   const { width, height } = useWindowDimensions();
   const currentPosition = useCurrentPosition();
@@ -523,6 +532,12 @@ export function SolarSystemMap() {
   }, [userPosState]);
 
   const { showTrails, showTextures } = useStore();
+  const syncTravelVisuals = useStore((s) => s.syncTravelVisuals);
+  const isFocusedValue = useIsFocused();
+  const isFocusedRef = useRef<boolean>(isFocusedValue);
+  useEffect(() => {
+    isFocusedRef.current = isFocusedValue;
+  }, [isFocusedValue]);
 
   useEffect(() => {
     return () => {
@@ -536,9 +551,44 @@ export function SolarSystemMap() {
   const latestLastUpdateTimeRef = useRef<number | undefined>(
     latestLastUpdateTime,
   );
+
   useEffect(() => {
     latestLastUpdateTimeRef.current = latestLastUpdateTime;
   }, [latestLastUpdateTime]);
+
+  // When focused, drive animation timing from focus start or latest distance change
+  const focusAnimStartRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (isFocusedValue) {
+      focusAnimStartRef.current = getCurrentTime();
+    } else {
+      focusAnimStartRef.current = null;
+    }
+  }, [isFocusedValue]);
+
+  // Reset animation start when distance updates while focused
+  const prevDistanceRef = useRef<{ prev?: number; curr?: number }>({});
+  const distanceTraveledVal = userPosState.distanceTraveled;
+  const previousDistanceTraveledVal = userPosState.previousDistanceTraveled;
+  useEffect(() => {
+    const changed =
+      distanceTraveledVal !== prevDistanceRef.current.curr ||
+      previousDistanceTraveledVal !== prevDistanceRef.current.prev;
+
+    if (changed && isFocusedRef.current) {
+      focusAnimStartRef.current = getCurrentTime();
+    }
+
+    // If values differ, an animation is pending; if equal, batch already synced
+    animSyncedRef.current = previousDistanceTraveledVal === distanceTraveledVal;
+    prevDistanceRef.current = {
+      prev: previousDistanceTraveledVal,
+      curr: distanceTraveledVal,
+    };
+  }, [distanceTraveledVal, previousDistanceTraveledVal]);
+
+  const animAlphaRef = useRef(0);
+  const animSyncedRef = useRef(true);
 
   const computeDisplayUserPos = useCallback((): THREE.Vector3 => {
     // If traveling, place user between start and target using distance proportion
@@ -552,11 +602,18 @@ export function SolarSystemMap() {
 
     if (target && typeof initialDistance === 'number' && initialDistance > 0) {
       const now = getCurrentTime();
-      const animStart = latestLastUpdateTimeRef.current ?? now;
-      const alpha = Math.min(
-        1,
-        Math.max(0, (now - animStart) / HABIT_TRAVEL_ANIM_MS),
-      );
+      // If not focused, freeze at the starting point (alpha = 0)
+      const effectiveStart =
+        (isFocusedRef.current ? focusAnimStartRef.current : null) ?? now;
+
+      const alpha = isFocusedRef.current
+        ? Math.min(
+            1,
+            Math.max(0, (now - effectiveStart) / HABIT_TRAVEL_ANIM_MS),
+          )
+        : 0;
+
+      animAlphaRef.current = alpha;
       const easeOut = 1 - Math.pow(1 - alpha, 3);
 
       const from = previousDistanceTraveled ?? distanceTraveled ?? 0;
@@ -570,6 +627,7 @@ export function SolarSystemMap() {
 
       const startBody =
         PLANETS.find((b) => b.name === currentLocation) ?? earth;
+
       const targetBody = PLANETS.find((b) => b.name === target.name) ?? earth;
 
       const startBase = toVec3(startBody.getCurrentPosition());
@@ -585,6 +643,7 @@ export function SolarSystemMap() {
       PLANETS.find(
         (b) => b.name === latestUserPosStateRef.current.currentLocation,
       ) ?? earth;
+
     const base = toVec3(body.getCurrentPosition());
     return adjustPositionForOrbits(body, base);
   }, []);
@@ -938,6 +997,24 @@ export function SolarSystemMap() {
       const renderLoop = () => {
         // Compute display user position for this frame
         displayUserPosRef.current = computeDisplayUserPos();
+
+        // If focused and an animation batch is pending, mark it as seen once complete
+        if (isFocusedRef.current && !animSyncedRef.current) {
+          const { distanceTraveled, previousDistanceTraveled } =
+            latestUserPosStateRef.current;
+
+          const complete =
+            animAlphaRef.current >= 0.999 ||
+            distanceTraveled === previousDistanceTraveled;
+
+          if (complete) {
+            try {
+              syncTravelVisuals();
+            } finally {
+              animSyncedRef.current = true;
+            }
+          }
+        }
 
         // Update dynamic positions
         // 1) User rocket follows latest position

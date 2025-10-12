@@ -87,6 +87,8 @@ type Store = {
   setDestination: (planetName: string) => void;
   warpTo: (planetName: string) => void;
   updateTravelPosition: () => void;
+  // Mark that the user has visually seen the latest travel progress; sync prev->curr
+  syncTravelVisuals: () => void;
   addHabit: (habit: {
     title: string;
     description?: string;
@@ -182,7 +184,9 @@ export const useStore = create<Store>()(
             position: getPlanetPosition(planetName),
           };
           // Initialize travel metrics toward target
-          const startPos = getPlanetPosition(state.userPosition.currentLocation);
+          const startPos = getPlanetPosition(
+            state.userPosition.currentLocation,
+          );
           const targetPos = getPlanetPosition(planetName);
           state.userPosition.initialDistance = calculateDistance(
             startPos,
@@ -255,7 +259,10 @@ export const useStore = create<Store>()(
             habitToComplete.completions.push(getCurrentDate().toISOString());
           }
           const target = state.userPosition.target;
-          if (target && typeof state.userPosition.initialDistance === 'number') {
+          if (
+            target &&
+            typeof state.userPosition.initialDistance === 'number'
+          ) {
             // First movement establishes launch time
             if (!state.userPosition.launchTime) {
               state.userPosition.launchTime = getCurrentDate().toISOString();
@@ -269,17 +276,15 @@ export const useStore = create<Store>()(
               prev + moveKm,
             );
 
-            // Set previous for animation and record update time
-            state.userPosition.previousDistanceTraveled = prev;
+            // Record update time; do NOT update previousDistanceTraveled here.
             state.userPosition.distanceTraveled = next;
             state.lastUpdateTime = getCurrentTime();
 
             // Check arrival
             if (next >= (state.userPosition.initialDistance ?? 0)) {
               const destinationName = target.name;
-              const isNewPlanet = !state.completedPlanets.includes(
-                destinationName,
-              );
+              const isNewPlanet =
+                !state.completedPlanets.includes(destinationName);
 
               state.userPosition.currentLocation = destinationName;
               state.userPosition.target = undefined;
@@ -381,6 +386,24 @@ export const useStore = create<Store>()(
       },
 
       /**
+       * Sync visual travel progress after user has seen the animation.
+       * This sets previousDistanceTraveled = distanceTraveled.
+       */
+      syncTravelVisuals: () => {
+        set((state) => {
+          if (
+            state.userPosition.distanceTraveled !== undefined &&
+            state.userPosition.target
+          ) {
+            state.userPosition.previousDistanceTraveled =
+              state.userPosition.distanceTraveled;
+          }
+
+          console.log('Synced travel visuals');
+        });
+      },
+
+      /**
        * Adds a specified amount of XP to the user's total.
        */
       addXP: (amount, source) => {
@@ -445,6 +468,4 @@ export const useIsSetupFinished = () =>
   useStore((state) => state.isSetupFinished);
 export const useUserLevel = () => useStore((state) => state.userLevel);
 export const useIsTraveling = () =>
-  useStore(
-    (state) => !!state.userPosition.target,
-  );
+  useStore((state) => !!state.userPosition.target);
