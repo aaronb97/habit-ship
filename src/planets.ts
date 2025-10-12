@@ -9,6 +9,8 @@ import saturnPositions from './positions/saturn.json';
 import uranusPositions from './positions/uranus.json';
 import neptunePositions from './positions/neptune.json';
 import plutoPositions from './positions/pluto.json';
+import phobosPositions from './positions/phobos.json';
+import deimosPositions from './positions/deimos.json';
 import { getCurrentDate } from './utils/time';
 
 /**
@@ -216,6 +218,26 @@ export const pluto = new LandablePlanet({
   radiusKm: 1188.3,
   orbitalPeriodDays: 90560,
 });
+export const phobos = new LandablePlanet({
+  name: 'Phobos',
+  description: 'A moon of Mars',
+  minLevel: 1,
+  color: 0x8b0000,
+  dailyPositions: phobosPositions,
+  radiusKm: 11.267,
+  orbitalPeriodDays: 0.3189,
+  orbits: 'Mars',
+});
+export const deimos = new LandablePlanet({
+  name: 'Deimos',
+  description: 'Another moon of Mars',
+  minLevel: 1,
+  color: 0xb22222,
+  dailyPositions: deimosPositions,
+  radiusKm: 6.2,
+  orbitalPeriodDays: 1.263,
+  orbits: 'Mars',
+});
 
 export const cBodies: CBody[] = [
   sun,
@@ -224,6 +246,8 @@ export const cBodies: CBody[] = [
   mercury,
   venus,
   mars,
+  phobos,
+  deimos,
   jupiter,
   saturn,
   uranus,
