@@ -547,15 +547,9 @@ export function SolarSystemMap() {
       return startAdj.clone().lerp(targetAdj, t);
     }
 
-    // Landed: align to current location's displayed position
-    if (currentLocation) {
-      const body = PLANETS.find((b) => b.name === currentLocation) ?? earth;
-      const base = toVec3(body.getCurrentPosition());
-      return adjustPositionForOrbits(body, base);
-    }
-
-    // Fallback: use raw currentPosition
-    return toVec3(latestUserPos.current);
+    const body = PLANETS.find((b) => b.name === currentLocation) ?? earth;
+    const base = toVec3(body.getCurrentPosition());
+    return adjustPositionForOrbits(body, base);
   }, [userPosState]);
 
   // Simple orbit state (spherical coordinates around origin)
@@ -897,6 +891,7 @@ export function SolarSystemMap() {
       const renderLoop = () => {
         // Compute display user position for this frame
         displayUserPosRef.current = computeDisplayUserPos();
+        console.log('displayUserPosRef.current', displayUserPosRef.current);
 
         // Update dynamic positions
         // 1) User rocket follows latest position
