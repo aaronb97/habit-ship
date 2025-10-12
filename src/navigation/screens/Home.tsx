@@ -17,7 +17,11 @@ import { PlanetSelectionModal } from '../../components/PlanetSelectionModal';
 import { colors, fonts, fontSizes } from '../../styles/theme';
 import { Habit, HabitId, useStore } from '../../utils/store';
 
+import { useIsFocused } from '@react-navigation/native';
+
 export function Home() {
+  const isFocused = useIsFocused();
+
   const {
     habits,
     editHabit,
@@ -30,7 +34,6 @@ export function Home() {
 
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showPlanetModal, setShowPlanetModal] = useState(false);
   const [hasShownLandingPrompt, setHasShownLandingPrompt] = useState(false);
 
   const handleCreate = (habit: {
@@ -53,8 +56,8 @@ export function Home() {
   // Show congratulations when user lands on a planet (speed === 0 && no target)
   useEffect(() => {
     const isLanded = userPosition.speed === 0 && !userPosition.target;
-    
-    if (isLanded && !hasShownLandingPrompt) {
+
+    if (isLanded && isFocused && !hasShownLandingPrompt) {
       setHasShownLandingPrompt(true);
       Alert.alert(
         '🎉 Congratulations!',
@@ -62,20 +65,23 @@ export function Home() {
         [
           {
             text: 'OK',
-            onPress: () => {
-              setShowPlanetModal(true);
-            },
           },
         ],
         { cancelable: false },
       );
     }
-    
+
     // Reset the flag when user starts traveling again
     if (!isLanded && hasShownLandingPrompt) {
       setHasShownLandingPrompt(false);
     }
-  }, [userPosition.speed, userPosition.target, userPosition.currentLocation, hasShownLandingPrompt]);
+  }, [
+    userPosition.speed,
+    userPosition.target,
+    userPosition.currentLocation,
+    hasShownLandingPrompt,
+    isFocused,
+  ]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -133,8 +139,8 @@ export function Home() {
       />
 
       <PlanetSelectionModal
-        visible={showPlanetModal}
-        onClose={() => setShowPlanetModal(false)}
+        visible={userPosition.speed === 0 && !userPosition.target}
+        onClose={() => undefined}
       />
     </SafeAreaView>
   );
