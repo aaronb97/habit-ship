@@ -1,6 +1,6 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Home } from './screens/Home';
-import { Planets } from './screens/Map';
+import { Planets } from './screens/Planets';
 import { Dev } from './screens/Dev';
 import { colors } from '../styles/theme';
 import { Ionicons } from '@expo/vector-icons';
