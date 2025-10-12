@@ -16,7 +16,7 @@ import type {
 import { colors } from '../styles/theme';
 import { cBodies as PLANETS, Planet, earth, type CBody } from '../planets';
 import { Coordinates } from '../types';
-import { getCurrentDate } from '../utils/time';
+import { getCurrentDate, getCurrentTime } from '../utils/time';
 import { useCurrentPosition, useStore } from '../utils/store';
 
 // ==========================
@@ -512,6 +512,14 @@ export function SolarSystemMap() {
   const displayUserPosRef = useRef<THREE.Vector3>(new THREE.Vector3());
 
   const userPosState = useStore((s) => s.userPosition);
+  const latestUserPosStateRef = useRef(userPosState);
+  useEffect(() => {
+    latestUserPosStateRef.current = userPosState;
+  }, [userPosState]);
+
+  // Local frame-based interpolation so the user moves smoothly even between store updates
+  const lastFrameTimeRef = useRef<number | null>(null);
+  const displayTravelOffsetRef = useRef<number>(0); // km added since last store update
 
   const computeDisplayUserPos = useCallback((): THREE.Vector3 => {
     // If traveling, place user between start and target using distance proportion
@@ -521,7 +529,7 @@ export function SolarSystemMap() {
       initialDistance,
       distanceTraveled,
       speed,
-    } = userPosState;
+    } = latestUserPosStateRef.current;
 
     if (
       target &&
@@ -529,10 +537,27 @@ export function SolarSystemMap() {
       typeof initialDistance === 'number' &&
       initialDistance > 0
     ) {
-      const t = Math.min(
-        1,
-        Math.max(0, (distanceTraveled ?? 0) / initialDistance),
+      // Smooth display progress using local frame deltas (independent of store refresh cadence)
+      const now = getCurrentTime();
+      const prev = lastFrameTimeRef.current ?? now;
+      const deltaHours = (now - prev) / 3600000;
+      lastFrameTimeRef.current = now;
+
+      // Accumulate at current speed, but never exceed remaining distance
+      const baseTraveled = distanceTraveled ?? 0;
+      const remaining = Math.max(0, initialDistance - baseTraveled);
+      const addKm = Math.max(0, speed * deltaHours);
+      displayTravelOffsetRef.current = Math.min(
+        remaining,
+        displayTravelOffsetRef.current + addKm,
       );
+
+      const effectiveTraveled = Math.min(
+        initialDistance,
+        baseTraveled + displayTravelOffsetRef.current,
+      );
+
+      const t = Math.min(1, Math.max(0, effectiveTraveled / initialDistance));
 
       const startBody =
         PLANETS.find((b) => b.name === currentLocation) ?? earth;
@@ -547,10 +572,13 @@ export function SolarSystemMap() {
       return startAdj.clone().lerp(targetAdj, t);
     }
 
+    // Not traveling: snap to the current body's displayed position and reset interpolation
     const body = PLANETS.find((b) => b.name === currentLocation) ?? earth;
     const base = toVec3(body.getCurrentPosition());
+    displayTravelOffsetRef.current = 0;
+    lastFrameTimeRef.current = null;
     return adjustPositionForOrbits(body, base);
-  }, [userPosState]);
+  }, []);
 
   // Simple orbit state (spherical coordinates around origin)
   const radiusRef = useRef(ORBIT_INITIAL_RADIUS);
@@ -891,7 +919,6 @@ export function SolarSystemMap() {
       const renderLoop = () => {
         // Compute display user position for this frame
         displayUserPosRef.current = computeDisplayUserPos();
-        console.log('displayUserPosRef.current', displayUserPosRef.current);
 
         // Update dynamic positions
         // 1) User rocket follows latest position
