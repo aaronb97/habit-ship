@@ -44,3 +44,14 @@ declare module 'three/examples/jsm/postprocessing/OutlinePass.js' {
     dispose(): void;
   }
 }
+
+declare module 'three/examples/jsm/postprocessing/ShaderPass.js' {
+  export class ShaderPass {
+    constructor(shader: unknown, textureID?: string);
+    renderToScreen: boolean;
+  }
+}
+
+declare module 'three/examples/jsm/shaders/CopyShader.js' {
+  export const CopyShader: unknown;
+}

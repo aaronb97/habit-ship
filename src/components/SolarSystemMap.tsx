@@ -6,6 +6,8 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { CopyShader } from 'three/examples/jsm/shaders/CopyShader.js';
 import { Asset } from 'expo-asset';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type {
@@ -39,7 +41,7 @@ const TRAIL_MAX_SEGMENTS = 1000;
 // Maximum alpha (opacity) for the newest point in a trail.
 const TRAIL_MAX_ALPHA = 0.85;
 // Exponent for ease-in alpha ramp along trail (2 = quadratic ease-in).
-const TRAIL_EASE_EXPONENT = 1.75;
+const TRAIL_EASE_EXPONENT = 2;
 
 // Apparent size scaling (for visual clarity vs physical accuracy)
 // Base scaling factor for all celestial body radii on screen.
@@ -525,8 +527,8 @@ export function SolarSystemMap() {
   const glRef = useRef<ExpoWebGLRenderingContext | null>(null);
   const composerRef = useRef<EffectComposer | null>(null);
   const outlinePassesRef = useRef<Record<string, OutlinePass>>({});
-  const renderPassRef = useRef<RenderPass | null>(null);
   const outlineIntensityRef = useRef<Record<string, number>>({});
+  const copyPassRef = useRef<ShaderPass | null>(null);
 
   const rocketRef = useRef<THREE.Group | null>(null);
   const planetRefs = useRef<Partial<Record<string, THREE.Mesh>>>({});
@@ -909,6 +911,8 @@ export function SolarSystemMap() {
       composer.setSize(drawingBufferWidth, drawingBufferHeight);
       const renderPass = new RenderPass(scene, camera);
       composer.addPass(renderPass);
+      // We will always use a final Copy pass to render to screen to keep output consistent
+      renderPass.renderToScreen = false;
       composerRef.current = composer;
 
       // Lights
@@ -991,14 +995,11 @@ export function SolarSystemMap() {
         }
       });
 
-      // Make sure the last pass renders to screen
-      const allOutlinePasses = Object.values(outlinePassesRef.current);
-      // Initially render base scene to screen; outlines will enable and take over when needed
-      allOutlinePasses.forEach((pass) => {
-        pass.renderToScreen = false;
-      });
-      renderPass.renderToScreen = true;
-      renderPassRef.current = renderPass;
+      // Add a stable final copy pass that always renders to screen
+      const copyPass = new ShaderPass(CopyShader);
+      copyPass.renderToScreen = true;
+      composer.addPass(copyPass);
+      copyPassRef.current = copyPass;
 
       // Initial rocket position
       // const initial = toVec3(latestUserPos.current);
@@ -1094,8 +1095,6 @@ export function SolarSystemMap() {
           if (cam && glCtx) {
             const heightPx = glCtx.drawingBufferHeight;
             const vFovRad = (cam.fov * Math.PI) / 180;
-            let anyEnabled = false;
-            let lastEnabledKey: string | null = null;
             PLANETS.forEach((p) => {
               const mesh = planetRefs.current[p.name];
               const pass = outlinePassesRef.current[p.name];
@@ -1126,21 +1125,7 @@ export function SolarSystemMap() {
               outlineIntensityRef.current[p.name] = factor;
               pass.edgeStrength = OUTLINE_EDGE_STRENGTH * factor;
               pass.enabled = factor > OUTLINE_MIN_ENABLED_FACTOR;
-              if (pass.enabled) {
-                anyEnabled = true;
-                lastEnabledKey = p.name;
-              }
             });
-            // Ensure something renders to screen
-            renderPassRef.current!.renderToScreen = !anyEnabled;
-            Object.entries(outlinePassesRef.current).forEach(([, pass]) => {
-              pass.renderToScreen = false;
-            });
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-            if (anyEnabled && lastEnabledKey) {
-              const lastPass = outlinePassesRef.current[lastEnabledKey]!;
-              lastPass.renderToScreen = true;
-            }
           }
         }
 
