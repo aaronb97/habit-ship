@@ -87,7 +87,6 @@ type Store = {
   setIsSetupFinished: (value: boolean) => void;
   setDestination: (planetName: string) => void;
   warpTo: (planetName: string) => void;
-  updateTravelPosition: () => void;
   // Mark that the user has visually seen the latest travel progress; sync prev->curr
   syncTravelVisuals: () => void;
   addHabit: (habit: {
@@ -377,16 +376,6 @@ export const useStore = create<Store>()(
        */
       expireTimer: () => {
         set({ activeTimer: undefined });
-      },
-
-      /**
-       * Updates the user's position during travel. If destination is reached,
-       * completes the planet and resets travel state.
-       */
-      updateTravelPosition: () => {
-        // No continuous updates needed; advancement happens on habit completion.
-        // This function remains as a no-op to preserve interface.
-        return;
       },
 
       /**

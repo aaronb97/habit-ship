@@ -14,7 +14,7 @@ import { cBodies, Planet } from '../../planets';
 
 export function Dev() {
   const store = useStore();
-  const { clearData, quickReset, updateTravelPosition, warpTo } = useStore();
+  const { clearData, quickReset, warpTo } = useStore();
 
   const handleAdvanceTime = (hours: number) => {
     const { userPosition } = useStore.getState();
@@ -27,9 +27,6 @@ export function Dev() {
     // Advance the system time (note: time no longer affects travel distance)
     const millisecondsToAdvance = hours * 3600000;
     advanceTime(millisecondsToAdvance);
-
-    // Keep call for compatibility (now a no-op)
-    updateTravelPosition();
   };
 
   const handleQuickReset = () => {
