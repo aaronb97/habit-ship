@@ -12,6 +12,7 @@ import plutoPositions from './positions/pluto.json';
 import phobosPositions from './positions/phobos.json';
 import deimosPositions from './positions/deimos.json';
 import { getCurrentDate } from './utils/time';
+import { Coordinates } from './types';
 
 /**
  * Short for celestial body
@@ -22,7 +23,7 @@ export interface CBody {
   color: number;
   radiusKm: number;
 
-  getCurrentPosition(): [number, number, number];
+  getCurrentPosition(): Coordinates;
 }
 
 interface BaseCBodyOptions {
@@ -37,6 +38,8 @@ interface PlanetOptions extends BaseCBodyOptions {
   orbitalPeriodDays: number;
   /** Optional parent body this planet/satellite orbits (e.g., 'Earth' for the Moon) */
   orbits?: string;
+  /** Multiplier for orbit offset */
+  orbitOffsetMultiplier?: number;
 }
 
 interface LandablePlanetOptions extends PlanetOptions {
@@ -45,17 +48,18 @@ interface LandablePlanetOptions extends PlanetOptions {
 
 interface StarOptions extends BaseCBodyOptions {
   color?: number;
-  position: [number, number, number];
+  position: Coordinates;
 }
 
 export class Planet implements CBody {
   public name: string;
   public description: string;
-  public dailyPositions: Record<string, [number, number, number]>;
+  public dailyPositions: Record<string, Coordinates>;
   public color: number;
   public radiusKm: number;
   public orbitalPeriodDays: number;
   public orbits?: string;
+  public orbitOffsetMultiplier?: number;
 
   constructor(options: PlanetOptions) {
     this.name = options.name;
@@ -63,10 +67,8 @@ export class Planet implements CBody {
     this.color = options.color;
     this.radiusKm = options.radiusKm;
     this.orbitalPeriodDays = options.orbitalPeriodDays;
-    this.dailyPositions = options.dailyPositions as Record<
-      string,
-      [number, number, number]
-    >;
+    this.dailyPositions = options.dailyPositions as Record<string, Coordinates>;
+    this.orbitOffsetMultiplier = options.orbitOffsetMultiplier;
 
     this.orbits = options.orbits;
   }
@@ -102,7 +104,7 @@ export class UnlandablePlanet extends Planet {
 export class Star implements CBody {
   public name: string;
   public description: string;
-  private position: [number, number, number];
+  private position: Coordinates;
   public color: number;
   public radiusKm: number;
 
@@ -227,6 +229,7 @@ export const phobos = new LandablePlanet({
   radiusKm: 11.267,
   orbitalPeriodDays: 0.3189,
   orbits: 'Mars',
+  orbitOffsetMultiplier: 100,
 });
 export const deimos = new LandablePlanet({
   name: 'Deimos',
@@ -237,6 +240,7 @@ export const deimos = new LandablePlanet({
   radiusKm: 6.2,
   orbitalPeriodDays: 1.263,
   orbits: 'Mars',
+  orbitOffsetMultiplier: 100,
 });
 
 export const cBodies: CBody[] = [

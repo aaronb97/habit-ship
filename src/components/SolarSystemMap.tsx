@@ -177,6 +177,7 @@ function getTrailForPlanet(planet: Planet, daysBack: number): THREE.Vector3[] {
 
   // Scale offsets so the ring matches the visually exaggerated separation applied in
   // adjustPositionForOrbits
+  const multiplier = planet.orbitOffsetMultiplier ?? ORBIT_OFFSET_MULTIPLIER;
 
   if (drawOrbitAroundParent && parent && parent instanceof Planet) {
     // Anchor the moon's trail around the parent's CURRENT position,
@@ -203,9 +204,9 @@ function getTrailForPlanet(planet: Planet, daysBack: number): THREE.Vector3[] {
         const parentKm = parent.dailyPositions[key]!;
 
         const offset = toVec3([
-          (childKm[0] - parentKm[0]) * ORBIT_OFFSET_MULTIPLIER,
-          (childKm[1] - parentKm[1]) * ORBIT_OFFSET_MULTIPLIER,
-          (childKm[2] - parentKm[2]) * ORBIT_OFFSET_MULTIPLIER,
+          (childKm[0] - parentKm[0]) * multiplier,
+          (childKm[1] - parentKm[1]) * multiplier,
+          (childKm[2] - parentKm[2]) * multiplier,
         ]);
 
         points.push(parentAnchor.clone().add(offset));
@@ -218,9 +219,9 @@ function getTrailForPlanet(planet: Planet, daysBack: number): THREE.Vector3[] {
     const parentToday = parent.dailyPositions[todayKey];
     if (childToday && parentToday) {
       const offset = toVec3([
-        (childToday[0] - parentToday[0]) * ORBIT_OFFSET_MULTIPLIER,
-        (childToday[1] - parentToday[1]) * ORBIT_OFFSET_MULTIPLIER,
-        (childToday[2] - parentToday[2]) * ORBIT_OFFSET_MULTIPLIER,
+        (childToday[0] - parentToday[0]) * multiplier,
+        (childToday[1] - parentToday[1]) * multiplier,
+        (childToday[2] - parentToday[2]) * multiplier,
       ]);
 
       points.push(parentAnchor.clone().add(offset));
@@ -342,7 +343,11 @@ function adjustPositionForOrbits(
       const parentPos = toVec3(parent.getCurrentPosition());
       const dir = basePosition.clone().sub(parentPos);
 
-      return parentPos.add(dir.multiplyScalar(ORBIT_OFFSET_MULTIPLIER));
+      return parentPos.add(
+        dir.multiplyScalar(
+          body.orbitOffsetMultiplier ?? ORBIT_OFFSET_MULTIPLIER,
+        ),
+      );
     }
   }
 
@@ -855,7 +860,8 @@ export function SolarSystemMap() {
         // Scale each body's visual radius according to its real radius (km) relative to Earth,
         // apply an exponential clamp to compress extremes so giants shrink and dwarfs grow relatively.
         // Earth's displayed size remains unchanged. The Sun is kept modest for readability.
-        const ratioToEarth = p.radiusKm / earth.radiusKm;
+        const radius = Math.max(100, p.radiusKm);
+        const ratioToEarth = radius / earth.radiusKm;
         const clampedRatio = apparentScaleRatio(ratioToEarth);
         const visualRadius = CBODY_RADIUS_MULTIPLIER * clampedRatio;
 
