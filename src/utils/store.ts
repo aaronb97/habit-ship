@@ -81,6 +81,7 @@ type Store = {
   // Render/debug toggles
   showTrails: boolean;
   showTextures: boolean;
+  logFPS: boolean;
 
   // Actions
   setIsSetupFinished: (value: boolean) => void;
@@ -111,6 +112,7 @@ type Store = {
   clearData: () => void;
   setShowTrails: (value: boolean) => void;
   setShowTextures: (value: boolean) => void;
+  setLogFPS: (value: boolean) => void;
 
   completeHabit: (habitId: HabitId) => Promise<void>;
   startTimer: (habitId: HabitId) => Promise<boolean>; // Returns true on success, false on failure
@@ -138,6 +140,7 @@ const initialData = {
   timeOffset: 0,
   showTrails: true,
   showTextures: true,
+  logFPS: false,
 } satisfies Partial<Store>;
 
 export const useStore = create<Store>()(
@@ -214,6 +217,7 @@ export const useStore = create<Store>()(
       resetAllSwipes: () => set({ swipedHabitId: undefined }),
       setShowTrails: (value) => set({ showTrails: value }),
       setShowTextures: (value) => set({ showTextures: value }),
+      setLogFPS: (value) => set({ logFPS: value }),
       quickReset: () => {
         set({
           ...initialData,

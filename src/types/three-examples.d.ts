@@ -39,6 +39,7 @@ declare module 'three/examples/jsm/postprocessing/OutlinePass.js' {
     visibleEdgeColor: Color;
     hiddenEdgeColor: Color;
     resolution: Vector2;
+    enabled: boolean;
     renderToScreen: boolean;
     dispose(): void;
   }

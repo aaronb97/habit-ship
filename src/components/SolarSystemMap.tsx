@@ -138,6 +138,15 @@ const OUTLINE_EDGE_GLOW = 1.0;
 const OUTLINE_EDGE_THICKNESS = 1.0;
 const OUTLINE_PULSE_PERIOD = 0.0;
 
+// Outline LOD & fading
+// Fade outlines based on screen-space radius (in pixels). Below FADE_OUT -> 0, above FADE_IN -> 1.
+const OUTLINE_MIN_PIXELS_FADE_OUT = 8; // start fading in around this size
+const OUTLINE_MIN_PIXELS_FADE_IN = 14; // fully visible by this size
+// Smoothing for outline intensity changes (per-frame lerp factor)
+const OUTLINE_INTENSITY_SMOOTHING = 0.15;
+// Below this intensity, disable the pass to avoid any processing cost
+const OUTLINE_MIN_ENABLED_FACTOR = 0.02;
+
 // Rocket prototype (not currently rendered, kept for future use)
 const ROCKET_SIZE_MULTIPLIER = 0.1; // Scales all rocket dimensions
 const ROCKET_SEGMENTS = Math.floor(16 * ROCKET_SIZE_MULTIPLIER); // Cylinder/cone segment count
@@ -402,6 +411,10 @@ type MappedMaterial =
   | THREE.MeshLambertMaterial
   | THREE.MeshPhongMaterial;
 
+type PlanetMeshUserData = {
+  visualRadius?: number;
+};
+
 function createPlanetMesh(
   name: string,
   color: number,
@@ -487,14 +500,6 @@ function createTrailLine(
   return line;
 }
 
-function withPerformance<T>(title: string, fn: () => T): T {
-  const start = performance.now();
-  const result = fn();
-  const end = performance.now();
-  console.log(`${title}: ${end - start}ms`);
-  return result;
-}
-
 export function SolarSystemMap() {
   const { width, height } = useWindowDimensions();
   const currentPosition = useCurrentPosition();
@@ -520,6 +525,8 @@ export function SolarSystemMap() {
   const glRef = useRef<ExpoWebGLRenderingContext | null>(null);
   const composerRef = useRef<EffectComposer | null>(null);
   const outlinePassesRef = useRef<Record<string, OutlinePass>>({});
+  const renderPassRef = useRef<RenderPass | null>(null);
+  const outlineIntensityRef = useRef<Record<string, number>>({});
 
   const rocketRef = useRef<THREE.Group | null>(null);
   const planetRefs = useRef<Partial<Record<string, THREE.Mesh>>>({});
@@ -942,6 +949,8 @@ export function SolarSystemMap() {
         );
 
         planetRefs.current[p.name] = mesh;
+        // Store radius for screen-space calculations
+        (mesh.userData as PlanetMeshUserData).visualRadius = visualRadius;
         const basePos = toVec3(p.getCurrentPosition());
         const adjustedPos = adjustPositionForOrbits(p, basePos);
         mesh.position.copy(adjustedPos);
@@ -966,28 +975,30 @@ export function SolarSystemMap() {
               [mesh],
             );
 
-            outlinePass.edgeStrength = OUTLINE_EDGE_STRENGTH;
+            // Start disabled and at zero strength; we will fade in based on screen-space size
+            outlinePass.edgeStrength = 0;
             outlinePass.edgeGlow = OUTLINE_EDGE_GLOW;
             outlinePass.edgeThickness = OUTLINE_EDGE_THICKNESS;
             outlinePass.pulsePeriod = OUTLINE_PULSE_PERIOD;
             outlinePass.visibleEdgeColor.set(p.color);
             outlinePass.hiddenEdgeColor.set(p.color);
+            // Disabled until it meets the screen-space size threshold
+            outlinePass.enabled = false;
             composerRef.current.addPass(outlinePass);
             outlinePassesRef.current[p.name] = outlinePass;
+            outlineIntensityRef.current[p.name] = 0;
           }
         }
       });
 
       // Make sure the last pass renders to screen
       const allOutlinePasses = Object.values(outlinePassesRef.current);
-      if (allOutlinePasses.length > 0) {
-        allOutlinePasses.forEach((pass, idx) => {
-          pass.renderToScreen = idx === allOutlinePasses.length - 1;
-        });
-      } else {
-        // If no outline passes were added, render the base scene to screen
-        renderPass.renderToScreen = true;
-      }
+      // Initially render base scene to screen; outlines will enable and take over when needed
+      allOutlinePasses.forEach((pass) => {
+        pass.renderToScreen = false;
+      });
+      renderPass.renderToScreen = true;
+      renderPassRef.current = renderPass;
 
       // Initial rocket position
       // const initial = toVec3(latestUserPos.current);
@@ -1076,10 +1087,73 @@ export function SolarSystemMap() {
 
         updateCamera();
 
-        if (composerRef.current) {
-          composerRef.current.render();
-        } else {
-          renderer.render(scene, camera);
+        // Update outline visibility and fade based on apparent pixel radius
+        {
+          const cam = cameraRef.current;
+          const glCtx = glRef.current;
+          if (cam && glCtx) {
+            const heightPx = glCtx.drawingBufferHeight;
+            const vFovRad = (cam.fov * Math.PI) / 180;
+            let anyEnabled = false;
+            let lastEnabledKey: string | null = null;
+            PLANETS.forEach((p) => {
+              const mesh = planetRefs.current[p.name];
+              const pass = outlinePassesRef.current[p.name];
+              if (!mesh || !pass) return;
+              // Determine sphere radius in world units
+              const ud = mesh.userData as PlanetMeshUserData;
+              let r: number =
+                typeof ud.visualRadius === 'number' ? ud.visualRadius : 0;
+              if (r <= 0) {
+                const g = mesh.geometry as THREE.SphereGeometry;
+                r = g.parameters.radius;
+                (mesh.userData as PlanetMeshUserData).visualRadius = r;
+              }
+              r *= mesh.scale.x;
+              const d = cam.position.distanceTo(mesh.position);
+              const heightWorld = 2 * d * Math.tan(vFovRad / 2);
+              const px = (r / Math.max(1e-6, heightWorld)) * heightPx;
+              const start = OUTLINE_MIN_PIXELS_FADE_OUT;
+              const end = OUTLINE_MIN_PIXELS_FADE_IN;
+              const target = THREE.MathUtils.clamp(
+                (px - start) / (end - start),
+                0,
+                1,
+              );
+              const prev = outlineIntensityRef.current[p.name] ?? 0;
+              const factor =
+                prev + (target - prev) * OUTLINE_INTENSITY_SMOOTHING;
+              outlineIntensityRef.current[p.name] = factor;
+              pass.edgeStrength = OUTLINE_EDGE_STRENGTH * factor;
+              pass.enabled = factor > OUTLINE_MIN_ENABLED_FACTOR;
+              if (pass.enabled) {
+                anyEnabled = true;
+                lastEnabledKey = p.name;
+              }
+            });
+            // Ensure something renders to screen
+            renderPassRef.current!.renderToScreen = !anyEnabled;
+            Object.entries(outlinePassesRef.current).forEach(([, pass]) => {
+              pass.renderToScreen = false;
+            });
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+            if (anyEnabled && lastEnabledKey) {
+              const lastPass = outlinePassesRef.current[lastEnabledKey]!;
+              lastPass.renderToScreen = true;
+            }
+          }
+        }
+
+        if (isFocusedRef.current) {
+          const now = performance.now();
+          if (composerRef.current) {
+            composerRef.current.render();
+          } else {
+            renderer.render(scene, camera);
+          }
+          const elapsed = performance.now() - now;
+          const fps = 1000 / elapsed;
+          console.log(`FPS: ${fps.toFixed(2)}`);
         }
 
         gl.endFrameEXP();
@@ -1088,7 +1162,13 @@ export function SolarSystemMap() {
 
       frameRef.current = requestAnimationFrame(renderLoop);
     },
-    [showTextures, updateCamera, showTrails, computeDisplayUserPos],
+    [
+      showTextures,
+      updateCamera,
+      showTrails,
+      computeDisplayUserPos,
+      syncTravelVisuals,
+    ],
   );
 
   // Resize handling
