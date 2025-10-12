@@ -71,7 +71,7 @@ const SMOOTHING_RADIUS = 0.2;
 // Gesture settings
 // Min/max zoom radius for pinch gesture.
 const ZOOM_MIN_RADIUS = 0.5;
-const ZOOM_MAX_RADIUS = 200;
+const ZOOM_MAX_RADIUS = 20000;
 // Drag across full screen width rotates yaw by 360°, across height rotates pitch by 180°.
 const PAN_YAW_ROTATION_PER_FULL_DRAG = 2 * Math.PI;
 const PAN_PITCH_ROTATION_PER_FULL_DRAG = Math.PI;
