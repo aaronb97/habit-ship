@@ -28,13 +28,8 @@ vi.mock('expo-notifications', () => {
   };
 });
 
-import {
-  useIsSetupFinished,
-  useIsTraveling,
-  useTimeRemaining,
-  useStore,
-} from './store';
-import { advanceTime } from './time';
+import { useIsSetupFinished, useIsTraveling, useStore } from './store';
+import { getHabitDistanceForLevel } from '../types';
 
 describe('store', () => {
   beforeEach(() => {
@@ -43,7 +38,6 @@ describe('store', () => {
       habits: [],
       userPosition: {
         currentLocation: 'Earth',
-        speed: 0,
       },
       completedPlanets: [],
     });
@@ -135,7 +129,7 @@ describe('store', () => {
     expect(result.current.habits).toHaveLength(0);
   });
 
-  it('should complete a habit and launch with initial speed', async () => {
+  it('should complete a habit and advance distance by base amount', async () => {
     const { result } = renderHook(() => useStore());
     const { result: traveling } = renderHook(() => useIsTraveling());
 
@@ -154,11 +148,13 @@ describe('store', () => {
     });
 
     expect(result.current.habits[0]!.completions).toHaveLength(1);
-    expect(result.current.userPosition.speed).toBe(50000);
+    const move = getHabitDistanceForLevel(result.current.userLevel.level);
+    expect(result.current.userPosition.distanceTraveled).toBeDefined();
+    expect(result.current.userPosition!.distanceTraveled).toBe(move);
     expect(traveling.current).toBe(true);
   });
 
-  it('should increase speed by 1.2x when completing habits while traveling', async () => {
+  it('should scale distance per habit by 1.2^(level-1)', async () => {
     const { result } = renderHook(() => useStore());
 
     act(() => {
@@ -169,16 +165,23 @@ describe('store', () => {
 
     await act(async () => {
       result.current.setDestination('The Moon');
-      await result.current.completeHabit(habitId); // Launch
+      await result.current.completeHabit(habitId); // First completion
     });
 
-    const initialSpeed = result.current.userPosition.speed;
+    const level = result.current.userLevel.level;
+    const firstMove = getHabitDistanceForLevel(level);
 
     await act(async () => {
-      await result.current.completeHabit(habitId); // Boost speed
+      await result.current.completeHabit(habitId); // Second completion
     });
-
-    expect(result.current.userPosition.speed).toBe(initialSpeed * 1.2);
+    const secondMove = getHabitDistanceForLevel(level);
+    expect(secondMove).toBeCloseTo(firstMove); // same level yields same distance per habit
+    expect(result.current.userPosition.distanceTraveled).toBe(
+      Math.min(
+        result.current.userPosition.initialDistance!,
+        firstMove + secondMove,
+      ),
+    );
   });
 
   it('should set destination correctly', () => {
@@ -189,10 +192,10 @@ describe('store', () => {
     });
 
     expect(result.current.userPosition.target?.name).toBe('The Moon');
-    expect(result.current.userPosition.speed).toBe(0);
+    expect(result.current.userPosition.initialDistance).toBeGreaterThan(0);
   });
 
-  it('should update travel position when traveling', () => {
+  it('should track distanceTraveled when completing habits', () => {
     const { result } = renderHook(() => useStore());
     const { result: traveling } = renderHook(() => useIsTraveling());
 
@@ -205,33 +208,21 @@ describe('store', () => {
     act(() => {
       result.current.setDestination('The Moon');
     });
-    // Use async act since completeHabit is async
-
     return (async () => {
       await act(async () => {
         await result.current.completeHabit(habitId);
       });
 
-      const prevDistance = result.current.userPosition.distanceTraveled;
+      const moved = result.current.userPosition.distanceTraveled ?? 0;
       expect(traveling.current).toBe(true);
-      expect(prevDistance).toBeDefined();
-      expect(prevDistance).toBe(0);
+      expect(moved).toBeGreaterThan(0);
       expect(result.current.userPosition.launchTime).toBeDefined();
-
-      // Advance time and update position
-      act(() => {
-        advanceTime(60 * 60 * 1000); // +1 hour
-        result.current.updateTravelPosition();
-      });
-
-      expect(result.current.userPosition.distanceTraveled).toBeGreaterThan(0);
     })();
   });
 
-  it('should land when reaching destination', async () => {
+  it('should land when reaching destination after enough completions', async () => {
     const { result } = renderHook(() => useStore());
     const { result: traveling } = renderHook(() => useIsTraveling());
-    const { result: timeRemaining } = renderHook(() => useTimeRemaining());
 
     act(() => {
       result.current.addHabit({ title: 'Quick Trip' });
@@ -244,17 +235,21 @@ describe('store', () => {
       await result.current.completeHabit(habitId);
     });
 
-    // Advance virtual time past the remaining travel time and update position
-    act(() => {
-      const remainingSeconds = timeRemaining.current;
-      advanceTime((remainingSeconds + 1) * 1000);
-      result.current.updateTravelPosition();
-    });
+    // Complete habits until arrival
+    const initialDist = result.current.userPosition.initialDistance!;
+    const perHabit = getHabitDistanceForLevel(result.current.userLevel.level);
+    const needed = Math.ceil(initialDist / perHabit);
+    for (let i = 1; i < needed; i++) {
+      // i already completed once
+      // eslint-disable-next-line no-await-in-loop
+      await act(async () => {
+        await result.current.completeHabit(habitId);
+      });
+    }
 
     expect(traveling.current).toBe(false);
     expect(result.current.userPosition.currentLocation).toBe('The Moon');
     expect(result.current.userPosition.target).toBeUndefined();
-    expect(result.current.userPosition.speed).toBe(0);
     expect(result.current.completedPlanets.includes('The Moon')).toBe(true);
   });
 
@@ -274,7 +269,6 @@ describe('store', () => {
     expect(result.current.isSetupFinished).toBe(false);
     expect(result.current.habits).toEqual([]);
     expect(result.current.userPosition.currentLocation).toBe('Earth');
-    expect(result.current.userPosition.speed).toBe(0);
     expect(result.current.userPosition.target).toBeUndefined();
     expect(result.current.completedPlanets).toEqual(['Earth']);
   });

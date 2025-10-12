@@ -524,9 +524,21 @@ export function SolarSystemMap() {
 
   const { showTrails, showTextures } = useStore();
 
-  // Local frame-based interpolation so the user moves smoothly even between store updates
-  const lastFrameTimeRef = useRef<number | null>(null);
-  const displayTravelOffsetRef = useRef<number>(0); // km added since last store update
+  useEffect(() => {
+    return () => {
+      console.log('SolarSystemMap unmounted');
+    };
+  }, []);
+
+  // Animate between previous and current traveled distances per habit completion
+  const HABIT_TRAVEL_ANIM_MS = 1000; // duration for visual travel per completion
+  const latestLastUpdateTime = useStore((s) => s.lastUpdateTime);
+  const latestLastUpdateTimeRef = useRef<number | undefined>(
+    latestLastUpdateTime,
+  );
+  useEffect(() => {
+    latestLastUpdateTimeRef.current = latestLastUpdateTime;
+  }, [latestLastUpdateTime]);
 
   const computeDisplayUserPos = useCallback((): THREE.Vector3 => {
     // If traveling, place user between start and target using distance proportion
@@ -535,40 +547,29 @@ export function SolarSystemMap() {
       currentLocation,
       initialDistance,
       distanceTraveled,
-      speed,
+      previousDistanceTraveled,
     } = latestUserPosStateRef.current;
 
-    if (
-      target &&
-      speed > 0 &&
-      typeof initialDistance === 'number' &&
-      initialDistance > 0
-    ) {
-      // Smooth display progress using local frame deltas (independent of store refresh cadence)
+    if (target && typeof initialDistance === 'number' && initialDistance > 0) {
       const now = getCurrentTime();
-      const prev = lastFrameTimeRef.current ?? now;
-      const deltaHours = (now - prev) / 3600000;
-      lastFrameTimeRef.current = now;
-
-      // Accumulate at current speed, but never exceed remaining distance
-      const baseTraveled = distanceTraveled ?? 0;
-      const remaining = Math.max(0, initialDistance - baseTraveled);
-      const addKm = Math.max(0, speed * deltaHours);
-      displayTravelOffsetRef.current = Math.min(
-        remaining,
-        displayTravelOffsetRef.current + addKm,
+      const animStart = latestLastUpdateTimeRef.current ?? now;
+      const alpha = Math.min(
+        1,
+        Math.max(0, (now - animStart) / HABIT_TRAVEL_ANIM_MS),
       );
+      const easeOut = 1 - Math.pow(1 - alpha, 3);
 
+      const from = previousDistanceTraveled ?? distanceTraveled ?? 0;
+      const to = distanceTraveled ?? 0;
       const effectiveTraveled = Math.min(
         initialDistance,
-        baseTraveled + displayTravelOffsetRef.current,
+        from + (to - from) * easeOut,
       );
 
       const t = Math.min(1, Math.max(0, effectiveTraveled / initialDistance));
 
       const startBody =
         PLANETS.find((b) => b.name === currentLocation) ?? earth;
-
       const targetBody = PLANETS.find((b) => b.name === target.name) ?? earth;
 
       const startBase = toVec3(startBody.getCurrentPosition());
@@ -579,11 +580,12 @@ export function SolarSystemMap() {
       return startAdj.clone().lerp(targetAdj, t);
     }
 
-    // Not traveling: snap to the current body's displayed position and reset interpolation
-    const body = PLANETS.find((b) => b.name === currentLocation) ?? earth;
+    // Not traveling: snap to the current body's displayed position
+    const body =
+      PLANETS.find(
+        (b) => b.name === latestUserPosStateRef.current.currentLocation,
+      ) ?? earth;
     const base = toVec3(body.getCurrentPosition());
-    displayTravelOffsetRef.current = 0;
-    lastFrameTimeRef.current = null;
     return adjustPositionForOrbits(body, base);
   }, []);
 

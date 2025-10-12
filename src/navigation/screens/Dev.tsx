@@ -19,16 +19,16 @@ export function Dev() {
   const handleAdvanceTime = (hours: number) => {
     const { userPosition } = useStore.getState();
 
-    if (!userPosition.target || userPosition.speed === 0) {
+    if (!userPosition.target) {
       alert('Not currently traveling. Start a journey first!');
       return;
     }
 
-    // Advance the system time
+    // Advance the system time (note: time no longer affects travel distance)
     const millisecondsToAdvance = hours * 3600000;
     advanceTime(millisecondsToAdvance);
 
-    // Update position based on new time
+    // Keep call for compatibility (now a no-op)
     updateTravelPosition();
   };
 

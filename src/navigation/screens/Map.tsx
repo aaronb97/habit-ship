@@ -27,7 +27,7 @@ export function Planets() {
     if (isTraveling) {
       Alert.alert(
         'Change Destination',
-        'You are currently traveling. Changing your destination will reset your speed. Are you sure you want to continue?',
+        'You are currently traveling. Changing your destination will reset your progress toward the current destination. Are you sure you want to continue?',
         [
           {
             text: 'Cancel',

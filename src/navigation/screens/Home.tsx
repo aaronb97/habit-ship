@@ -53,8 +53,8 @@ export function Home() {
     setEditingHabit(null);
   };
 
-  // Show congratulations when user lands on a planet (speed === 0 && no target)
-  const isLanded = userPosition.speed === 0 && !userPosition.target;
+  // Show congratulations when user lands on a planet (no target means landed)
+  const isLanded = !userPosition.target;
 
   if (isLanded && isFocused && !hasShownLandingPrompt) {
     setHasShownLandingPrompt(true);
@@ -131,7 +131,7 @@ export function Home() {
       />
 
       <PlanetSelectionModal
-        visible={userPosition.speed === 0 && !userPosition.target}
+        visible={!userPosition.target}
         onClose={() => undefined}
       />
     </SafeAreaView>

@@ -1,36 +1,21 @@
-import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { cBodies } from '../planets';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import { useIsTraveling, useStore, useTimeRemaining } from '../utils/store';
-import { formatSecondsAsDaysAndHours } from '../utils/units';
+import { useIsTraveling, useStore } from '../utils/store';
 import { ProgressBar } from './ProgressBar';
 
 export function JourneyDisplay() {
-  const { userPosition, updateTravelPosition, clearData } = useStore();
-
-  // Update position every second (which also triggers re-render for time remaining)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      updateTravelPosition();
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [updateTravelPosition]);
+  const { userPosition, clearData } = useStore();
 
   // Determine what to display
-  const displayLocation = (() => {
-    if (userPosition.target && userPosition.speed > 0) {
-      return userPosition.target.name;
-    }
-
-    return userPosition.currentLocation;
-  })();
+  const displayLocation = userPosition.target
+    ? userPosition.target.name
+    : userPosition.currentLocation;
 
   const isTraveling = useIsTraveling();
 
   const planet = cBodies.find((p) => p.name === displayLocation);
-  const timeRemaining = useTimeRemaining();
+  // No time remaining in distance-per-habit model
 
   if (!planet) {
     console.error('Encountered invalid planet, resetting data');
@@ -42,7 +27,7 @@ export function JourneyDisplay() {
   let distanceRemaining = 0;
   let distancePercentage = 0;
 
-  if (userPosition.target && userPosition.speed > 0) {
+  if (userPosition.target) {
     const { initialDistance, distanceTraveled } = userPosition;
     if (typeof initialDistance === 'number' && initialDistance > 0) {
       const traveled = distanceTraveled ?? 0;
@@ -73,24 +58,6 @@ export function JourneyDisplay() {
 
           <View style={styles.progressContainer}>
             <View style={styles.progressRow}>
-              <Text style={styles.progressLabel}>Speed</Text>
-              <Text style={styles.progressValue}>
-                {userPosition.speed.toLocaleString()} km/h
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.progressContainer}>
-            <View style={styles.progressRow}>
-              <Text style={styles.progressLabel}>Time Remaining</Text>
-              <Text style={styles.progressValue}>
-                {formatSecondsAsDaysAndHours(timeRemaining)}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.progressContainer}>
-            <View style={styles.progressRow}>
               <Text style={styles.progressLabel}>Distance Remaining</Text>
               <Text style={styles.progressValue}>
                 {distanceRemaining.toLocaleString(undefined, {
@@ -103,10 +70,10 @@ export function JourneyDisplay() {
         </>
       )}
 
-      {userPosition.speed === 0 && (
+      {!isTraveling && (
         <Text style={styles.landedText}>
           {userPosition.target?.name
-            ? `Complete a habit to launch toward ${userPosition.target.name}`
+            ? `Complete a habit to travel toward ${userPosition.target.name}`
             : 'Select a destination to begin your journey'}
         </Text>
       )}

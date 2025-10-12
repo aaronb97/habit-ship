@@ -12,10 +12,10 @@ export type UserPosition = {
     name: string;
     position: Coordinates;
   };
-  speed: number; // km/h
   launchTime?: string; // ISO timestamp
   initialDistance?: number; // Initial distance in km at launch
   distanceTraveled?: number; // Distance traveled in km since launch
+  previousDistanceTraveled?: number; // Last displayed distance used for animations
 };
 
 export type UserLevel = {
@@ -99,4 +99,10 @@ export function getLevelProgress(totalXP: number): number {
   const totalNeeded = nextLevelXP - currentLevelXP;
 
   return Math.min(progressXP / totalNeeded, 1);
+}
+
+// Distance gained per habit completion for a given level
+export function getHabitDistanceForLevel(level: number): number {
+  const L = Math.max(1, Math.floor(level));
+  return 1_000_000 * Math.pow(1.2, L - 1);
 }
