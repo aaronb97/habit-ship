@@ -280,9 +280,8 @@ export const useStore = create<Store>()(
               state.userPosition.currentLocation,
             );
 
-            const targetPos = getPlanetPosition(
-              state.userPosition.target.name,
-            );
+            const targetPos = getPlanetPosition(state.userPosition.target.name);
+
             state.userPosition.initialDistance = calculateDistance(
               startPos,
               targetPos,
