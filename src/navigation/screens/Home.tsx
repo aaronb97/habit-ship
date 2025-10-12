@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -54,34 +54,26 @@ export function Home() {
   };
 
   // Show congratulations when user lands on a planet (speed === 0 && no target)
-  useEffect(() => {
-    const isLanded = userPosition.speed === 0 && !userPosition.target;
+  const isLanded = userPosition.speed === 0 && !userPosition.target;
 
-    if (isLanded && isFocused && !hasShownLandingPrompt) {
-      setHasShownLandingPrompt(true);
-      Alert.alert(
-        '🎉 Congratulations!',
-        `You have landed on ${userPosition.currentLocation}! Please select your next destination to continue your journey.`,
-        [
-          {
-            text: 'OK',
-          },
-        ],
-        { cancelable: false },
-      );
-    }
+  if (isLanded && isFocused && !hasShownLandingPrompt) {
+    setHasShownLandingPrompt(true);
+    Alert.alert(
+      '🎉 Congratulations!',
+      `You have landed on ${userPosition.currentLocation}! Please select your next destination to continue your journey.`,
+      [
+        {
+          text: 'OK',
+        },
+      ],
+      { cancelable: false },
+    );
+  }
 
-    // Reset the flag when user starts traveling again
-    if (!isLanded && hasShownLandingPrompt) {
-      setHasShownLandingPrompt(false);
-    }
-  }, [
-    userPosition.speed,
-    userPosition.target,
-    userPosition.currentLocation,
-    hasShownLandingPrompt,
-    isFocused,
-  ]);
+  // Reset the flag when user starts traveling again
+  if (!isLanded && hasShownLandingPrompt) {
+    setHasShownLandingPrompt(false);
+  }
 
   return (
     <SafeAreaView style={styles.container}>
