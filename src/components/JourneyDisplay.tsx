@@ -2,12 +2,7 @@ import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { cBodies } from '../planets';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import {
-  calculateDistance,
-  useIsTraveling,
-  useStore,
-  useTimeRemaining,
-} from '../utils/store';
+import { useIsTraveling, useStore, useTimeRemaining } from '../utils/store';
 import { formatSecondsAsDaysAndHours } from '../utils/units';
 import { ProgressBar } from './ProgressBar';
 
@@ -43,25 +38,16 @@ export function JourneyDisplay() {
     return null;
   }
 
-  // Calculate current stats if traveling
+  // Calculate current stats if traveling (distance-based)
   let distanceRemaining = 0;
   let distancePercentage = 0;
 
-  if (
-    userPosition.target &&
-    userPosition.currentCoordinates &&
-    userPosition.speed > 0
-  ) {
-    const targetPos = userPosition.target.position;
-
-    distanceRemaining = calculateDistance(
-      userPosition.currentCoordinates,
-      targetPos,
-    );
-
-    if (userPosition.initialDistance && userPosition.initialDistance > 0) {
-      const distanceTraveled = userPosition.initialDistance - distanceRemaining;
-      distancePercentage = distanceTraveled / userPosition.initialDistance;
+  if (userPosition.target && userPosition.speed > 0) {
+    const { initialDistance, distanceTraveled } = userPosition;
+    if (typeof initialDistance === 'number' && initialDistance > 0) {
+      const traveled = distanceTraveled ?? 0;
+      distanceRemaining = Math.max(0, initialDistance - traveled);
+      distancePercentage = Math.min(1, Math.max(0, traveled / initialDistance));
     }
   }
 

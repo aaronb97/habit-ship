@@ -212,9 +212,10 @@ describe('store', () => {
         await result.current.completeHabit(habitId);
       });
 
-      const prevCoords = result.current.userPosition.currentCoordinates;
+      const prevDistance = result.current.userPosition.distanceTraveled;
       expect(traveling.current).toBe(true);
-      expect(prevCoords).toBeDefined();
+      expect(prevDistance).toBeDefined();
+      expect(prevDistance).toBe(0);
       expect(result.current.userPosition.launchTime).toBeDefined();
 
       // Advance time and update position
@@ -223,7 +224,7 @@ describe('store', () => {
         result.current.updateTravelPosition();
       });
 
-      expect(result.current.userPosition.currentCoordinates).toBeDefined();
+      expect(result.current.userPosition.distanceTraveled).toBeGreaterThan(0);
     })();
   });
 

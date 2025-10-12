@@ -7,8 +7,7 @@ export type DailyPosition = {
 };
 
 export type UserPosition = {
-  currentLocation?: string; // Planet/moon name if landed
-  currentCoordinates?: Coordinates; // Current position if traveling
+  currentLocation: string; // Planet/moon name if landed or the starting position if traveling
   target?: {
     name: string;
     position: Coordinates;
@@ -16,6 +15,7 @@ export type UserPosition = {
   speed: number; // km/h
   launchTime?: string; // ISO timestamp
   initialDistance?: number; // Initial distance in km at launch
+  distanceTraveled?: number; // Distance traveled in km since launch
 };
 
 export type UserLevel = {

@@ -138,20 +138,21 @@ const OUTLINE_EDGE_THICKNESS = 1.0;
 const OUTLINE_PULSE_PERIOD = 0.0;
 
 // Rocket prototype (not currently rendered, kept for future use)
-const ROCKET_SEGMENTS = 16; // Cylinder/cone segment count
-const ROCKET_BODY_RADIUS = 0.2;
-const ROCKET_BODY_HEIGHT = 1.2;
-const ROCKET_NOSE_RADIUS = 0.22;
-const ROCKET_NOSE_HEIGHT = 0.4;
-const ROCKET_FIN_THICKNESS = 0.05;
-const ROCKET_FIN_HEIGHT = 0.25;
-const ROCKET_FIN_WIDTH = 0.25;
-const ROCKET_FIN_OFFSET_X = 0.18;
-const ROCKET_FIN_OFFSET_Y = -0.4;
-const ROCKET_FIN_OFFSET_Z = 0.18;
+const ROCKET_SIZE_MULTIPLIER = 0.1; // Scales all rocket dimensions
+const ROCKET_SEGMENTS = Math.floor(16 * ROCKET_SIZE_MULTIPLIER); // Cylinder/cone segment count
+const ROCKET_BODY_RADIUS = ROCKET_SIZE_MULTIPLIER;
+const ROCKET_BODY_HEIGHT = 1.2 * ROCKET_SIZE_MULTIPLIER;
+const ROCKET_NOSE_RADIUS = 0.22 * ROCKET_SIZE_MULTIPLIER;
+const ROCKET_NOSE_HEIGHT = 0.4 * ROCKET_SIZE_MULTIPLIER;
+const ROCKET_FIN_THICKNESS = 0.05 * ROCKET_SIZE_MULTIPLIER;
+const ROCKET_FIN_HEIGHT = 0.25 * ROCKET_SIZE_MULTIPLIER;
+const ROCKET_FIN_WIDTH = 0.25 * ROCKET_SIZE_MULTIPLIER;
+const ROCKET_FIN_OFFSET_X = 0.18 * ROCKET_SIZE_MULTIPLIER;
+const ROCKET_FIN_OFFSET_Y = -0.4 * ROCKET_SIZE_MULTIPLIER;
+const ROCKET_FIN_OFFSET_Z = 0.18 * ROCKET_SIZE_MULTIPLIER;
 const ROCKET_ORIENTATION_Z = Math.PI;
 // Vertical offset of the rocket nose relative to the group's origin.
-const ROCKET_NOSE_Y = 0.8;
+const ROCKET_NOSE_Y = 0.8 * ROCKET_SIZE_MULTIPLIER;
 
 function toVec3([x, y, z]: Coordinates): THREE.Vector3 {
   return new THREE.Vector3(x * KM_TO_SCENE, y * KM_TO_SCENE, z * KM_TO_SCENE);
@@ -445,7 +446,7 @@ function createTrailLine(
   for (let i = 0; i < n; i++) {
     const t = n > 1 ? i / (n - 1) : 1; // 0 .. 1 from oldest to newest
     const eased = Math.pow(t, TRAIL_EASE_EXPONENT); // ease-in for smoother tail
-    alphas[i] = TRAIL_MAX_ALPHA * eased; // 0 -> TRAIL_MAX_ALPHA
+    alphas[i] = TRAIL_MAX_ALPHA * eased; // 0 -> max alpha
   }
 
   geom.setAttribute('alpha', new THREE.Float32BufferAttribute(alphas, 1));
@@ -508,6 +509,54 @@ export function SolarSystemMap() {
 
   const rocketRef = useRef<THREE.Group | null>(null);
   const planetRefs = useRef<Partial<Record<string, THREE.Mesh>>>({});
+  const displayUserPosRef = useRef<THREE.Vector3>(new THREE.Vector3());
+
+  const userPosState = useStore((s) => s.userPosition);
+
+  const computeDisplayUserPos = useCallback((): THREE.Vector3 => {
+    // If traveling, place user between start and target using distance proportion
+    const {
+      target,
+      currentLocation,
+      initialDistance,
+      distanceTraveled,
+      speed,
+    } = userPosState;
+
+    if (
+      target &&
+      speed > 0 &&
+      typeof initialDistance === 'number' &&
+      initialDistance > 0
+    ) {
+      const t = Math.min(
+        1,
+        Math.max(0, (distanceTraveled ?? 0) / initialDistance),
+      );
+
+      const startBody =
+        PLANETS.find((b) => b.name === currentLocation) ?? earth;
+
+      const targetBody = PLANETS.find((b) => b.name === target.name) ?? earth;
+
+      const startBase = toVec3(startBody.getCurrentPosition());
+      const startAdj = adjustPositionForOrbits(startBody, startBase);
+      const targetBase = toVec3(targetBody.getCurrentPosition());
+      const targetAdj = adjustPositionForOrbits(targetBody, targetBase);
+
+      return startAdj.clone().lerp(targetAdj, t);
+    }
+
+    // Landed: align to current location's displayed position
+    if (currentLocation) {
+      const body = PLANETS.find((b) => b.name === currentLocation) ?? earth;
+      const base = toVec3(body.getCurrentPosition());
+      return adjustPositionForOrbits(body, base);
+    }
+
+    // Fallback: use raw currentPosition
+    return toVec3(latestUserPos.current);
+  }, [userPosState]);
 
   // Simple orbit state (spherical coordinates around origin)
   const radiusRef = useRef(ORBIT_INITIAL_RADIUS);
@@ -541,7 +590,7 @@ export function SolarSystemMap() {
     const sun = new THREE.Vector3(0, 0, 0);
     const user = rocketRef.current
       ? rocketRef.current.position.clone()
-      : toVec3(latestUserPos.current);
+      : displayUserPosRef.current.clone();
 
     const target = toVec3(
       latestTargetPos.current ?? earth.getCurrentPosition(),
@@ -776,10 +825,9 @@ export function SolarSystemMap() {
       sunLight.position.set(0, 0, 0);
       scene.add(sunLight);
 
-      // Rocket (user)
-      // const rocket = createRocketMesh();
-      // rocketRef.current = rocket;
-      // scene.add(rocket);
+      const rocket = createRocketMesh();
+      rocketRef.current = rocket;
+      scene.add(rocket);
 
       PLANETS.forEach((p) => {
         // Scale each body's visual radius according to its real radius (km) relative to Earth,
@@ -847,11 +895,13 @@ export function SolarSystemMap() {
 
       // Animation loop
       const renderLoop = () => {
+        // Compute display user position for this frame
+        displayUserPosRef.current = computeDisplayUserPos();
+
         // Update dynamic positions
         // 1) User rocket follows latest position
         if (rocketRef.current) {
-          const p = toVec3(latestUserPos.current);
-          rocketRef.current.position.copy(p);
+          rocketRef.current.position.copy(displayUserPosRef.current);
         }
 
         // 2) Update planet positions for today (in case date offset changes)
@@ -920,7 +970,7 @@ export function SolarSystemMap() {
 
       frameRef.current = requestAnimationFrame(renderLoop);
     },
-    [updateCamera],
+    [updateCamera, computeDisplayUserPos],
   );
 
   // Resize handling

@@ -185,11 +185,11 @@ export const useStore = create<Store>()(
         set((state) => {
           // Instantly move to the specified planet and clear any travel state
           state.userPosition.currentLocation = planetName;
-          state.userPosition.currentCoordinates = undefined;
           state.userPosition.target = undefined;
           state.userPosition.speed = 0;
           state.userPosition.launchTime = undefined;
           state.userPosition.initialDistance = undefined;
+          state.userPosition.distanceTraveled = undefined;
           state.lastUpdateTime = undefined;
           state.planetLandedNotificationId = undefined;
         });
@@ -275,14 +275,20 @@ export const useStore = create<Store>()(
           if (boostType === 'LAUNCH' && state.userPosition.target) {
             state.userPosition.launchTime = getCurrentDate().toISOString();
             state.lastUpdateTime = getCurrentTime();
-            const currentPos = getCurrentPosition(state.userPosition);
-            const targetPos = state.userPosition.target.position;
+
+            const startPos = getPlanetPosition(
+              state.userPosition.currentLocation,
+            );
+
+            const targetPos = getPlanetPosition(
+              state.userPosition.target.name,
+            );
             state.userPosition.initialDistance = calculateDistance(
-              currentPos,
+              startPos,
               targetPos,
             );
 
-            state.userPosition.currentCoordinates = currentPos;
+            state.userPosition.distanceTraveled = 0;
           }
         });
       },
@@ -362,33 +368,39 @@ export const useStore = create<Store>()(
       updateTravelPosition: () => {
         const {
           lastUpdateTime,
-          userPosition: { target, launchTime, currentCoordinates, speed },
+          userPosition: {
+            target,
+            launchTime,
+            speed,
+            initialDistance,
+            distanceTraveled,
+          },
           completedPlanets,
         } = get();
 
-        if (!target || !launchTime || !currentCoordinates) return;
+        if (!target || !launchTime || initialDistance === undefined) return;
 
         const now = getCurrentTime();
         const lastUpdate = lastUpdateTime || now;
         const hoursElapsed = (now - lastUpdate) / 3600000;
-        const distanceTraveled = speed * hoursElapsed;
+        const deltaDistance = speed * hoursElapsed;
+        const newDistanceTraveled = Math.min(
+          initialDistance,
+          (distanceTraveled ?? 0) + deltaDistance,
+        );
 
-        const targetPos = target.position;
-        const currentPos = currentCoordinates;
-        const distanceRemaining = calculateDistance(currentPos, targetPos);
-
-        if (distanceTraveled >= distanceRemaining) {
+        if (newDistanceTraveled >= initialDistance) {
           // Arrived
           const destinationName = target.name;
           const isNewPlanet = !completedPlanets.includes(destinationName);
 
           set((state) => {
             state.userPosition.currentLocation = destinationName;
-            state.userPosition.currentCoordinates = undefined;
             state.userPosition.target = undefined;
             state.userPosition.speed = 0;
             state.userPosition.launchTime = undefined;
             state.userPosition.initialDistance = undefined;
+            state.userPosition.distanceTraveled = undefined;
             state.lastUpdateTime = undefined;
 
             // Complete the planet directly
@@ -402,18 +414,8 @@ export const useStore = create<Store>()(
           }
         } else {
           // Still traveling
-          const dx = targetPos[0] - currentPos[0];
-          const dy = targetPos[1] - currentPos[1];
-          const dz = targetPos[2] - currentPos[2];
-          const progress = distanceTraveled / distanceRemaining;
-
           set((state) => {
-            state.userPosition.currentCoordinates = [
-              currentPos[0] + dx * progress,
-              currentPos[1] + dy * progress,
-              currentPos[2] + dz * progress,
-            ];
-
+            state.userPosition.distanceTraveled = newDistanceTraveled;
             state.lastUpdateTime = now;
           });
         }
@@ -450,12 +452,29 @@ export const useStore = create<Store>()(
 // =================================================================
 
 function getCurrentPosition(position: UserPosition) {
+  // If in-flight with distance tracking, interpolate between the
+  // CURRENT positions of the start and target bodies using traveled ratio.
+  if (
+    position.target &&
+    position.initialDistance !== undefined &&
+    position.distanceTraveled !== undefined
+  ) {
+    const start = getPlanetPosition(position.currentLocation);
+    const target = getPlanetPosition(position.target.name);
+    const denom = position.initialDistance === 0 ? 1 : position.initialDistance;
+    const t = Math.min(1, Math.max(0, position.distanceTraveled / denom));
+
+    return [
+      start[0] + (target[0] - start[0]) * t,
+      start[1] + (target[1] - start[1]) * t,
+      start[2] + (target[2] - start[2]) * t,
+    ] as Coordinates;
+  }
+
+  // Otherwise, use the current body's true position
   return (
-    position.currentCoordinates ??
-    (
-      cBodies.find((p) => p.name === position.currentLocation) ?? earth
-    ).getCurrentPosition()
-  );
+    cBodies.find((p) => p.name === position.currentLocation) ?? earth
+  ).getCurrentPosition();
 }
 
 export function useCurrentPosition() {
@@ -472,14 +491,11 @@ function getTimeRemaining(
     return 0;
   }
 
-  const distance = calculateDistance(
-    getCurrentPosition(position),
-    position.target.position,
-  );
-
-  // distance is in km, speed is in km/h, so result is in hours
-  // convert to seconds
-  return (distance / speed) * 3600;
+  // Use distance tracking only
+  if (position.initialDistance === undefined) return 0;
+  const traveled = position.distanceTraveled ?? 0;
+  const remaining = Math.max(0, position.initialDistance - traveled);
+  return (remaining / speed) * 3600;
 }
 
 export const useIsSetupFinished = () =>
