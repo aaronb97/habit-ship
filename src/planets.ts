@@ -167,13 +167,36 @@ function satelliteRelativePosition(
 /**
  * Short for celestial body
  */
-export interface CBody {
-  name: string;
-  description: string;
-  color: number;
-  radiusKm: number;
+export abstract class CBody {
+  public name: string;
+  public description: string;
+  public color: number;
+  public radiusKm: number;
+  public minLevel?: number;
+  // Visual/physical attributes for rendering
+  public axialTiltDeg?: number; // degrees (positive tilts toward +Z around local Z)
 
-  getPosition(date?: Date): Coordinates;
+  constructor(opts: {
+    name: string;
+    description: string;
+    color: number;
+    radiusKm: number;
+    minLevel?: number;
+    axialTiltDeg?: number;
+  }) {
+    this.name = opts.name;
+    this.description = opts.description;
+    this.color = opts.color;
+    this.radiusKm = opts.radiusKm;
+    this.minLevel = opts.minLevel;
+    this.axialTiltDeg = opts.axialTiltDeg;
+  }
+
+  abstract getPosition(date?: Date): Coordinates;
+
+  get isLandable(): boolean {
+    return this.minLevel !== undefined;
+  }
 }
 
 interface BaseCBodyOptions {
@@ -187,6 +210,7 @@ interface PlanetOptions extends BaseCBodyOptions {
   orbitalPeriodDays: number;
   kepler: KeplerianElements; // heliocentric elements (required for planets)
   minLevel?: number; // if present, planet is landable
+  axialTiltDeg?: number;
 }
 
 interface MoonOptions extends BaseCBodyOptions {
@@ -196,6 +220,7 @@ interface MoonOptions extends BaseCBodyOptions {
   satellite: SatelliteOrbit; // required for moons
   orbitOffsetMultiplier?: number;
   minLevel: number; // moons are always landable
+  axialTiltDeg?: number;
 }
 
 interface StarOptions extends BaseCBodyOptions {
@@ -203,23 +228,21 @@ interface StarOptions extends BaseCBodyOptions {
   position: Coordinates;
 }
 
-export class Planet implements CBody {
-  public name: string;
-  public description: string;
-  public color: number;
-  public radiusKm: number;
+export class Planet extends CBody {
   public orbitalPeriodDays: number;
   public kepler: KeplerianElements;
-  public minLevel?: number;
 
   constructor(options: PlanetOptions) {
-    this.name = options.name;
-    this.description = options.description;
-    this.color = options.color;
-    this.radiusKm = options.radiusKm;
+    super({
+      name: options.name,
+      description: options.description,
+      color: options.color,
+      radiusKm: options.radiusKm,
+      minLevel: options.minLevel,
+      axialTiltDeg: options.axialTiltDeg,
+    });
     this.orbitalPeriodDays = options.orbitalPeriodDays;
     this.kepler = options.kepler;
-    this.minLevel = options.minLevel;
   }
 
   getPosition(date?: Date): Coordinates {
@@ -231,32 +254,27 @@ export class Planet implements CBody {
     return coords;
   }
 
-  get isLandable(): boolean {
-    return this.minLevel !== undefined;
-  }
 }
 
-export class Moon implements CBody {
-  public name: string;
-  public description: string;
-  public color: number;
-  public radiusKm: number;
+export class Moon extends CBody {
   public orbitalPeriodDays: number;
   public orbits: HelioName;
   public satellite: SatelliteOrbit;
   public orbitOffsetMultiplier?: number;
-  public minLevel: number; // moons are always landable
 
   constructor(options: MoonOptions) {
-    this.name = options.name;
-    this.description = options.description;
-    this.color = options.color;
-    this.radiusKm = options.radiusKm;
+    super({
+      name: options.name,
+      description: options.description,
+      color: options.color,
+      radiusKm: options.radiusKm,
+      minLevel: options.minLevel,
+      axialTiltDeg: options.axialTiltDeg,
+    });
     this.orbitalPeriodDays = options.orbitalPeriodDays;
     this.orbits = options.orbits;
     this.satellite = options.satellite;
     this.orbitOffsetMultiplier = options.orbitOffsetMultiplier;
-    this.minLevel = options.minLevel;
   }
 
   getPosition(date?: Date): Coordinates {
@@ -275,24 +293,19 @@ export class Moon implements CBody {
     ];
   }
 
-  get isLandable(): boolean {
-    return true;
-  }
 }
 
-export class Star implements CBody {
-  public name: string;
-  public description: string;
+export class Star extends CBody {
   private position: Coordinates;
-  public color: number;
-  public radiusKm: number;
 
   constructor(options: StarOptions) {
-    this.name = options.name;
-    this.description = options.description;
-    this.color = options.color ?? 0xfff700;
+    super({
+      name: options.name,
+      description: options.description,
+      color: options.color ?? 0xfff700,
+      radiusKm: options.radiusKm,
+    });
     this.position = options.position;
-    this.radiusKm = options.radiusKm;
   }
 
   getPosition() {
@@ -404,6 +417,7 @@ export const earth = new Planet({
   orbitalPeriodDays: 365.256,
   kepler: HELIO.Earth,
   minLevel: 1,
+  axialTiltDeg: 23.44,
 });
 export const moon = new Moon({
   name: 'The Moon',
@@ -423,6 +437,7 @@ export const moon = new Moon({
     meanMotionDegPerDay: 360 / 27.321661,
   },
   minLevel: 1,
+  axialTiltDeg: 6.68,
 });
 export const mercury = new Planet({
   name: 'Mercury',
@@ -432,6 +447,7 @@ export const mercury = new Planet({
   orbitalPeriodDays: 87.969,
   kepler: HELIO.Mercury,
   minLevel: 1,
+  axialTiltDeg: 0.03,
 });
 export const venus = new Planet({
   name: 'Venus',
@@ -441,6 +457,7 @@ export const venus = new Planet({
   orbitalPeriodDays: 224.701,
   kepler: HELIO.Venus,
   minLevel: 1,
+  axialTiltDeg: 177.36,
 });
 export const mars = new Planet({
   name: 'Mars',
@@ -450,6 +467,7 @@ export const mars = new Planet({
   orbitalPeriodDays: 686.98,
   kepler: HELIO.Mars,
   minLevel: 1,
+  axialTiltDeg: 25.19,
 });
 export const jupiter = new Planet({
   name: 'Jupiter',
@@ -458,6 +476,7 @@ export const jupiter = new Planet({
   radiusKm: 69911,
   orbitalPeriodDays: 4332.589,
   kepler: HELIO.Jupiter,
+  axialTiltDeg: 3.13,
 });
 export const saturn = new Planet({
   name: 'Saturn',
@@ -466,6 +485,7 @@ export const saturn = new Planet({
   radiusKm: 58232,
   orbitalPeriodDays: 10759.22,
   kepler: HELIO.Saturn,
+  axialTiltDeg: 26.73,
 });
 export const uranus = new Planet({
   name: 'Uranus',
@@ -474,6 +494,7 @@ export const uranus = new Planet({
   radiusKm: 25362,
   orbitalPeriodDays: 30685.4,
   kepler: HELIO.Uranus,
+  axialTiltDeg: 97.77, // severe tilt
 });
 export const neptune = new Planet({
   name: 'Neptune',
@@ -482,6 +503,7 @@ export const neptune = new Planet({
   radiusKm: 24622,
   orbitalPeriodDays: 60190,
   kepler: HELIO.Neptune,
+  axialTiltDeg: 28.32,
 });
 export const pluto = new Planet({
   name: 'Pluto',
@@ -491,6 +513,7 @@ export const pluto = new Planet({
   orbitalPeriodDays: 90560,
   kepler: HELIO.Pluto,
   minLevel: 5,
+  axialTiltDeg: 119.6,
 });
 export const phobos = new Moon({
   name: 'Phobos',
@@ -510,6 +533,7 @@ export const phobos = new Moon({
     meanMotionDegPerDay: 360 / 0.31891,
   },
   minLevel: 1,
+  axialTiltDeg: 0,
 });
 export const deimos = new Moon({
   name: 'Deimos',
@@ -529,6 +553,7 @@ export const deimos = new Moon({
     meanMotionDegPerDay: 360 / 1.26244,
   },
   minLevel: 1,
+  axialTiltDeg: 0,
 });
 
 // Jupiter moons (Galilean)
@@ -538,8 +563,9 @@ export const io = new Moon({
   color: 0xc0c0c0,
   radiusKm: 1821.6,
   orbitalPeriodDays: 1.769,
+  minLevel: 2,
+  axialTiltDeg: 0.05,
   orbits: 'Jupiter',
-
   satellite: {
     semiMajorAxisKm: 421700,
     e: 0.0041,
@@ -549,16 +575,17 @@ export const io = new Moon({
     meanAnomalyAtEpoch: 0,
     meanMotionDegPerDay: 360 / 1.769,
   },
-  minLevel: 2,
 });
+
 export const europa = new Moon({
   name: 'Europa',
   description: 'Icy moon with subsurface ocean',
   color: 0xc0c0c0,
   radiusKm: 1560.8,
   orbitalPeriodDays: 3.551,
+  minLevel: 1,
+  axialTiltDeg: 0.1,
   orbits: 'Jupiter',
-
   satellite: {
     semiMajorAxisKm: 671100,
     e: 0.009,
@@ -568,16 +595,17 @@ export const europa = new Moon({
     meanAnomalyAtEpoch: 0,
     meanMotionDegPerDay: 360 / 3.551,
   },
-  minLevel: 1,
 });
+
 export const ganymede = new Moon({
   name: 'Ganymede',
   description: 'Largest moon in the Solar System',
   color: 0xc0c0c0,
   radiusKm: 2634.1,
   orbitalPeriodDays: 7.155,
+  minLevel: 3,
+  axialTiltDeg: 0.33,
   orbits: 'Jupiter',
-
   satellite: {
     semiMajorAxisKm: 1070400,
     e: 0.0013,
@@ -587,16 +615,17 @@ export const ganymede = new Moon({
     meanAnomalyAtEpoch: 0,
     meanMotionDegPerDay: 360 / 7.155,
   },
-  minLevel: 3,
 });
+
 export const callisto = new Moon({
   name: 'Callisto',
   description: 'Heavily cratered outer Galilean moon',
   color: 0xc0c0c0,
   radiusKm: 2410.3,
   orbitalPeriodDays: 16.689,
+  minLevel: 3,
+  axialTiltDeg: 0.28,
   orbits: 'Jupiter',
-
   satellite: {
     semiMajorAxisKm: 1882700,
     e: 0.007,
@@ -606,16 +635,16 @@ export const callisto = new Moon({
     meanAnomalyAtEpoch: 0,
     meanMotionDegPerDay: 360 / 16.689,
   },
-  minLevel: 3,
 });
 
-// Saturn moons
 export const titan = new Moon({
   name: 'Titan',
   description: 'Largest moon of Saturn with thick atmosphere',
   color: 0xc0c0c0,
   radiusKm: 2574.7,
   orbitalPeriodDays: 15.945,
+  minLevel: 1,
+  axialTiltDeg: 0.3,
   orbits: 'Saturn',
   satellite: {
     semiMajorAxisKm: 1221870,
@@ -626,14 +655,16 @@ export const titan = new Moon({
     meanAnomalyAtEpoch: 0,
     meanMotionDegPerDay: 360 / 15.945,
   },
-  minLevel: 1,
 });
+
 export const iapetus = new Moon({
   name: 'Iapetus',
   description: 'Distant moon of Saturn with a two-tone surface',
   color: 0xc0c0c0,
   radiusKm: 734.5,
   orbitalPeriodDays: 79.3215,
+  minLevel: 4,
+  axialTiltDeg: 15.5,
   orbits: 'Saturn',
   satellite: {
     semiMajorAxisKm: 3560820,
@@ -644,18 +675,17 @@ export const iapetus = new Moon({
     meanAnomalyAtEpoch: 0,
     meanMotionDegPerDay: 360 / 79.3215,
   },
-  minLevel: 4,
 });
 
-// Neptune moon
 export const triton = new Moon({
   name: 'Triton',
   description: 'Retrograde moon of Neptune',
   color: 0xc0c0c0,
   radiusKm: 1353.4,
   orbitalPeriodDays: 5.8769,
+  minLevel: 1,
+  axialTiltDeg: 157,
   orbits: 'Neptune',
-
   satellite: {
     semiMajorAxisKm: 354759,
     e: 0.00002,
@@ -665,7 +695,106 @@ export const triton = new Moon({
     meanAnomalyAtEpoch: 0,
     meanMotionDegPerDay: -360 / 5.8769, // retrograde
   },
+});
+
+export const miranda = new Moon({
+  name: 'Miranda',
+  description: 'Smallest of Uranus’s major moons',
+  color: 0xc0c0c0,
+  radiusKm: 235.8,
+  orbitalPeriodDays: 1.4135,
   minLevel: 1,
+  axialTiltDeg: 0,
+  orbits: 'Uranus',
+  satellite: {
+    semiMajorAxisKm: 129_900,
+    e: 0.0013,
+    i: 102.11, // ~97.77 + 4.34 (approx relative to ecliptic)
+    longNode: 0,
+    argPeri: 0,
+    meanAnomalyAtEpoch: 0,
+    meanMotionDegPerDay: 360 / 1.4135,
+  },
+});
+
+export const ariel = new Moon({
+  name: 'Ariel',
+  description: 'One of Uranus’s larger moons',
+  color: 0xc0c0c0,
+  radiusKm: 578.9,
+  orbitalPeriodDays: 2.52,
+  minLevel: 1,
+  axialTiltDeg: 0.1,
+  orbits: 'Uranus',
+  satellite: {
+    semiMajorAxisKm: 190_900,
+    e: 0.0012,
+    i: 98.03, // ~97.77 + 0.26
+    longNode: 0,
+    argPeri: 0,
+    meanAnomalyAtEpoch: 0,
+    meanMotionDegPerDay: 360 / 2.52,
+  },
+});
+
+export const umbriel = new Moon({
+  name: 'Umbriel',
+  description: 'Dark Uranian moon',
+  color: 0xc0c0c0,
+  radiusKm: 584.7,
+  orbitalPeriodDays: 4.144,
+  minLevel: 1,
+  axialTiltDeg: 0.1,
+  orbits: 'Uranus',
+  satellite: {
+    semiMajorAxisKm: 266_000,
+    e: 0.0039,
+    i: 98.13, // ~97.77 + 0.36
+    longNode: 0,
+    argPeri: 0,
+    meanAnomalyAtEpoch: 0,
+    meanMotionDegPerDay: 360 / 4.144,
+  },
+});
+
+export const titania = new Moon({
+  name: 'Titania',
+  description: 'Largest moon of Uranus',
+  color: 0xc0c0c0,
+  radiusKm: 788.4,
+  orbitalPeriodDays: 8.706,
+  minLevel: 1,
+  axialTiltDeg: 0.1,
+  orbits: 'Uranus',
+  satellite: {
+    semiMajorAxisKm: 436_300,
+    e: 0.0011,
+    i: 97.85, // ~97.77 + 0.08
+    longNode: 0,
+    argPeri: 0,
+    meanAnomalyAtEpoch: 0,
+    meanMotionDegPerDay: 360 / 8.706,
+  },
+});
+
+export const oberon = new Moon({
+  name: 'Oberon',
+  description: 'Second-largest moon of Uranus',
+  color: 0xc0c0c0,
+  radiusKm: 761.4,
+  orbitalPeriodDays: 13.463,
+  minLevel: 1,
+  axialTiltDeg: 0.1,
+  orbits: 'Uranus',
+  satellite: {
+    semiMajorAxisKm: 583_500,
+    e: 0.0014,
+    i: 97.87, // ~97.77 + 0.1
+    longNode: 0,
+    argPeri: 0,
+    meanAnomalyAtEpoch: 0,
+    meanMotionDegPerDay: 360 / 13.463,
+  },
 });
 
 export const cBodies: CBody[] = [
@@ -693,4 +822,10 @@ export const cBodies: CBody[] = [
   iapetus,
   // Neptune moon
   triton,
+  // Uranus moons
+  miranda,
+  ariel,
+  umbriel,
+  titania,
+  oberon,
 ];

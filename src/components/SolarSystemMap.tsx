@@ -124,6 +124,22 @@ const TEXTURE_ANISOTROPY = 4;
 // Mesh orientation
 // Rotate planet meshes so their equators are horizontal and textures align nicely.
 const PLANET_MESH_X_ROTATION = -Math.PI / 2;
+// Artistic global multiplier for body rotation speeds (spin)
+const ROTATION_SPEED_MULTIPLIER = 30;
+
+// Approximate sidereal rotation periods for planets (hours).
+// Negative indicates retrograde spin.
+const PLANET_ROTATION_HOURS: Record<string, number> = {
+  Mercury: 1407.5,
+  Venus: -5832.5,
+  Earth: 23.934,
+  Mars: 24.623,
+  Jupiter: 9.925,
+  Saturn: 10.656,
+  Uranus: -17.24,
+  Neptune: 16.11,
+  Pluto: -153.2928,
+};
 
 // Numerics
 // Squared-length threshold to detect near-degenerate plane normals.
@@ -400,6 +416,7 @@ type MappedMaterial =
 
 type PlanetMeshUserData = {
   visualRadius?: number;
+  spinRadPerMs?: number;
 };
 
 function createPlanetMesh(
@@ -938,6 +955,30 @@ export function SolarSystemMap() {
         planetRefs.current[p.name] = mesh;
         // Store radius for screen-space calculations
         (mesh.userData as PlanetMeshUserData).visualRadius = visualRadius;
+        // Apply base equatorial alignment and then axial tilt (deg -> rad)
+        const tiltDeg = p.axialTiltDeg ?? 0;
+        mesh.rotation.x = PLANET_MESH_X_ROTATION;
+        if (tiltDeg !== 0) {
+          mesh.rotation.z += THREE.MathUtils.degToRad(tiltDeg);
+        }
+        // Compute spin speed (rad per ms). For planets, use known sidereal
+        // rotation hours. For moons, assume tidal locking: period equals
+        // orbital period; retrograde if meanMotionDegPerDay < 0.
+        let periodHours: number | undefined;
+        if (p instanceof Planet) {
+          const h = PLANET_ROTATION_HOURS[p.name];
+          if (typeof h === 'number' && h !== 0) periodHours = h;
+        } else if (p instanceof Moon) {
+          const meanMotion = p.satellite.meanMotionDegPerDay;
+          const sign = meanMotion < 0 ? -1 : 1;
+          periodHours = sign * (p.orbitalPeriodDays * 24);
+        }
+        if (typeof periodHours === 'number' && periodHours !== 0) {
+          const sign = periodHours < 0 ? -1 : 1;
+          const magHours = Math.abs(periodHours);
+          const radPerMs = (2 * Math.PI) / (magHours * 3600 * 1000);
+          (mesh.userData as PlanetMeshUserData).spinRadPerMs = sign * radPerMs;
+        }
         const basePos = toVec3(p.getPosition());
         const adjustedPos = adjustPositionForOrbits(p, basePos);
         mesh.position.copy(adjustedPos);
@@ -986,7 +1027,12 @@ export function SolarSystemMap() {
       // rocket.position.copy(initial);
 
       // Animation loop
+      const lastTimeRef: { current: number | null } = { current: null };
       const renderLoop = () => {
+        const tNow = performance.now();
+        const dtMs =
+          lastTimeRef.current === null ? 16 : tNow - lastTimeRef.current;
+        lastTimeRef.current = tNow;
         // Compute display user position for this frame
         displayUserPosRef.current = computeDisplayUserPos();
 
@@ -1014,13 +1060,18 @@ export function SolarSystemMap() {
           rocketRef.current.position.copy(displayUserPosRef.current);
         }
 
-        // 2) Update planet positions for today (in case date offset changes)
+        // 2) Update planet positions and spin (in case date offset changes)
         PLANETS.forEach((p) => {
           const mesh = planetRefs.current[p.name];
           if (mesh) {
             const basePos = toVec3(p.getPosition());
             const adjustedPos = adjustPositionForOrbits(p, basePos);
             mesh.position.copy(adjustedPos);
+            const ud = mesh.userData as PlanetMeshUserData;
+            if (ud.spinRadPerMs) {
+              mesh.rotation.y +=
+                ud.spinRadPerMs * dtMs * ROTATION_SPEED_MULTIPLIER;
+            }
           }
         });
 
@@ -1110,13 +1161,13 @@ export function SolarSystemMap() {
         }
 
         if (isFocusedRef.current) {
-          const now = performance.now();
+          const frameStart = performance.now();
           if (composerRef.current) {
             composerRef.current.render();
           } else {
             renderer.render(scene, camera);
           }
-          const elapsed = performance.now() - now;
+          const elapsed = performance.now() - frameStart;
           const fps = 1000 / elapsed;
           if (logFPS) console.log(`FPS: ${fps.toFixed(2)}`);
         }
