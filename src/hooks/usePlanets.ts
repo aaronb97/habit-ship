@@ -33,7 +33,7 @@ export function usePlanets(): PlanetWithDistance[] {
       return true;
     })
     .map((planet) => {
-      const planetCoords = planet.getCurrentPosition();
+      const planetCoords = planet.getPosition();
       const distance = calculateDistance(currentPosition, planetCoords);
 
       // Determine if planet should be disabled and why

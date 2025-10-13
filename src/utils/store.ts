@@ -48,7 +48,7 @@ export function getPlanetPosition(planetName: string): Coordinates {
   const planet = cBodies.find((p) => p.name === planetName);
   if (!planet) throw new Error(`Planet ${planetName} not found`);
 
-  return planet.getCurrentPosition();
+  return planet.getPosition();
 }
 
 // Distance awarded per habit completion based on level
@@ -234,11 +234,11 @@ export const useStore = create<Store>()(
             currentLocation: 'Earth',
             target: {
               name: 'The Moon',
-              position: moon.getCurrentPosition(),
+              position: moon.getPosition(),
             },
             initialDistance: calculateDistance(
               getPlanetPosition('Earth'),
-              moon.getCurrentPosition(),
+              moon.getPosition(),
             ),
             distanceTraveled: 0,
             previousDistanceTraveled: 0,
@@ -449,7 +449,7 @@ function getCurrentPosition(position: UserPosition) {
   // Otherwise, use the current body's true position
   return (
     cBodies.find((p) => p.name === position.currentLocation) ?? earth
-  ).getCurrentPosition();
+  ).getPosition();
 }
 
 export function useCurrentPosition() {

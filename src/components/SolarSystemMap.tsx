@@ -170,10 +170,6 @@ function toVec3([x, y, z]: Coordinates): THREE.Vector3 {
   return new THREE.Vector3(x * KM_TO_SCENE, y * KM_TO_SCENE, z * KM_TO_SCENE);
 }
 
-function getDateKey(date: Date): string {
-  return date.toISOString().split('T')[0]!;
-}
-
 function getTrailForPlanet(planet: Planet, daysBack: number): THREE.Vector3[] {
   const points: THREE.Vector3[] = [];
   const today = getCurrentDate();
@@ -194,42 +190,28 @@ function getTrailForPlanet(planet: Planet, daysBack: number): THREE.Vector3[] {
   if (drawOrbitAroundParent && parent && parent instanceof Planet) {
     // Anchor the moon's trail around the parent's CURRENT position,
     // using historical relative offsets (moon - parent) for each day.
-    const parentAnchor = toVec3(parent.getCurrentPosition());
+    const parentAnchor = toVec3(parent.getPosition());
 
     for (let i = daysBack; i >= 1; i -= step) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      const key = getDateKey(d);
 
-      const childHas = Object.prototype.hasOwnProperty.call(
-        planet.dailyPositions,
-        key,
-      );
+      const childKm = planet.getPosition(d);
+      const parentKm = parent.getPosition(d);
 
-      const parentHas = Object.prototype.hasOwnProperty.call(
-        parent.dailyPositions,
-        key,
-      );
+      const offset = toVec3([
+        (childKm[0] - parentKm[0]) * multiplier,
+        (childKm[1] - parentKm[1]) * multiplier,
+        (childKm[2] - parentKm[2]) * multiplier,
+      ]);
 
-      if (childHas && parentHas) {
-        const childKm = planet.dailyPositions[key]!;
-        const parentKm = parent.dailyPositions[key]!;
-
-        const offset = toVec3([
-          (childKm[0] - parentKm[0]) * multiplier,
-          (childKm[1] - parentKm[1]) * multiplier,
-          (childKm[2] - parentKm[2]) * multiplier,
-        ]);
-
-        points.push(parentAnchor.clone().add(offset));
-      }
+      points.push(parentAnchor.clone().add(offset));
     }
 
     // Include today's point
-    const todayKey = getDateKey(today);
-    const childToday = planet.dailyPositions[todayKey];
-    const parentToday = parent.dailyPositions[todayKey];
-    if (childToday && parentToday) {
+    const childToday = planet.getPosition(today);
+    const parentToday = parent.getPosition(today);
+    {
       const offset = toVec3([
         (childToday[0] - parentToday[0]) * multiplier,
         (childToday[1] - parentToday[1]) * multiplier,
@@ -246,23 +228,19 @@ function getTrailForPlanet(planet: Planet, daysBack: number): THREE.Vector3[] {
   for (let i = daysBack; i >= 1; i -= step) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
-    const key = getDateKey(d);
-    if (Object.prototype.hasOwnProperty.call(planet.dailyPositions, key)) {
-      const coords = planet.dailyPositions[key]!;
-      points.push(
-        new THREE.Vector3(
-          coords[0] * KM_TO_SCENE,
-          coords[1] * KM_TO_SCENE,
-          coords[2] * KM_TO_SCENE,
-        ),
-      );
-    }
+    const coords = planet.getPosition(d);
+    points.push(
+      new THREE.Vector3(
+        coords[0] * KM_TO_SCENE,
+        coords[1] * KM_TO_SCENE,
+        coords[2] * KM_TO_SCENE,
+      ),
+    );
   }
 
-  // Always include today's (current) position at the end if available
-  const todayKey = getDateKey(today);
-  if (Object.prototype.hasOwnProperty.call(planet.dailyPositions, todayKey)) {
-    const todayCoords = planet.dailyPositions[todayKey]!;
+  // Always include today's (current) position at the end
+  {
+    const todayCoords = planet.getPosition(today);
     points.push(
       new THREE.Vector3(
         todayCoords[0] * KM_TO_SCENE,
@@ -352,7 +330,7 @@ function adjustPositionForOrbits(
   if (body instanceof Planet && body.orbits) {
     const parent = PLANETS.find((b) => b.name === body.orbits);
     if (parent) {
-      const parentPos = toVec3(parent.getCurrentPosition());
+      const parentPos = toVec3(parent.getPosition());
       const dir = basePosition.clone().sub(parentPos);
 
       return parentPos.add(
@@ -639,9 +617,9 @@ export function SolarSystemMap() {
 
       const targetBody = PLANETS.find((b) => b.name === target.name) ?? earth;
 
-      const startBase = toVec3(startBody.getCurrentPosition());
+      const startBase = toVec3(startBody.getPosition());
       const startAdj = adjustPositionForOrbits(startBody, startBase);
-      const targetBase = toVec3(targetBody.getCurrentPosition());
+      const targetBase = toVec3(targetBody.getPosition());
       const targetAdj = adjustPositionForOrbits(targetBody, targetBase);
 
       return startAdj.clone().lerp(targetAdj, t);
@@ -653,7 +631,7 @@ export function SolarSystemMap() {
         (b) => b.name === latestUserPosStateRef.current.currentLocation,
       ) ?? earth;
 
-    const base = toVec3(body.getCurrentPosition());
+    const base = toVec3(body.getPosition());
     return adjustPositionForOrbits(body, base);
   }, []);
 
@@ -691,9 +669,7 @@ export function SolarSystemMap() {
       ? rocketRef.current.position.clone()
       : displayUserPosRef.current.clone();
 
-    const target = toVec3(
-      latestTargetPos.current ?? earth.getCurrentPosition(),
-    );
+    const target = toVec3(latestTargetPos.current ?? earth.getPosition());
 
     // Center of orbit: the user's position.
     const center = user.clone();
@@ -955,7 +931,8 @@ export function SolarSystemMap() {
         planetRefs.current[p.name] = mesh;
         // Store radius for screen-space calculations
         (mesh.userData as PlanetMeshUserData).visualRadius = visualRadius;
-        const basePos = toVec3(p.getCurrentPosition());
+        const basePos = toVec3(p.getPosition());
+        console.log(p.getPosition());
         const adjustedPos = adjustPositionForOrbits(p, basePos);
         mesh.position.copy(adjustedPos);
         scene.add(mesh);
@@ -1038,7 +1015,7 @@ export function SolarSystemMap() {
         PLANETS.forEach((p) => {
           const mesh = planetRefs.current[p.name];
           if (mesh) {
-            const basePos = toVec3(p.getCurrentPosition());
+            const basePos = toVec3(p.getPosition());
             const adjustedPos = adjustPositionForOrbits(p, basePos);
             mesh.position.copy(adjustedPos);
           }
