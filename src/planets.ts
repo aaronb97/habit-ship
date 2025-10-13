@@ -44,9 +44,9 @@ function solveKepler(M: number, e: number): number {
 }
 
 // Round a date to the nearest hour to stabilize snapshots across frames
-function quantizeToNearestHour(date: Date): Date {
+function quantizeToSecond(date: Date): Date {
   const t = date.getTime();
-  const hourMs = 60 * 60 * 1000;
+  const hourMs = 1000;
   const qt = Math.round(t / hourMs) * hourMs;
   return new Date(qt);
 }
@@ -214,8 +214,6 @@ export class Planet implements CBody {
   public orbitOffsetMultiplier?: number;
   public kepler?: KeplerianElements;
   public satellite?: SatelliteOrbit;
-  private _lastDateKey?: number;
-  private _lastPosition?: Coordinates;
 
   constructor(options: PlanetOptions) {
     this.name = options.name;
@@ -231,13 +229,10 @@ export class Planet implements CBody {
   }
 
   getPosition(date?: Date): Coordinates {
-    // Quantize to nearest hour by default to avoid frequent micro-changes
+    // Quantize to nearest second by default to avoid frequent micro-changes
     const dRaw = date ?? getCurrentDate();
-    const d = quantizeToNearestHour(dRaw);
-    const key = d.getTime();
-    if (this._lastDateKey === key && this._lastPosition) {
-      return this._lastPosition;
-    }
+    const d = quantizeToSecond(dRaw);
+
     // Satellite body: compute parent + relative
     if (this.orbits && this.satellite) {
       const parent = cBodies.find((b) => b.name === this.orbits);
@@ -253,23 +248,17 @@ export class Planet implements CBody {
         parentPos[1] + rel[1],
         parentPos[2] + rel[2],
       ];
-      this._lastDateKey = key;
-      this._lastPosition = coords;
       return coords;
     }
 
     // Primary around Sun via Keplerian elements
     if (this.kepler) {
       const coords = heliocentricFromKepler(this.kepler, d);
-      this._lastDateKey = key;
-      this._lastPosition = coords;
       return coords;
     }
 
     // Fallback: origin
     const coords: Coordinates = [0, 0, 0];
-    this._lastDateKey = key;
-    this._lastPosition = coords;
 
     return coords;
   }

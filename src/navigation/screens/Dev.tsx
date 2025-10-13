@@ -91,6 +91,13 @@ export function Dev() {
               onValueChange={(v) => store.setShowTextures(v)}
             />
           </View>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Log FPS</Text>
+            <Switch
+              value={!!store.logFPS}
+              onValueChange={(v) => store.setLogFPS(v)}
+            />
+          </View>
         </View>
 
         <View style={styles.section}>

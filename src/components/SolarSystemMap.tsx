@@ -518,7 +518,7 @@ export function SolarSystemMap() {
     latestUserPosStateRef.current = userPosState;
   }, [userPosState]);
 
-  const { showTrails, showTextures } = useStore();
+  const { showTrails, showTextures, logFPS } = useStore();
   const syncTravelVisuals = useStore((s) => s.syncTravelVisuals);
   const isFocusedValue = useIsFocused();
   const isFocusedRef = useRef<boolean>(isFocusedValue);
@@ -932,7 +932,6 @@ export function SolarSystemMap() {
         // Store radius for screen-space calculations
         (mesh.userData as PlanetMeshUserData).visualRadius = visualRadius;
         const basePos = toVec3(p.getPosition());
-        console.log(p.getPosition());
         const adjustedPos = adjustPositionForOrbits(p, basePos);
         mesh.position.copy(adjustedPos);
         scene.add(mesh);
@@ -1115,7 +1114,7 @@ export function SolarSystemMap() {
           }
           const elapsed = performance.now() - now;
           const fps = 1000 / elapsed;
-          console.log(`FPS: ${fps.toFixed(2)}`);
+          if (logFPS) console.log(`FPS: ${fps.toFixed(2)}`);
         }
 
         gl.endFrameEXP();
@@ -1130,6 +1129,7 @@ export function SolarSystemMap() {
       showTrails,
       computeDisplayUserPos,
       syncTravelVisuals,
+      logFPS,
     ],
   );
 
