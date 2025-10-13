@@ -130,7 +130,7 @@ function heliocentricFromKepler(
 function satelliteRelativePosition(
   sat: SatelliteOrbit,
   date: Date,
-  parentAxialTiltDeg?: number,
+  parentAxialTiltDeg: number,
 ): Coordinates {
   const epoch = sat.epochJd ?? 2451545.0;
   const d = getJulianDay(date) - epoch;
@@ -149,7 +149,7 @@ function satelliteRelativePosition(
 
   // All satellite inclinations are specified relative to the parent's equator.
   // Approximate ecliptic-relative inclination by adding the parent's axial tilt.
-  const iDeg = (parentAxialTiltDeg ?? 0) + sat.i;
+  const iDeg = parentAxialTiltDeg + sat.i;
   const i = deg2rad(iDeg);
   const Omega = deg2rad(sat.longNode);
   const omega = deg2rad(sat.argPeri);
@@ -288,7 +288,11 @@ export class Moon extends CBody {
       throw new Error(`Parent body ${this.orbits} not found for ${this.name}`);
     }
     const parentPos: Coordinates = parent.getPosition(d);
-    const rel = satelliteRelativePosition(this.satellite, d);
+    const rel = satelliteRelativePosition(
+      this.satellite,
+      d,
+      parent.axialTiltDeg ?? 0,
+    );
     return [
       parentPos[0] + rel[0],
       parentPos[1] + rel[1],
