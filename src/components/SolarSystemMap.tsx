@@ -124,22 +124,7 @@ const TEXTURE_ANISOTROPY = 4;
 // Mesh orientation
 // Rotate planet meshes so their equators are horizontal and textures align nicely.
 const PLANET_MESH_X_ROTATION = -Math.PI / 2;
-// Artistic global multiplier for body rotation speeds (spin)
-const ROTATION_SPEED_MULTIPLIER = 30;
-
-// Approximate sidereal rotation periods for planets (hours).
-// Negative indicates retrograde spin.
-const PLANET_ROTATION_HOURS: Record<string, number> = {
-  Mercury: 1407.5,
-  Venus: -5832.5,
-  Earth: 23.934,
-  Mars: 24.623,
-  Jupiter: 9.925,
-  Saturn: 10.656,
-  Uranus: -17.24,
-  Neptune: 16.11,
-  Pluto: -153.2928,
-};
+// (Removed continuous spin; we keep a static random phase.)
 
 // Numerics
 // Squared-length threshold to detect near-degenerate plane normals.
@@ -416,7 +401,6 @@ type MappedMaterial =
 
 type PlanetMeshUserData = {
   visualRadius?: number;
-  spinRadPerMs?: number;
 };
 
 function createPlanetMesh(
@@ -961,24 +945,10 @@ export function SolarSystemMap() {
         if (tiltDeg !== 0) {
           mesh.rotation.z += THREE.MathUtils.degToRad(tiltDeg);
         }
-        // Compute spin speed (rad per ms). For planets, use known sidereal
-        // rotation hours. For moons, assume tidal locking: period equals
-        // orbital period; retrograde if meanMotionDegPerDay < 0.
-        let periodHours: number | undefined;
-        if (p instanceof Planet) {
-          const h = PLANET_ROTATION_HOURS[p.name];
-          if (typeof h === 'number' && h !== 0) periodHours = h;
-        } else if (p instanceof Moon) {
-          const meanMotion = p.satellite.meanMotionDegPerDay;
-          const sign = meanMotion < 0 ? -1 : 1;
-          periodHours = sign * (p.orbitalPeriodDays * 24);
-        }
-        if (typeof periodHours === 'number' && periodHours !== 0) {
-          const sign = periodHours < 0 ? -1 : 1;
-          const magHours = Math.abs(periodHours);
-          const radPerMs = (2 * Math.PI) / (magHours * 3600 * 1000);
-          (mesh.userData as PlanetMeshUserData).spinRadPerMs = sign * radPerMs;
-        }
+        // Initialize a random rotation phase around the spin axis (local Y) and keep static.
+        // Using rotateOnAxis ensures the rotation is about the local spin axis after tilt.
+        const randomPhase = Math.random() * Math.PI * 2;
+        mesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), randomPhase);
         const basePos = toVec3(p.getPosition());
         const adjustedPos = adjustPositionForOrbits(p, basePos);
         mesh.position.copy(adjustedPos);
@@ -1022,17 +992,9 @@ export function SolarSystemMap() {
       composer.addPass(copyPass);
       copyPassRef.current = copyPass;
 
-      // Initial rocket position
-      // const initial = toVec3(latestUserPos.current);
-      // rocket.position.copy(initial);
-
       // Animation loop
-      const lastTimeRef: { current: number | null } = { current: null };
       const renderLoop = () => {
-        const tNow = performance.now();
-        const dtMs =
-          lastTimeRef.current === null ? 16 : tNow - lastTimeRef.current;
-        lastTimeRef.current = tNow;
+        // No per-frame spin integration; positions only
         // Compute display user position for this frame
         displayUserPosRef.current = computeDisplayUserPos();
 
@@ -1060,18 +1022,13 @@ export function SolarSystemMap() {
           rocketRef.current.position.copy(displayUserPosRef.current);
         }
 
-        // 2) Update planet positions and spin (in case date offset changes)
+        // 2) Update planet positions (in case date offset changes)
         PLANETS.forEach((p) => {
           const mesh = planetRefs.current[p.name];
           if (mesh) {
             const basePos = toVec3(p.getPosition());
             const adjustedPos = adjustPositionForOrbits(p, basePos);
             mesh.position.copy(adjustedPos);
-            const ud = mesh.userData as PlanetMeshUserData;
-            if (ud.spinRadPerMs) {
-              mesh.rotation.y +=
-                ud.spinRadPerMs * dtMs * ROTATION_SPEED_MULTIPLIER;
-            }
           }
         });
 

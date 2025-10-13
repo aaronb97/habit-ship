@@ -130,6 +130,7 @@ function heliocentricFromKepler(
 function satelliteRelativePosition(
   sat: SatelliteOrbit,
   date: Date,
+  parentAxialTiltDeg?: number,
 ): Coordinates {
   const epoch = sat.epochJd ?? 2451545.0;
   const d = getJulianDay(date) - epoch;
@@ -146,7 +147,10 @@ function satelliteRelativePosition(
   const sinv = (sqrt1me2 * sinE) / (1 - e * cosE);
   const v = Math.atan2(sinv, cosv);
 
-  const i = deg2rad(sat.i);
+  // All satellite inclinations are specified relative to the parent's equator.
+  // Approximate ecliptic-relative inclination by adding the parent's axial tilt.
+  const iDeg = (parentAxialTiltDeg ?? 0) + sat.i;
+  const i = deg2rad(iDeg);
   const Omega = deg2rad(sat.longNode);
   const omega = deg2rad(sat.argPeri);
   const u = omega + v;
@@ -253,7 +257,6 @@ export class Planet extends CBody {
     const coords = heliocentricFromKepler(this.kepler, d);
     return coords;
   }
-
 }
 
 export class Moon extends CBody {
@@ -292,7 +295,6 @@ export class Moon extends CBody {
       parentPos[2] + rel[2],
     ];
   }
-
 }
 
 export class Star extends CBody {
@@ -564,7 +566,6 @@ export const io = new Moon({
   radiusKm: 1821.6,
   orbitalPeriodDays: 1.769,
   minLevel: 2,
-  axialTiltDeg: 0.05,
   orbits: 'Jupiter',
   satellite: {
     semiMajorAxisKm: 421700,
@@ -584,7 +585,6 @@ export const europa = new Moon({
   radiusKm: 1560.8,
   orbitalPeriodDays: 3.551,
   minLevel: 1,
-  axialTiltDeg: 0.1,
   orbits: 'Jupiter',
   satellite: {
     semiMajorAxisKm: 671100,
@@ -604,7 +604,6 @@ export const ganymede = new Moon({
   radiusKm: 2634.1,
   orbitalPeriodDays: 7.155,
   minLevel: 3,
-  axialTiltDeg: 0.33,
   orbits: 'Jupiter',
   satellite: {
     semiMajorAxisKm: 1070400,
@@ -624,7 +623,6 @@ export const callisto = new Moon({
   radiusKm: 2410.3,
   orbitalPeriodDays: 16.689,
   minLevel: 3,
-  axialTiltDeg: 0.28,
   orbits: 'Jupiter',
   satellite: {
     semiMajorAxisKm: 1882700,
@@ -644,7 +642,6 @@ export const titan = new Moon({
   radiusKm: 2574.7,
   orbitalPeriodDays: 15.945,
   minLevel: 1,
-  axialTiltDeg: 0.3,
   orbits: 'Saturn',
   satellite: {
     semiMajorAxisKm: 1221870,
@@ -664,7 +661,6 @@ export const iapetus = new Moon({
   radiusKm: 734.5,
   orbitalPeriodDays: 79.3215,
   minLevel: 4,
-  axialTiltDeg: 15.5,
   orbits: 'Saturn',
   satellite: {
     semiMajorAxisKm: 3560820,
@@ -704,12 +700,11 @@ export const miranda = new Moon({
   radiusKm: 235.8,
   orbitalPeriodDays: 1.4135,
   minLevel: 1,
-  axialTiltDeg: 0,
   orbits: 'Uranus',
   satellite: {
     semiMajorAxisKm: 129_900,
     e: 0.0013,
-    i: 102.11, // ~97.77 + 4.34 (approx relative to ecliptic)
+    i: 4.34, // relative to Uranus equator
     longNode: 0,
     argPeri: 0,
     meanAnomalyAtEpoch: 0,
@@ -724,12 +719,11 @@ export const ariel = new Moon({
   radiusKm: 578.9,
   orbitalPeriodDays: 2.52,
   minLevel: 1,
-  axialTiltDeg: 0.1,
   orbits: 'Uranus',
   satellite: {
     semiMajorAxisKm: 190_900,
     e: 0.0012,
-    i: 98.03, // ~97.77 + 0.26
+    i: 0.26,
     longNode: 0,
     argPeri: 0,
     meanAnomalyAtEpoch: 0,
@@ -744,12 +738,11 @@ export const umbriel = new Moon({
   radiusKm: 584.7,
   orbitalPeriodDays: 4.144,
   minLevel: 1,
-  axialTiltDeg: 0.1,
   orbits: 'Uranus',
   satellite: {
     semiMajorAxisKm: 266_000,
     e: 0.0039,
-    i: 98.13, // ~97.77 + 0.36
+    i: 0.36,
     longNode: 0,
     argPeri: 0,
     meanAnomalyAtEpoch: 0,
@@ -764,12 +757,11 @@ export const titania = new Moon({
   radiusKm: 788.4,
   orbitalPeriodDays: 8.706,
   minLevel: 1,
-  axialTiltDeg: 0.1,
   orbits: 'Uranus',
   satellite: {
     semiMajorAxisKm: 436_300,
     e: 0.0011,
-    i: 97.85, // ~97.77 + 0.08
+    i: 0.08,
     longNode: 0,
     argPeri: 0,
     meanAnomalyAtEpoch: 0,
@@ -784,12 +776,11 @@ export const oberon = new Moon({
   radiusKm: 761.4,
   orbitalPeriodDays: 13.463,
   minLevel: 1,
-  axialTiltDeg: 0.1,
   orbits: 'Uranus',
   satellite: {
     semiMajorAxisKm: 583_500,
     e: 0.0014,
-    i: 97.87, // ~97.77 + 0.1
+    i: 0.1,
     longNode: 0,
     argPeri: 0,
     meanAnomalyAtEpoch: 0,
