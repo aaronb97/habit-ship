@@ -131,6 +131,8 @@ const PLANET_MESH_X_ROTATION = -Math.PI / 2;
 const PLANE_NORMAL_EPS = 1e-8;
 // Threshold when choosing a helper axis for cross products (avoid near-parallel vectors).
 const HELPER_AXIS_THRESHOLD = 0.9;
+// Global ecliptic "up" direction (J2000 heliocentric ecliptic uses +Z as north)
+const ECLIPTIC_UP = new THREE.Vector3(0, 0, 1);
 
 // Post-processing outline
 // Controls for the OutlinePass used to accent selected meshes.
@@ -730,19 +732,25 @@ export function SolarSystemMap() {
       if (n.lengthSq() < PLANE_NORMAL_EPS) n.set(0, 1, 0);
     }
 
+    // Normalize and enforce a consistent hemisphere so the view never flips.
     n.normalize();
+    if (n.dot(ECLIPTIC_UP) > 0) n.multiplyScalar(-1);
 
-    // Orthonormal basis (U, V) spanning the plane
-    let U = target.clone().sub(center);
+    // Orthonormal basis (U, V) spanning the plane with a stable orientation.
+    // Start from the target direction projected into the plane. If degenerate, use
+    // a stable reference (ECLIPTIC_UP x n) instead of arbitrary axes.
+    let U = target.clone().sub(center).projectOnPlane(n);
     if (U.lengthSq() < PLANE_NORMAL_EPS) {
-      const helper =
-        Math.abs(n.y) < HELPER_AXIS_THRESHOLD
-          ? new THREE.Vector3(0, 1, 0)
-          : new THREE.Vector3(1, 0, 0);
-
-      U = helper.clone().cross(n);
+      U = ECLIPTIC_UP.clone().cross(n);
+      if (U.lengthSq() < PLANE_NORMAL_EPS) {
+        // Fallback if n is nearly aligned with ECLIPTIC_UP
+        const helper =
+          Math.abs(n.y) < HELPER_AXIS_THRESHOLD
+            ? new THREE.Vector3(0, 1, 0)
+            : new THREE.Vector3(1, 0, 0);
+        U = helper.clone().cross(n);
+      }
     }
-
     U.normalize();
     const V = n.clone().cross(U).normalize();
 
@@ -760,7 +768,7 @@ export function SolarSystemMap() {
       .add(circleOffset);
 
     camera.position.copy(desiredPos);
-    // Keep camera "up" aligned to plane normal to minimize roll
+    // Keep camera "up" aligned to the (sign-stabilized) plane normal to minimize roll
     camera.up.copy(n);
 
     // Look at the center of the plane to keep sun, user, and target framed
