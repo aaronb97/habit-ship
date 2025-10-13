@@ -102,7 +102,7 @@ const CAMERA_FAR = 20000;
 
 // Lighting
 // Low ambient to keep space dark while detailing planet shading.
-const AMBIENT_LIGHT_INTENSITY = 0.05;
+const AMBIENT_LIGHT_INTENSITY = 0.5;
 // Sun light intensity, infinite distance (0) and mild decay for falloff.
 const SUNLIGHT_INTENSITY = 5;
 const SUNLIGHT_DISTANCE = 0;
