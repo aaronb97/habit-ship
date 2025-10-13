@@ -28,16 +28,8 @@ import { useIsFocused } from '@react-navigation/native';
 // Units & scaling
 // Scale real KM to scene units (keeps numbers in a reasonable range). 10,000,000 km => 1 scene unit.
 const KM_TO_SCENE = 1 / 1e7;
-// Average days per year including leap years for orbital calculations.
-const DAYS_PER_YEAR = 365.25;
-// Maximum trail lookback in years — limits geometry while showing history.
-const MAX_TRAIL_YEARS = 100;
-// Maximum trail length in days derived from years above.
-const MAX_TRAIL_DAYS = Math.floor(MAX_TRAIL_YEARS * DAYS_PER_YEAR);
 
 // Trail rendering
-// Upper bound on number of line segments per trail; step size is increased to respect this.
-const TRAIL_MAX_SEGMENTS = 1000;
 // Maximum alpha (opacity) for the newest point in a trail.
 const TRAIL_MAX_ALPHA = 0.85;
 // Exponent for ease-in alpha ramp along trail (2 = quadratic ease-in).
@@ -170,13 +162,14 @@ function toVec3([x, y, z]: Coordinates): THREE.Vector3 {
   return new THREE.Vector3(x * KM_TO_SCENE, y * KM_TO_SCENE, z * KM_TO_SCENE);
 }
 
-function getTrailForPlanet(planet: Planet, daysBack: number): THREE.Vector3[] {
+function getTrailForPlanet(planet: Planet, segments = 500): THREE.Vector3[] {
   const points: THREE.Vector3[] = [];
   const today = getCurrentDate();
 
-  // Sample with a dynamic step so we never exceed ~1000 segments.
-  // If stepping by 1 would produce >1000 segments, increase the step size.
-  const step = Math.max(1, Math.ceil(daysBack / TRAIL_MAX_SEGMENTS));
+  // Divide the orbital period into N equal segments and look back over one full period
+  const periodDays = planet.orbitalPeriodDays;
+  const stepDays = periodDays / Math.max(1, segments);
+  const stepMs = stepDays * 24 * 60 * 60 * 1000;
 
   const drawOrbitAroundParent = Boolean(planet.orbits);
   const parent = drawOrbitAroundParent
@@ -192,9 +185,8 @@ function getTrailForPlanet(planet: Planet, daysBack: number): THREE.Vector3[] {
     // using historical relative offsets (moon - parent) for each day.
     const parentAnchor = toVec3(parent.getPosition());
 
-    for (let i = daysBack; i >= 1; i -= step) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
+    for (let i = segments; i >= 1; i--) {
+      const d = new Date(today.getTime() - i * stepMs);
 
       const childKm = planet.getPosition(d);
       const parentKm = parent.getPosition(d);
@@ -225,9 +217,8 @@ function getTrailForPlanet(planet: Planet, daysBack: number): THREE.Vector3[] {
   }
 
   // Default: heliocentric trail (for planets orbiting the Sun)
-  for (let i = daysBack; i >= 1; i -= step) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
+  for (let i = segments; i >= 1; i--) {
+    const d = new Date(today.getTime() - i * stepMs);
     const coords = planet.getPosition(d);
     points.push(
       new THREE.Vector3(
@@ -238,14 +229,14 @@ function getTrailForPlanet(planet: Planet, daysBack: number): THREE.Vector3[] {
     );
   }
 
-  // Always include today's (current) position at the end
+  // Include today's point
   {
-    const todayCoords = planet.getPosition(today);
+    const coords = planet.getPosition(today);
     points.push(
       new THREE.Vector3(
-        todayCoords[0] * KM_TO_SCENE,
-        todayCoords[1] * KM_TO_SCENE,
-        todayCoords[2] * KM_TO_SCENE,
+        coords[0] * KM_TO_SCENE,
+        coords[1] * KM_TO_SCENE,
+        coords[2] * KM_TO_SCENE,
       ),
     );
   }
@@ -937,11 +928,8 @@ export function SolarSystemMap() {
         scene.add(mesh);
 
         if (p instanceof Planet) {
-          const periodDays = Math.round(p.orbitalPeriodDays);
-          const daysBack = Math.min(periodDays, MAX_TRAIL_DAYS);
-
           if (showTrails) {
-            const trailPoints = getTrailForPlanet(p, daysBack);
+            const trailPoints = getTrailForPlanet(p);
             const trail = createTrailLine(trailPoints, p.color);
             if (trail) scene.add(trail);
           }

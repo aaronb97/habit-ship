@@ -46,8 +46,8 @@ function solveKepler(M: number, e: number): number {
 // Round a date to the nearest hour to stabilize snapshots across frames
 function quantizeToSecond(date: Date): Date {
   const t = date.getTime();
-  const hourMs = 1000;
-  const qt = Math.round(t / hourMs) * hourMs;
+  const secondMs = 1000;
+  const qt = Math.round(t / secondMs) * secondMs;
   return new Date(qt);
 }
 
@@ -229,7 +229,7 @@ export class Planet implements CBody {
   }
 
   getPosition(date?: Date): Coordinates {
-    // Quantize to nearest second by default to avoid frequent micro-changes
+    // Quantize to nearest second
     const dRaw = date ?? getCurrentDate();
     const d = quantizeToSecond(dRaw);
 
@@ -493,7 +493,7 @@ export const phobos = new LandablePlanet({
   name: 'Phobos',
   description: 'A moon of Mars',
   minLevel: 1,
-  color: 0x8b0000,
+  color: 0xc0c0c0,
   radiusKm: 11.267,
   orbitalPeriodDays: 0.3189,
   orbits: 'Mars',
@@ -512,7 +512,7 @@ export const deimos = new LandablePlanet({
   name: 'Deimos',
   description: 'Another moon of Mars',
   minLevel: 1,
-  color: 0xb22222,
+  color: 0xc0c0c0,
   radiusKm: 6.2,
   orbitalPeriodDays: 1.263,
   orbits: 'Mars',
