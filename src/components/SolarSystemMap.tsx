@@ -520,6 +520,7 @@ export function SolarSystemMap() {
   const planetRefs = useRef<Partial<Record<string, THREE.Mesh>>>({});
   const displayUserPosRef = useRef<THREE.Vector3>(new THREE.Vector3());
   const trailRefs = useRef<Partial<Record<string, THREE.Line>>>({});
+  const skyRef = useRef<THREE.Mesh | null>(null);
 
   const userPosState = useStore((s) => s.userPosition);
   const latestUserPosStateRef = useRef(userPosState);
@@ -766,6 +767,15 @@ export function SolarSystemMap() {
     camera.lookAt(center);
   }, []);
 
+  // Double-tap: smoothly zoom camera to default radius
+  const zoomCamera = useCallback(() => {
+    radiusTargetRef.current = ORBIT_INITIAL_RADIUS;
+
+    // Stop inertial motion so reset feels snappy
+    yawVelocityRef.current = 0;
+    pitchVelocityRef.current = 0;
+  }, []);
+
   // Gestures: pinch to zoom radius; pan to spin camera around the orbit plane
 
   const pinchGesture = useMemo(() => {
@@ -837,9 +847,22 @@ export function SolarSystemMap() {
       .runOnJS(true);
   }, [width, height]);
 
+  // Double-tap to reset camera
+  const doubleTapGesture = useMemo(() => {
+    return Gesture.Tap()
+      .numberOfTaps(2)
+      .maxDelay(250)
+      .onEnd((_e, success) => {
+        if (success) {
+          zoomCamera();
+        }
+      })
+      .runOnJS(true);
+  }, [zoomCamera]);
+
   const composedGesture = useMemo(
-    () => Gesture.Simultaneous(pinchGesture, panGesture),
-    [pinchGesture, panGesture],
+    () => Gesture.Race(doubleTapGesture, pinchGesture, panGesture),
+    [pinchGesture, panGesture, doubleTapGesture],
   );
 
   const onContextCreate = useCallback(
@@ -895,6 +918,7 @@ export function SolarSystemMap() {
         });
 
         const skyMesh = new THREE.Mesh(skyGeometry, skyMaterial);
+        skyRef.current = skyMesh;
 
         scene.add(skyMesh);
       } catch (e) {
@@ -1157,6 +1181,15 @@ export function SolarSystemMap() {
           (radiusTargetRef.current - radiusRef.current) * SMOOTHING_RADIUS;
 
         updateCamera();
+
+        // Keep sky centered on the camera to avoid parallax and clipping
+        {
+          const cam = cameraRef.current;
+          const sky = skyRef.current;
+          if (cam && sky) {
+            sky.position.copy(cam.position);
+          }
+        }
 
         // Update outline visibility and fade based on apparent pixel radius
         {
