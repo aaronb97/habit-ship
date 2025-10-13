@@ -166,6 +166,7 @@ const ROCKET_FIN_OFFSET_Z = 0.18 * ROCKET_SIZE_MULTIPLIER;
 const ROCKET_ORIENTATION_Z = Math.PI;
 // Vertical offset of the rocket nose relative to the group's origin.
 const ROCKET_NOSE_Y = 0.8 * ROCKET_SIZE_MULTIPLIER;
+const TRAIL_LENGTH_MULTIPLIER = 0.75;
 
 function toVec3([x, y, z]: Coordinates): THREE.Vector3 {
   return new THREE.Vector3(x * KM_TO_SCENE, y * KM_TO_SCENE, z * KM_TO_SCENE);
@@ -174,9 +175,7 @@ function toVec3([x, y, z]: Coordinates): THREE.Vector3 {
 function getTrailForBody(body: Planet | Moon, segments = 500): THREE.Vector3[] {
   const points: THREE.Vector3[] = [];
   const today = getCurrentDate();
-
-  // Divide the orbital period into N equal segments and look back over one full period
-  const periodDays = body.orbitalPeriodDays;
+  const periodDays = TRAIL_LENGTH_MULTIPLIER * body.orbitalPeriodDays;
   const stepDays = periodDays / Math.max(1, segments);
   const stepMs = stepDays * 24 * 60 * 60 * 1000;
 
