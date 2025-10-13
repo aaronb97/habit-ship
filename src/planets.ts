@@ -80,20 +80,6 @@ export interface SatelliteOrbit {
   epochJd?: number; // defaults to J2000.0
 }
 
-// Type-safe list of heliocentric bodies that moons can orbit
-export const HELIO_NAMES = [
-  'Mercury',
-  'Venus',
-  'Earth',
-  'Mars',
-  'Jupiter',
-  'Saturn',
-  'Uranus',
-  'Neptune',
-  'Pluto',
-] as const;
-export type HelioName = (typeof HELIO_NAMES)[number];
-
 function heliocentricFromKepler(
   el: KeplerianElements,
   date: Date,
@@ -324,7 +310,7 @@ export const sun = new Star({
 // Heliocentric Keplerian elements (J2000)
 // LDot values from JPL approximations (deg/century); others held fixed.
 // These produce reasonably accurate positions for visualization.
-const HELIO: Record<HelioName, KeplerianElements> = {
+const HELIO = {
   Mercury: {
     a: 0.38709893,
     e: 0.20563069,
@@ -406,9 +392,9 @@ const HELIO: Record<HelioName, KeplerianElements> = {
     longNode: 110.30347,
     LDot: 145.20780515,
   },
-};
+} satisfies Record<string, KeplerianElements>;
 
-export type HelioElementsName = keyof typeof HELIO;
+export type HelioName = keyof typeof HELIO;
 
 export const earth = new Planet({
   name: 'Earth',
