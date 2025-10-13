@@ -16,7 +16,13 @@ import type {
 } from 'react-native-gesture-handler';
 
 import { colors } from '../styles/theme';
-import { cBodies as PLANETS, Planet, earth, type CBody } from '../planets';
+import {
+  cBodies as PLANETS,
+  Planet,
+  Moon,
+  earth,
+  type CBody,
+} from '../planets';
 import { Coordinates } from '../types';
 import { getCurrentDate, getCurrentTime } from '../utils/time';
 import { useCurrentPosition, useStore } from '../utils/store';
@@ -33,7 +39,7 @@ const KM_TO_SCENE = 1 / 1e7;
 // Maximum alpha (opacity) for the newest point in a trail.
 const TRAIL_MAX_ALPHA = 0.85;
 // Exponent for ease-in alpha ramp along trail (2 = quadratic ease-in).
-const TRAIL_EASE_EXPONENT = 2;
+const TRAIL_EASE_EXPONENT = 3;
 
 // Apparent size scaling (for visual clarity vs physical accuracy)
 // Base scaling factor for all celestial body radii on screen.
@@ -162,23 +168,26 @@ function toVec3([x, y, z]: Coordinates): THREE.Vector3 {
   return new THREE.Vector3(x * KM_TO_SCENE, y * KM_TO_SCENE, z * KM_TO_SCENE);
 }
 
-function getTrailForPlanet(planet: Planet, segments = 500): THREE.Vector3[] {
+function getTrailForBody(body: Planet | Moon, segments = 500): THREE.Vector3[] {
   const points: THREE.Vector3[] = [];
   const today = getCurrentDate();
 
   // Divide the orbital period into N equal segments and look back over one full period
-  const periodDays = planet.orbitalPeriodDays;
+  const periodDays = body.orbitalPeriodDays;
   const stepDays = periodDays / Math.max(1, segments);
   const stepMs = stepDays * 24 * 60 * 60 * 1000;
 
-  const drawOrbitAroundParent = Boolean(planet.orbits);
+  const drawOrbitAroundParent = body instanceof Moon;
   const parent = drawOrbitAroundParent
-    ? PLANETS.find((b) => b.name === planet.orbits)
+    ? PLANETS.find((b) => b.name === (body as Moon).orbits)
     : undefined;
 
   // Scale offsets so the ring matches the visually exaggerated separation applied in
   // adjustPositionForOrbits
-  const multiplier = planet.orbitOffsetMultiplier ?? ORBIT_OFFSET_MULTIPLIER;
+  const multiplier =
+    body instanceof Moon
+      ? body.orbitOffsetMultiplier ?? ORBIT_OFFSET_MULTIPLIER
+      : ORBIT_OFFSET_MULTIPLIER;
 
   if (drawOrbitAroundParent && parent && parent instanceof Planet) {
     // Anchor the moon's trail around the parent's CURRENT position,
@@ -188,7 +197,7 @@ function getTrailForPlanet(planet: Planet, segments = 500): THREE.Vector3[] {
     for (let i = segments; i >= 1; i--) {
       const d = new Date(today.getTime() - i * stepMs);
 
-      const childKm = planet.getPosition(d);
+      const childKm = body.getPosition(d);
       const parentKm = parent.getPosition(d);
 
       const offset = toVec3([
@@ -201,7 +210,7 @@ function getTrailForPlanet(planet: Planet, segments = 500): THREE.Vector3[] {
     }
 
     // Include today's point
-    const childToday = planet.getPosition(today);
+    const childToday = body.getPosition(today);
     const parentToday = parent.getPosition(today);
     {
       const offset = toVec3([
@@ -219,7 +228,7 @@ function getTrailForPlanet(planet: Planet, segments = 500): THREE.Vector3[] {
   // Default: heliocentric trail (for planets orbiting the Sun)
   for (let i = segments; i >= 1; i--) {
     const d = new Date(today.getTime() - i * stepMs);
-    const coords = planet.getPosition(d);
+    const coords = body.getPosition(d);
     points.push(
       new THREE.Vector3(
         coords[0] * KM_TO_SCENE,
@@ -231,7 +240,7 @@ function getTrailForPlanet(planet: Planet, segments = 500): THREE.Vector3[] {
 
   // Include today's point
   {
-    const coords = planet.getPosition(today);
+    const coords = body.getPosition(today);
     points.push(
       new THREE.Vector3(
         coords[0] * KM_TO_SCENE,
@@ -318,7 +327,7 @@ function adjustPositionForOrbits(
   body: CBody,
   basePosition: THREE.Vector3,
 ): THREE.Vector3 {
-  if (body instanceof Planet && body.orbits) {
+  if (body instanceof Moon) {
     const parent = PLANETS.find((b) => b.name === body.orbits);
     if (parent) {
       const parentPos = toVec3(parent.getPosition());
@@ -349,6 +358,13 @@ const BODY_TEXTURE_REQUIRE: Record<string, number> = {
   Uranus: require('../../assets/cbodies/uranus.jpg'),
   Neptune: require('../../assets/cbodies/neptune.jpg'),
   Pluto: require('../../assets/cbodies/pluto.jpg'),
+  Io: require('../../assets/cbodies/io.jpg'),
+  Europa: require('../../assets/cbodies/europa.jpg'),
+  Ganymede: require('../../assets/cbodies/ganymede.jpg'),
+  Callisto: require('../../assets/cbodies/callisto.jpg'),
+  Titan: require('../../assets/cbodies/titan.jpg'),
+  Iapetus: require('../../assets/cbodies/iapetus.jpg'),
+  Triton: require('../../assets/cbodies/triton.png'),
 };
 
 async function loadBodyTextures(
@@ -927,9 +943,9 @@ export function SolarSystemMap() {
         mesh.position.copy(adjustedPos);
         scene.add(mesh);
 
-        if (p instanceof Planet) {
+        if (p instanceof Planet || p instanceof Moon) {
           if (showTrails) {
-            const trailPoints = getTrailForPlanet(p);
+            const trailPoints = getTrailForBody(p);
             const trail = createTrailLine(trailPoints, p.color);
             if (trail) scene.add(trail);
           }

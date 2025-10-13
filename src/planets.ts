@@ -80,6 +80,20 @@ export interface SatelliteOrbit {
   epochJd?: number; // defaults to J2000.0
 }
 
+// Type-safe list of heliocentric bodies that moons can orbit
+export const HELIO_NAMES = [
+  'Mercury',
+  'Venus',
+  'Earth',
+  'Mars',
+  'Jupiter',
+  'Saturn',
+  'Uranus',
+  'Neptune',
+  'Pluto',
+] as const;
+export type HelioName = (typeof HELIO_NAMES)[number];
+
 function heliocentricFromKepler(
   el: KeplerianElements,
   date: Date,
@@ -185,18 +199,17 @@ interface BaseCBodyOptions {
 interface PlanetOptions extends BaseCBodyOptions {
   color: number;
   orbitalPeriodDays: number;
-  /** Optional parent body this planet/satellite orbits (e.g., 'Earth' for the Moon) */
-  orbits?: string;
-  /** Multiplier for orbit offset */
-  orbitOffsetMultiplier?: number;
-  /** Heliocentric Keplerian elements (if primary around Sun) */
-  kepler?: KeplerianElements;
-  /** Satellite orbit elements (if orbits another body) */
-  satellite?: SatelliteOrbit;
+  kepler: KeplerianElements; // heliocentric elements (required for planets)
+  minLevel?: number; // if present, planet is landable
 }
 
-interface LandablePlanetOptions extends PlanetOptions {
-  minLevel: number;
+interface MoonOptions extends BaseCBodyOptions {
+  color: number;
+  orbitalPeriodDays: number;
+  orbits: HelioName; // parent planet name
+  satellite: SatelliteOrbit; // required for moons
+  orbitOffsetMultiplier?: number;
+  minLevel: number; // moons are always landable
 }
 
 interface StarOptions extends BaseCBodyOptions {
@@ -210,10 +223,8 @@ export class Planet implements CBody {
   public color: number;
   public radiusKm: number;
   public orbitalPeriodDays: number;
-  public orbits?: string;
-  public orbitOffsetMultiplier?: number;
-  public kepler?: KeplerianElements;
-  public satellite?: SatelliteOrbit;
+  public kepler: KeplerianElements;
+  public minLevel?: number;
 
   constructor(options: PlanetOptions) {
     this.name = options.name;
@@ -221,61 +232,65 @@ export class Planet implements CBody {
     this.color = options.color;
     this.radiusKm = options.radiusKm;
     this.orbitalPeriodDays = options.orbitalPeriodDays;
-    this.orbitOffsetMultiplier = options.orbitOffsetMultiplier;
     this.kepler = options.kepler;
-    this.satellite = options.satellite;
-
-    this.orbits = options.orbits;
+    this.minLevel = options.minLevel;
   }
 
   getPosition(date?: Date): Coordinates {
     // Quantize to nearest second
     const dRaw = date ?? getCurrentDate();
     const d = quantizeToSecond(dRaw);
-
-    // Satellite body: compute parent + relative
-    if (this.orbits && this.satellite) {
-      const parent = cBodies.find((b) => b.name === this.orbits);
-      if (!parent || !(parent instanceof Planet)) {
-        throw new Error(
-          `Parent body ${this.orbits} not found for ${this.name}`,
-        );
-      }
-      const parentPos: Coordinates = parent.getPosition(d);
-      const rel = satelliteRelativePosition(this.satellite, d);
-      const coords: Coordinates = [
-        parentPos[0] + rel[0],
-        parentPos[1] + rel[1],
-        parentPos[2] + rel[2],
-      ];
-      return coords;
-    }
-
     // Primary around Sun via Keplerian elements
-    if (this.kepler) {
-      const coords = heliocentricFromKepler(this.kepler, d);
-      return coords;
-    }
-
-    // Fallback: origin
-    const coords: Coordinates = [0, 0, 0];
-
+    const coords = heliocentricFromKepler(this.kepler, d);
     return coords;
   }
-}
 
-export class LandablePlanet extends Planet {
-  public minLevel: number;
-
-  constructor(options: LandablePlanetOptions) {
-    super(options);
-    this.minLevel = options.minLevel;
+  get isLandable(): boolean {
+    return this.minLevel !== undefined;
   }
 }
 
-export class UnlandablePlanet extends Planet {
-  constructor(options: PlanetOptions) {
-    super(options);
+export class Moon implements CBody {
+  public name: string;
+  public description: string;
+  public color: number;
+  public radiusKm: number;
+  public orbitalPeriodDays: number;
+  public orbits: HelioName;
+  public satellite: SatelliteOrbit;
+  public orbitOffsetMultiplier?: number;
+  public minLevel: number; // moons are always landable
+
+  constructor(options: MoonOptions) {
+    this.name = options.name;
+    this.description = options.description;
+    this.color = options.color;
+    this.radiusKm = options.radiusKm;
+    this.orbitalPeriodDays = options.orbitalPeriodDays;
+    this.orbits = options.orbits;
+    this.satellite = options.satellite;
+    this.orbitOffsetMultiplier = options.orbitOffsetMultiplier;
+    this.minLevel = options.minLevel;
+  }
+
+  getPosition(date?: Date): Coordinates {
+    const dRaw = date ?? getCurrentDate();
+    const d = quantizeToSecond(dRaw);
+    const parent = cBodies.find((b) => b.name === this.orbits);
+    if (!parent || !(parent instanceof Planet)) {
+      throw new Error(`Parent body ${this.orbits} not found for ${this.name}`);
+    }
+    const parentPos: Coordinates = parent.getPosition(d);
+    const rel = satelliteRelativePosition(this.satellite, d);
+    return [
+      parentPos[0] + rel[0],
+      parentPos[1] + rel[1],
+      parentPos[2] + rel[2],
+    ];
+  }
+
+  get isLandable(): boolean {
+    return true;
   }
 }
 
@@ -309,7 +324,7 @@ export const sun = new Star({
 // Heliocentric Keplerian elements (J2000)
 // LDot values from JPL approximations (deg/century); others held fixed.
 // These produce reasonably accurate positions for visualization.
-const HELIO: Record<string, KeplerianElements> = {
+const HELIO: Record<HelioName, KeplerianElements> = {
   Mercury: {
     a: 0.38709893,
     e: 0.20563069,
@@ -393,19 +408,20 @@ const HELIO: Record<string, KeplerianElements> = {
   },
 };
 
-export const earth = new LandablePlanet({
+export type HelioElementsName = keyof typeof HELIO;
+
+export const earth = new Planet({
   name: 'Earth',
   description: 'Home sweet home',
-  minLevel: 1,
   color: 0x6b93d6,
   radiusKm: 6371,
   orbitalPeriodDays: 365.256,
   kepler: HELIO.Earth,
+  minLevel: 1,
 });
-export const moon = new LandablePlanet({
+export const moon = new Moon({
   name: 'The Moon',
   description: 'Our celestial companion',
-  minLevel: 1,
   color: 0xc0c0c0,
   radiusKm: 1737.4,
   orbitalPeriodDays: 27.321661,
@@ -420,35 +436,36 @@ export const moon = new LandablePlanet({
     meanAnomalyAtEpoch: 115.3654,
     meanMotionDegPerDay: 360 / 27.321661,
   },
+  minLevel: 1,
 });
-export const mercury = new LandablePlanet({
+export const mercury = new Planet({
   name: 'Mercury',
   description: 'Closest planet to the Sun',
-  minLevel: 1,
   color: 0x8c7853,
   radiusKm: 2439.7,
   orbitalPeriodDays: 87.969,
   kepler: HELIO.Mercury,
+  minLevel: 1,
 });
-export const venus = new LandablePlanet({
+export const venus = new Planet({
   name: 'Venus',
   description: 'The morning star',
-  minLevel: 1,
   color: 0xffc649,
   radiusKm: 6051.8,
   orbitalPeriodDays: 224.701,
   kepler: HELIO.Venus,
+  minLevel: 1,
 });
-export const mars = new LandablePlanet({
+export const mars = new Planet({
   name: 'Mars',
   description: 'The Red Planet',
-  minLevel: 1,
   color: 0xcd5c5c,
   radiusKm: 3389.5,
   orbitalPeriodDays: 686.98,
   kepler: HELIO.Mars,
+  minLevel: 1,
 });
-export const jupiter = new UnlandablePlanet({
+export const jupiter = new Planet({
   name: 'Jupiter',
   description: 'The largest planet in our solar system',
   color: 0xd8ca9d,
@@ -456,7 +473,7 @@ export const jupiter = new UnlandablePlanet({
   orbitalPeriodDays: 4332.589,
   kepler: HELIO.Jupiter,
 });
-export const saturn = new UnlandablePlanet({
+export const saturn = new Planet({
   name: 'Saturn',
   description: 'The ringed planet',
   color: 0xfad5a5,
@@ -464,7 +481,7 @@ export const saturn = new UnlandablePlanet({
   orbitalPeriodDays: 10759.22,
   kepler: HELIO.Saturn,
 });
-export const uranus = new UnlandablePlanet({
+export const uranus = new Planet({
   name: 'Uranus',
   description: 'The ice giant tilted on its side',
   color: 0x4fd0e7,
@@ -472,7 +489,7 @@ export const uranus = new UnlandablePlanet({
   orbitalPeriodDays: 30685.4,
   kepler: HELIO.Uranus,
 });
-export const neptune = new UnlandablePlanet({
+export const neptune = new Planet({
   name: 'Neptune',
   description: 'The windiest planet in our solar system',
   color: 0x4b70dd,
@@ -480,19 +497,18 @@ export const neptune = new UnlandablePlanet({
   orbitalPeriodDays: 60190,
   kepler: HELIO.Neptune,
 });
-export const pluto = new LandablePlanet({
+export const pluto = new Planet({
   name: 'Pluto',
   description: 'The dwarf planet at the edge of our solar system',
-  minLevel: 5,
   color: 0xa0522d,
   radiusKm: 1188.3,
   orbitalPeriodDays: 90560,
   kepler: HELIO.Pluto,
+  minLevel: 5,
 });
-export const phobos = new LandablePlanet({
+export const phobos = new Moon({
   name: 'Phobos',
   description: 'A moon of Mars',
-  minLevel: 1,
   color: 0xc0c0c0,
   radiusKm: 11.267,
   orbitalPeriodDays: 0.3189,
@@ -507,11 +523,11 @@ export const phobos = new LandablePlanet({
     meanAnomalyAtEpoch: 0,
     meanMotionDegPerDay: 360 / 0.31891,
   },
+  minLevel: 1,
 });
-export const deimos = new LandablePlanet({
+export const deimos = new Moon({
   name: 'Deimos',
   description: 'Another moon of Mars',
-  minLevel: 1,
   color: 0xc0c0c0,
   radiusKm: 6.2,
   orbitalPeriodDays: 1.263,
@@ -526,6 +542,144 @@ export const deimos = new LandablePlanet({
     meanAnomalyAtEpoch: 0,
     meanMotionDegPerDay: 360 / 1.26244,
   },
+  minLevel: 1,
+});
+
+// Jupiter moons (Galilean)
+export const io = new Moon({
+  name: 'Io',
+  description: 'Volcanic moon of Jupiter',
+  color: 0xc0c0c0,
+  radiusKm: 1821.6,
+  orbitalPeriodDays: 1.769,
+  orbits: 'Jupiter',
+
+  satellite: {
+    semiMajorAxisKm: 421700,
+    e: 0.0041,
+    i: 0.04,
+    longNode: 0,
+    argPeri: 0,
+    meanAnomalyAtEpoch: 0,
+    meanMotionDegPerDay: 360 / 1.769,
+  },
+  minLevel: 2,
+});
+export const europa = new Moon({
+  name: 'Europa',
+  description: 'Icy moon with subsurface ocean',
+  color: 0xc0c0c0,
+  radiusKm: 1560.8,
+  orbitalPeriodDays: 3.551,
+  orbits: 'Jupiter',
+
+  satellite: {
+    semiMajorAxisKm: 671100,
+    e: 0.009,
+    i: 0.47,
+    longNode: 0,
+    argPeri: 0,
+    meanAnomalyAtEpoch: 0,
+    meanMotionDegPerDay: 360 / 3.551,
+  },
+  minLevel: 1,
+});
+export const ganymede = new Moon({
+  name: 'Ganymede',
+  description: 'Largest moon in the Solar System',
+  color: 0xc0c0c0,
+  radiusKm: 2634.1,
+  orbitalPeriodDays: 7.155,
+  orbits: 'Jupiter',
+
+  satellite: {
+    semiMajorAxisKm: 1070400,
+    e: 0.0013,
+    i: 0.2,
+    longNode: 0,
+    argPeri: 0,
+    meanAnomalyAtEpoch: 0,
+    meanMotionDegPerDay: 360 / 7.155,
+  },
+  minLevel: 3,
+});
+export const callisto = new Moon({
+  name: 'Callisto',
+  description: 'Heavily cratered outer Galilean moon',
+  color: 0xc0c0c0,
+  radiusKm: 2410.3,
+  orbitalPeriodDays: 16.689,
+  orbits: 'Jupiter',
+
+  satellite: {
+    semiMajorAxisKm: 1882700,
+    e: 0.007,
+    i: 0.19,
+    longNode: 0,
+    argPeri: 0,
+    meanAnomalyAtEpoch: 0,
+    meanMotionDegPerDay: 360 / 16.689,
+  },
+  minLevel: 3,
+});
+
+// Saturn moons
+export const titan = new Moon({
+  name: 'Titan',
+  description: 'Largest moon of Saturn with thick atmosphere',
+  color: 0xc0c0c0,
+  radiusKm: 2574.7,
+  orbitalPeriodDays: 15.945,
+  orbits: 'Saturn',
+  satellite: {
+    semiMajorAxisKm: 1221870,
+    e: 0.0288,
+    i: 0.348,
+    longNode: 0,
+    argPeri: 0,
+    meanAnomalyAtEpoch: 0,
+    meanMotionDegPerDay: 360 / 15.945,
+  },
+  minLevel: 1,
+});
+export const iapetus = new Moon({
+  name: 'Iapetus',
+  description: 'Distant moon of Saturn with a two-tone surface',
+  color: 0xc0c0c0,
+  radiusKm: 734.5,
+  orbitalPeriodDays: 79.3215,
+  orbits: 'Saturn',
+  satellite: {
+    semiMajorAxisKm: 3560820,
+    e: 0.0286,
+    i: 7.5,
+    longNode: 0,
+    argPeri: 0,
+    meanAnomalyAtEpoch: 0,
+    meanMotionDegPerDay: 360 / 79.3215,
+  },
+  minLevel: 4,
+});
+
+// Neptune moon
+export const triton = new Moon({
+  name: 'Triton',
+  description: 'Retrograde moon of Neptune',
+  color: 0xc0c0c0,
+  radiusKm: 1353.4,
+  orbitalPeriodDays: 5.8769,
+  orbits: 'Neptune',
+
+  satellite: {
+    semiMajorAxisKm: 354759,
+    e: 0.00002,
+    i: 156.8, // retrograde inclination
+    longNode: 0,
+    argPeri: 0,
+    meanAnomalyAtEpoch: 0,
+    meanMotionDegPerDay: -360 / 5.8769, // retrograde
+  },
+  minLevel: 1,
 });
 
 export const cBodies: CBody[] = [
@@ -535,11 +689,22 @@ export const cBodies: CBody[] = [
   mercury,
   venus,
   mars,
-  phobos,
-  deimos,
   jupiter,
   saturn,
   uranus,
   neptune,
   pluto,
+  // Martian moons
+  phobos,
+  deimos,
+  // Jovian moons
+  io,
+  europa,
+  ganymede,
+  callisto,
+  // Saturn moons
+  titan,
+  iapetus,
+  // Neptune moon
+  triton,
 ];

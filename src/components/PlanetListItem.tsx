@@ -1,11 +1,11 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { useStore, useUserLevel } from '../utils/store';
-import { LandablePlanet } from '../planets';
+import { Planet, Moon } from '../planets';
 import { getHabitDistanceForLevel } from '../types';
 
 interface PlanetListItemProps {
-  planet: LandablePlanet;
+  planet: Planet | Moon;
   distance: number; // Distance in km from current position
   isSelected?: boolean;
   disabledReason?: string; // Reason why planet cannot be selected
@@ -23,7 +23,8 @@ export function PlanetListItem({
 }: PlanetListItemProps) {
   const userLevel = useUserLevel();
   const { userPosition } = useStore();
-  const isLocked = userLevel.level < planet.minLevel;
+  const minLevel = planet.minLevel;
+  const isLocked = minLevel !== undefined ? userLevel.level < minLevel : false;
   const isDisabled = !!disabledReason || isLocked;
 
   // Format distance for display
@@ -79,9 +80,9 @@ export function PlanetListItem({
         <Text style={styles.planetDescription}>{planet.description}</Text>
       )}
 
-      {isLocked && (
+      {isLocked && minLevel !== undefined && (
         <View style={styles.lockOverlay}>
-          <Text style={styles.lockText}>Level {planet.minLevel} Required</Text>
+          <Text style={styles.lockText}>Level {minLevel} Required</Text>
         </View>
       )}
 
