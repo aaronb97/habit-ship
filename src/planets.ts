@@ -517,6 +517,25 @@ export const pluto = new Planet({
   minLevel: 5,
   axialTiltDeg: 119.6,
 });
+export const charon = new Moon({
+  name: 'Charon',
+  description: 'Largest moon of Pluto',
+  color: 0xc0c0c0,
+  radiusKm: 606,
+  orbitalPeriodDays: 6.38723,
+  minLevel: 5,
+  orbits: 'Pluto',
+  orbitOffsetMultiplier: 125,
+  satellite: {
+    semiMajorAxisKm: 19571,
+    e: 0.0002,
+    i: 0.08,
+    longNode: 0,
+    argPeri: 0,
+    meanAnomalyAtEpoch: 0,
+    meanMotionDegPerDay: 360 / 6.38723,
+  },
+});
 export const phobos = new Moon({
   name: 'Phobos',
   description: 'A moon of Mars',
@@ -673,6 +692,102 @@ export const iapetus = new Moon({
   },
 });
 
+// Additional major moons of Saturn
+export const mimas = new Moon({
+  name: 'Mimas',
+  description: 'Innermost major moon of Saturn',
+  color: 0xc0c0c0,
+  radiusKm: 198.2,
+  orbitalPeriodDays: 0.942422,
+  minLevel: 1,
+  orbits: 'Saturn',
+  satellite: {
+    semiMajorAxisKm: 185539,
+    e: 0.0196,
+    i: 1.5,
+    longNode: 0,
+    argPeri: 0,
+    meanAnomalyAtEpoch: 0,
+    meanMotionDegPerDay: 360 / 0.942422,
+  },
+});
+
+export const enceladus = new Moon({
+  name: 'Enceladus',
+  description: 'Geologically active icy moon of Saturn',
+  color: 0xc0c0c0,
+  radiusKm: 252.1,
+  orbitalPeriodDays: 1.370218,
+  minLevel: 1,
+  orbits: 'Saturn',
+  satellite: {
+    semiMajorAxisKm: 237948,
+    e: 0.0047,
+    i: 0.01,
+    longNode: 0,
+    argPeri: 0,
+    meanAnomalyAtEpoch: 0,
+    meanMotionDegPerDay: 360 / 1.370218,
+  },
+});
+
+export const tethys = new Moon({
+  name: 'Tethys',
+  description: 'Large mid-sized moon of Saturn',
+  color: 0xc0c0c0,
+  radiusKm: 531.1,
+  orbitalPeriodDays: 1.887802,
+  minLevel: 1,
+  orbits: 'Saturn',
+  satellite: {
+    semiMajorAxisKm: 294619,
+    e: 0.0001,
+    i: 1.09,
+    longNode: 0,
+    argPeri: 0,
+    meanAnomalyAtEpoch: 0,
+    meanMotionDegPerDay: 360 / 1.887802,
+  },
+});
+
+export const dione = new Moon({
+  name: 'Dione',
+  description: 'Heavily cratered moon of Saturn',
+  color: 0xc0c0c0,
+  radiusKm: 561.4,
+  orbitalPeriodDays: 2.736915,
+  minLevel: 1,
+  orbits: 'Saturn',
+  satellite: {
+    semiMajorAxisKm: 377396,
+    e: 0.0022,
+    i: 0.02,
+    longNode: 0,
+    argPeri: 0,
+    meanAnomalyAtEpoch: 0,
+    meanMotionDegPerDay: 360 / 2.736915,
+  },
+});
+
+export const rhea = new Moon({
+  name: 'Rhea',
+  description: 'Second-largest moon of Saturn',
+  color: 0xc0c0c0,
+  radiusKm: 763.5,
+  orbitalPeriodDays: 4.518212,
+  minLevel: 1,
+  orbits: 'Saturn',
+  satellite: {
+    semiMajorAxisKm: 527108,
+    e: 0.001,
+    i: 0.33,
+    longNode: 0,
+    argPeri: 0,
+    meanAnomalyAtEpoch: 0,
+    meanMotionDegPerDay: 360 / 4.518212,
+  },
+});
+
 export const triton = new Moon({
   name: 'Triton',
   description: 'Retrograde moon of Neptune',
@@ -800,6 +915,8 @@ export const cBodies: CBody[] = [
   uranus,
   neptune,
   pluto,
+  // Pluto system
+  charon,
   // Martian moons
   phobos,
   deimos,
@@ -811,6 +928,11 @@ export const cBodies: CBody[] = [
   // Saturn moons
   titan,
   iapetus,
+  mimas,
+  enceladus,
+  tethys,
+  dione,
+  rhea,
   // Neptune moon
   triton,
   // Uranus moons

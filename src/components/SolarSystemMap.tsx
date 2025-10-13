@@ -519,6 +519,7 @@ export function SolarSystemMap() {
   const rocketRef = useRef<THREE.Group | null>(null);
   const planetRefs = useRef<Partial<Record<string, THREE.Mesh>>>({});
   const displayUserPosRef = useRef<THREE.Vector3>(new THREE.Vector3());
+  const trailRefs = useRef<Partial<Record<string, THREE.Line>>>({});
 
   const userPosState = useStore((s) => s.userPosition);
   const latestUserPosStateRef = useRef(userPosState);
@@ -527,6 +528,10 @@ export function SolarSystemMap() {
   }, [userPosState]);
 
   const { showTrails, showTextures, logFPS } = useStore();
+  const showTrailsRef = useRef(showTrails);
+  useEffect(() => {
+    showTrailsRef.current = showTrails;
+  }, [showTrails]);
   const syncTravelVisuals = useStore((s) => s.syncTravelVisuals);
   const isFocusedValue = useIsFocused();
   const isFocusedRef = useRef<boolean>(isFocusedValue);
@@ -538,6 +543,28 @@ export function SolarSystemMap() {
     return () => {
       console.log('SolarSystemMap unmounted');
     };
+  }, []);
+
+  // Determine which planet systems are relevant for rendering moons
+  const getRelevantPlanetSystems = useCallback((): Set<string> => {
+    const systems = new Set<string>();
+    const { currentLocation, target } = latestUserPosStateRef.current;
+
+    const addSystemForName = (name: string | undefined) => {
+      if (!name) return;
+      const body = PLANETS.find((b) => b.name === name);
+      if (!body) return;
+      if (body instanceof Moon) {
+        systems.add(body.orbits);
+      } else if (body instanceof Planet) {
+        systems.add(body.name);
+      }
+    };
+
+    addSystemForName(currentLocation);
+    addSystemForName(target?.name);
+
+    return systems;
   }, []);
 
   // Animate between previous and current traveled distances per habit completion
@@ -915,6 +942,7 @@ export function SolarSystemMap() {
       const rocket = createRocketMesh();
       rocketRef.current = rocket;
       scene.add(rocket);
+      const relevantSystems = getRelevantPlanetSystems();
 
       PLANETS.forEach((p) => {
         // Scale each body's visual radius according to its real radius (km) relative to Earth,
@@ -952,13 +980,26 @@ export function SolarSystemMap() {
         const basePos = toVec3(p.getPosition());
         const adjustedPos = adjustPositionForOrbits(p, basePos);
         mesh.position.copy(adjustedPos);
+        // Only render moons for relevant systems on init
+        if (p instanceof Moon) {
+          const allowed = relevantSystems.has(p.orbits);
+          mesh.visible = allowed;
+        } else {
+          mesh.visible = true;
+        }
         scene.add(mesh);
 
         if (p instanceof Planet || p instanceof Moon) {
           if (showTrails) {
             const trailPoints = getTrailForBody(p);
             const trail = createTrailLine(trailPoints, p.color);
-            if (trail) scene.add(trail);
+            if (trail) {
+              scene.add(trail);
+              trailRefs.current[p.name] = trail;
+              if (p instanceof Moon) {
+                trail.visible = relevantSystems.has(p.orbits);
+              }
+            }
           }
 
           // Outline pass for this planet with its associated color
@@ -1032,6 +1073,47 @@ export function SolarSystemMap() {
           }
         });
 
+        // Update moon visibility based on current/target systems
+        {
+          const relevantSystemsNow = getRelevantPlanetSystems();
+          PLANETS.forEach((p) => {
+            const mesh = planetRefs.current[p.name];
+            let line = trailRefs.current[p.name];
+            if (p instanceof Moon) {
+              const allowed = relevantSystemsNow.has(p.orbits);
+              if (mesh) mesh.visible = allowed;
+              // Ensure trail exists if trails are shown and moon allowed
+              if (!line && showTrailsRef.current && allowed) {
+                const points = getTrailForBody(p);
+                const created = createTrailLine(points, p.color);
+                if (created) {
+                  created.visible = true;
+                  trailRefs.current[p.name] = created;
+                  scene.add(created);
+                  line = created;
+                }
+              }
+              if (line) line.visible = allowed && showTrailsRef.current;
+            } else if (p instanceof Planet) {
+              if (mesh) mesh.visible = true;
+              if (!line && showTrailsRef.current) {
+                const points = getTrailForBody(p);
+                const created = createTrailLine(points, p.color);
+                if (created) {
+                  created.visible = true;
+                  trailRefs.current[p.name] = created;
+                  scene.add(created);
+                  line = created;
+                }
+              }
+              if (line) line.visible = showTrailsRef.current;
+            } else {
+              // e.g., Sun — no trails
+              if (mesh) mesh.visible = true;
+            }
+          });
+        }
+
         // Camera orbit: auto-rotate when idle, apply inertia, and tween toward targets
         if (
           !isPanningRef.current &&
@@ -1087,6 +1169,12 @@ export function SolarSystemMap() {
               const mesh = planetRefs.current[p.name];
               const pass = outlinePassesRef.current[p.name];
               if (!mesh || !pass) return;
+              // Skip outlines for invisible meshes
+              if (!mesh.visible) {
+                outlineIntensityRef.current[p.name] = 0;
+                pass.enabled = false;
+                return;
+              }
               // Determine sphere radius in world units
               const ud = mesh.userData as PlanetMeshUserData;
               let r: number =
@@ -1140,6 +1228,7 @@ export function SolarSystemMap() {
       updateCamera,
       showTrails,
       computeDisplayUserPos,
+      getRelevantPlanetSystems,
       syncTravelVisuals,
       logFPS,
     ],
