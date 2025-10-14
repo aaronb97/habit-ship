@@ -26,7 +26,7 @@ import {
 } from '../planets';
 import { Coordinates } from '../types';
 import { getCurrentDate, getCurrentTime } from '../utils/time';
-import { useCurrentPosition, useIsTraveling, useStore } from '../utils/store';
+import { isTraveling, useStore } from '../utils/store';
 import { useIsFocused } from '@react-navigation/native';
 
 // ==========================
@@ -420,20 +420,6 @@ function createTrailLine(
 
 export function SolarSystemMap() {
   const { width, height } = useWindowDimensions();
-  const currentPosition = useCurrentPosition();
-  const targetPosition = useStore((s) => s.userPosition.target?.position);
-
-  // Keep latest current position in a ref so animation loop can read it without re-creating
-  const latestUserPos = useRef<Coordinates>(currentPosition);
-  useEffect(() => {
-    latestUserPos.current = currentPosition;
-  }, [currentPosition]);
-
-  // Keep latest target position in a ref for use inside the render loop
-  const latestTargetPos = useRef<Coordinates | undefined>(targetPosition);
-  useEffect(() => {
-    latestTargetPos.current = targetPosition;
-  }, [targetPosition]);
 
   // Refs for scene graph
   const rendererRef = useRef<Renderer | null>(null);
@@ -456,11 +442,6 @@ export function SolarSystemMap() {
 
   const userPosState = useStore((s) => s.userPosition);
 
-  const isTraveling = useIsTraveling();
-  const isTravelingRef = useRef(isTraveling);
-  useEffect(() => {
-    isTravelingRef.current = isTraveling;
-  }, [isTraveling]);
   const rocketColorFromStore = useStore((s) => s.rocketColor);
   const syncTravelVisuals = useStore((s) => s.syncTravelVisuals);
   const isFocusedValue = useIsFocused();
@@ -499,14 +480,6 @@ export function SolarSystemMap() {
 
   // Animate between previous and current traveled distances per habit completion
   const HABIT_TRAVEL_ANIM_MS = 1000; // duration for visual travel per completion
-  const latestLastUpdateTime = useStore((s) => s.lastUpdateTime);
-  const latestLastUpdateTimeRef = useRef<number | undefined>(
-    latestLastUpdateTime,
-  );
-
-  useEffect(() => {
-    latestLastUpdateTimeRef.current = latestLastUpdateTime;
-  }, [latestLastUpdateTime]);
 
   // When focused, drive animation timing from focus start or latest distance change
   const focusAnimStartRef = useRef<number | null>(null);
@@ -629,7 +602,8 @@ export function SolarSystemMap() {
       ) ?? earth;
 
     const center = adjustPositionForOrbits(body, toVec3(body.getPosition()));
-    const tgtPos = toVec3(latestTargetPos.current ?? earth.getPosition());
+    const targetPos = useStore.getState().userPosition.target?.position;
+    const tgtPos = toVec3(targetPos ?? earth.getPosition());
     const dir = tgtPos.clone().sub(center).normalize();
     const r = getVisualRadius(body.name) * (1 + ROCKET_SURFACE_OFFSET);
     return center.clone().add(dir.multiplyScalar(r || 0));
@@ -669,7 +643,8 @@ export function SolarSystemMap() {
       ? rocketRef.current.position.clone()
       : displayUserPosRef.current.clone();
 
-    const target = toVec3(latestTargetPos.current ?? earth.getPosition());
+    const targetPos = useStore.getState().userPosition.target?.position;
+    const target = toVec3(targetPos ?? earth.getPosition());
 
     // Center of orbit: the user's position.
     const center = user.clone();
@@ -1121,7 +1096,7 @@ export function SolarSystemMap() {
             );
 
             // Accumulate spin angle and apply twist around local forward using rotateOnAxis
-            if (isTravelingRef.current) {
+            if (isTraveling(useStore.getState())) {
               rocketSpinAngleRef.current += ROCKET_SPIN_SPEED;
             } else {
               rocketSpinAngleRef.current *= 0.95;

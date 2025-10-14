@@ -487,12 +487,19 @@ export function useCurrentPosition() {
     useShallow((state) => getCurrentPosition(state.userPosition)),
   );
 }
+
 export const useIsSetupFinished = () =>
   useStore((state) => state.isSetupFinished);
+
 export const useUserLevel = () => useStore((state) => state.userLevel);
-export const useIsTraveling = () =>
-  useStore(
-    (state) =>
-      !!state.userPosition.target &&
-      (state.userPosition.distanceTraveled ?? 0) > 0,
+
+export function isTraveling(store: Store) {
+  return (
+    !!store.userPosition.target &&
+    (store.userPosition.distanceTraveled ?? 0) > 0
   );
+}
+
+export function useIsTraveling() {
+  return useStore((state) => isTraveling(state));
+}
