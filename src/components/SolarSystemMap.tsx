@@ -452,23 +452,16 @@ export function SolarSystemMap() {
   const trailRefs = useRef<Partial<Record<string, THREE.Line>>>({});
   const skyRef = useRef<THREE.Mesh | null>(null);
 
-  const userPosState = useStore((s) => s.userPosition);
-  const latestUserPosStateRef = useRef(userPosState);
-  useEffect(() => {
-    latestUserPosStateRef.current = userPosState;
-  }, [userPosState]);
+  const showTextures = useStore((s) => s.showTextures);
 
-  const { showTrails, showTextures, logFPS } = useStore();
+  const userPosState = useStore((s) => s.userPosition);
+
   const isTraveling = useIsTraveling();
   const isTravelingRef = useRef(isTraveling);
   useEffect(() => {
     isTravelingRef.current = isTraveling;
   }, [isTraveling]);
   const rocketColorFromStore = useStore((s) => s.rocketColor);
-  const showTrailsRef = useRef(showTrails);
-  useEffect(() => {
-    showTrailsRef.current = showTrails;
-  }, [showTrails]);
   const syncTravelVisuals = useStore((s) => s.syncTravelVisuals);
   const isFocusedValue = useIsFocused();
   const isFocusedRef = useRef<boolean>(isFocusedValue);
@@ -485,7 +478,7 @@ export function SolarSystemMap() {
   // Determine which planet systems are relevant for rendering moons
   const getRelevantPlanetSystems = useCallback((): Set<string> => {
     const systems = new Set<string>();
-    const { currentLocation, target } = latestUserPosStateRef.current;
+    const { currentLocation, target } = useStore.getState().userPosition;
 
     const addSystemForName = (name: string | undefined) => {
       if (!name) return;
@@ -571,7 +564,7 @@ export function SolarSystemMap() {
       initialDistance,
       distanceTraveled,
       previousDistanceTraveled,
-    } = latestUserPosStateRef.current;
+    } = useStore.getState().userPosition;
 
     if (target && typeof initialDistance === 'number' && initialDistance > 0) {
       const now = getCurrentTime();
@@ -632,7 +625,7 @@ export function SolarSystemMap() {
     // Not traveling: snap to the current body's displayed position
     const body =
       PLANETS.find(
-        (b) => b.name === latestUserPosStateRef.current.currentLocation,
+        (b) => b.name === useStore.getState().userPosition.currentLocation,
       ) ?? earth;
 
     const center = adjustPositionForOrbits(body, toVec3(body.getPosition()));
@@ -1020,7 +1013,7 @@ export function SolarSystemMap() {
         scene.add(mesh);
 
         if (p instanceof Planet || p instanceof Moon) {
-          if (showTrails) {
+          if (useStore.getState().showTrails) {
             const trailPoints = getTrailForBody(p);
             const trail = createTrailLine(trailPoints, p.color);
             if (trail) {
@@ -1065,6 +1058,8 @@ export function SolarSystemMap() {
 
       // Animation loop
       const renderLoop = () => {
+        const { showTrails, logFPS } = useStore.getState();
+
         // No per-frame spin integration; positions only
         // Compute display user position for this frame
         displayUserPosRef.current = computeDisplayUserPos();
@@ -1072,7 +1067,7 @@ export function SolarSystemMap() {
         // If focused and an animation batch is pending, mark it as seen once complete
         if (isFocusedRef.current && !animSyncedRef.current) {
           const { distanceTraveled, previousDistanceTraveled } =
-            latestUserPosStateRef.current;
+            useStore.getState().userPosition;
 
           const complete =
             animAlphaRef.current >= 0.999 ||
@@ -1094,7 +1089,7 @@ export function SolarSystemMap() {
           rocket.position.copy(displayUserPosRef.current);
 
           // Determine aim target in scene units (prefer surface endpoint when traveling)
-          const { target, currentLocation } = latestUserPosStateRef.current;
+          const { target, currentLocation } = useStore.getState().userPosition;
           const startName = currentLocation;
           const targetName = target?.name ?? 'Earth';
           const startBody = PLANETS.find((b) => b.name === startName) ?? earth;
@@ -1159,7 +1154,7 @@ export function SolarSystemMap() {
               const allowed = relevantSystemsNow.has(p.orbits);
               if (mesh) mesh.visible = allowed;
               // Ensure trail exists if trails are shown and moon allowed
-              if (!line && showTrailsRef.current && allowed) {
+              if (!line && showTrails && allowed) {
                 const points = getTrailForBody(p);
                 const created = createTrailLine(points, p.color);
                 if (created) {
@@ -1169,10 +1164,10 @@ export function SolarSystemMap() {
                   line = created;
                 }
               }
-              if (line) line.visible = allowed && showTrailsRef.current;
+              if (line) line.visible = allowed && showTrails;
             } else if (p instanceof Planet) {
               if (mesh) mesh.visible = true;
-              if (!line && showTrailsRef.current) {
+              if (!line && showTrails) {
                 const points = getTrailForBody(p);
                 const created = createTrailLine(points, p.color);
                 if (created) {
@@ -1182,7 +1177,7 @@ export function SolarSystemMap() {
                   line = created;
                 }
               }
-              if (line) line.visible = showTrailsRef.current;
+              if (line) line.visible = showTrails;
             } else {
               // e.g., Sun — no trails
               if (mesh) mesh.visible = true;
@@ -1313,11 +1308,9 @@ export function SolarSystemMap() {
       updateCamera,
       getRelevantPlanetSystems,
       rocketColorFromStore,
-      showTrails,
       computeDisplayUserPos,
       syncTravelVisuals,
       getVisualRadius,
-      logFPS,
     ],
   );
 
