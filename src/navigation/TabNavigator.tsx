@@ -14,6 +14,7 @@ export function TabNavigator() {
   const pendingMapAnim = useStore(
     (s) => s.pendingTravelAnimation || s.pendingLanding,
   );
+
   const homeNeedsSelection = useStore((s) => s.justLanded);
 
   return (

@@ -17,8 +17,10 @@ export function Planets() {
         'Select on Home',
         'You just landed! Please go to the Home tab to choose your next destination.',
       );
+
       return;
     }
+
     if (isTraveling) {
       Alert.alert(
         'Change Destination',
@@ -56,17 +58,22 @@ export function Planets() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header} />
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {planetsWithDistance.map(({ planet, distance, disabledReason, isVisited }) => (
-          <PlanetListItem
-            key={planet.name}
-            planet={planet}
-            distance={distance}
-            disabledReason={disabledReason}
-            isVisited={isVisited}
-            onPress={() => handleSetDestination(planet.name)}
-          />
-        ))}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {planetsWithDistance.map(
+          ({ planet, distance, disabledReason, isVisited }) => (
+            <PlanetListItem
+              key={planet.name}
+              planet={planet}
+              distance={distance}
+              disabledReason={disabledReason}
+              isVisited={isVisited}
+              onPress={() => handleSetDestination(planet.name)}
+            />
+          ),
+        )}
       </ScrollView>
     </SafeAreaView>
   );

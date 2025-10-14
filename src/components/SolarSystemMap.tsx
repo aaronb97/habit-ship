@@ -156,6 +156,8 @@ const ROCKET_MODEL_SCALE = 0.01; // uniform scale for OBJ model
 const ROCKET_SURFACE_OFFSET = 0.04; // extra offset above visual surface (fraction of visual radius)
 const ROCKET_SPIN_SPEED = 0.03; // radians per frame while traveling
 const DEFAULT_ROCKET_FORWARD = new THREE.Vector3(0, 1, 0); // assumed model forward axis
+// Additional fixed clearance applied at destination to avoid intersecting surface (scene units)
+const ROCKET_LANDING_CLEARANCE = 0.005;
 
 const TRAIL_LENGTH_MULTIPLIER = 0.75;
 
@@ -447,6 +449,7 @@ export function SolarSystemMap() {
   const finalizeLandingAfterAnimation = useStore(
     (s) => s.finalizeLandingAfterAnimation,
   );
+
   const isFocusedValue = useIsFocused();
   const isFocusedRef = useRef<boolean>(isFocusedValue);
   useEffect(() => {
@@ -483,16 +486,94 @@ export function SolarSystemMap() {
 
   // Animate between previous and current traveled distances per habit completion
   const HABIT_TRAVEL_ANIM_MS = 3000; // duration for visual travel per completion
+  const CAMERA_MOVE_MS = 5000;
+  const CAMERA_HOLD_MS = 1000; // then holds 1s before rocket anim begins
+
+  // Helpers
+  const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
+  const easeInOutCubic = (t: number) =>
+    t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+  const lerpAngle = (a: number, b: number, t: number) => {
+    let diff = ((b - a + Math.PI) % (2 * Math.PI)) - Math.PI; // shortest path
+    if (diff < -Math.PI) diff += 2 * Math.PI;
+    return a + diff * t;
+  };
+
+  const vantageForProgress = useCallback((p: number) => {
+    // Map absolute journey progress to camera yaw/pitch
+    const PITCH_HIGH = MAX_PITCH_RAD * 0.95; // almost straight-down
+    const PITCH_LOW = 0.06; // near-plane
+    const YAW_AHEAD = 0; // in direction of travel
+    const YAW_SIDE = Math.PI / 2; // side-on
+    const YAW_BEHIND = Math.PI; // behind rocket
+    const s = (e0: number, e1: number, x: number) => {
+      const t = Math.min(1, Math.max(0, (x - e0) / Math.max(1e-9, e1 - e0)));
+      return t * t * (3 - 2 * t);
+    };
+
+    const l = (a: number, b: number, t: number) => a + (b - a) * t;
+    const yaw =
+      p <= 0.5
+        ? l(YAW_AHEAD, YAW_SIDE, s(0.0, 0.5, p))
+        : l(YAW_SIDE, YAW_BEHIND, s(0.5, 1.0, p));
+
+    const pitch = l(PITCH_HIGH, PITCH_LOW, s(0.1, 0.9, p));
+    return { yaw, pitch };
+  }, []);
 
   // When focused, drive animation timing from focus start or latest distance change
   const focusAnimStartRef = useRef<number | null>(null);
   useEffect(() => {
     if (isFocusedValue) {
-      focusAnimStartRef.current = getCurrentTime();
+      const start = getCurrentTime();
+      focusAnimStartRef.current = start;
+      // Ensure camera pre-roll has the correct endpoints when the user opens the Map
+      cameraStartRef.current = {
+        yaw: yawRef.current,
+        pitch: pitchRef.current,
+        radius: radiusRef.current,
+      };
+
+      const { initialDistance, previousDistanceTraveled, distanceTraveled } =
+        useStore.getState().userPosition;
+
+      const pending =
+        useStore.getState().pendingTravelAnimation ||
+        (typeof distanceTraveled === 'number' &&
+          distanceTraveled !== previousDistanceTraveled);
+
+      const denom =
+        initialDistance && initialDistance > 0 ? initialDistance : 1;
+
+      const fromAbs = Math.min(
+        1,
+        Math.max(0, (previousDistanceTraveled ?? 0) / denom),
+      );
+
+      const toAbs = Math.min(1, Math.max(0, (distanceTraveled ?? 0) / denom));
+      vantageStartRef.current = vantageForProgress(fromAbs);
+      vantageEndRef.current = vantageForProgress(toAbs);
+      if (pending) {
+        yawVelocityRef.current = 0;
+        pitchVelocityRef.current = 0;
+        radiusTargetRef.current = ORBIT_INITIAL_RADIUS;
+        scheduleRef.current = {
+          preRollEnd: start + CAMERA_MOVE_MS + CAMERA_HOLD_MS,
+          rocketEnd:
+            start + CAMERA_MOVE_MS + CAMERA_HOLD_MS + HABIT_TRAVEL_ANIM_MS,
+        };
+
+        scriptedCameraActiveRef.current = true;
+      } else {
+        scheduleRef.current = null;
+        scriptedCameraActiveRef.current = false;
+      }
     } else {
       focusAnimStartRef.current = null;
     }
-  }, [isFocusedValue]);
+  }, [isFocusedValue, vantageForProgress]);
 
   // Reset animation start when distance updates while focused
   const prevDistanceRef = useRef<{ prev?: number; curr?: number }>({});
@@ -504,7 +585,34 @@ export function SolarSystemMap() {
       previousDistanceTraveledVal !== prevDistanceRef.current.prev;
 
     if (changed && isFocusedRef.current) {
-      focusAnimStartRef.current = getCurrentTime();
+      const start = getCurrentTime();
+      focusAnimStartRef.current = start;
+      // Capture camera state at animation start and desired vantage endpoints
+      cameraStartRef.current = {
+        yaw: yawRef.current,
+        pitch: pitchRef.current,
+        radius: radiusRef.current,
+      };
+
+      const { initialDistance } = useStore.getState().userPosition;
+      const denom =
+        initialDistance && initialDistance > 0 ? initialDistance : 1;
+
+      const fromAbs = clamp01((previousDistanceTraveledVal ?? 0) / denom);
+      const toAbs = clamp01((distanceTraveledVal ?? 0) / denom);
+      vantageStartRef.current = vantageForProgress(fromAbs);
+      vantageEndRef.current = vantageForProgress(toAbs);
+      // Stop inertial motion and set zoom radius target for the move
+      yawVelocityRef.current = 0;
+      pitchVelocityRef.current = 0;
+      radiusTargetRef.current = ORBIT_INITIAL_RADIUS;
+      scheduleRef.current = {
+        preRollEnd: start + CAMERA_MOVE_MS + CAMERA_HOLD_MS,
+        rocketEnd:
+          start + CAMERA_MOVE_MS + CAMERA_HOLD_MS + HABIT_TRAVEL_ANIM_MS,
+      };
+
+      scriptedCameraActiveRef.current = true;
     }
 
     // If values differ, an animation is pending; if equal, batch already synced
@@ -513,11 +621,24 @@ export function SolarSystemMap() {
       prev: previousDistanceTraveledVal,
       curr: distanceTraveledVal,
     };
-  }, [distanceTraveledVal, previousDistanceTraveledVal]);
+  }, [distanceTraveledVal, previousDistanceTraveledVal, vantageForProgress]);
 
   const animAlphaRef = useRef(0);
   const animSyncedRef = useRef(true);
   const rocketSpinAngleRef = useRef(0);
+  const cameraStartRef = useRef<{
+    yaw: number;
+    pitch: number;
+    radius: number;
+  } | null>(null);
+
+  const vantageStartRef = useRef<{ yaw: number; pitch: number } | null>(null);
+  const vantageEndRef = useRef<{ yaw: number; pitch: number } | null>(null);
+  const scheduleRef = useRef<{ preRollEnd: number; rocketEnd: number } | null>(
+    null,
+  );
+
+  const scriptedCameraActiveRef = useRef(false);
 
   // Helper: read visual radius (scene units) for a body
   const getVisualRadius = useCallback((name: string): number => {
@@ -548,33 +669,36 @@ export function SolarSystemMap() {
       const effectiveStart =
         (isFocusedRef.current ? focusAnimStartRef.current : null) ?? now;
 
-      const alpha = isFocusedRef.current
-        ? Math.min(
-            1,
-            Math.max(0, (now - effectiveStart) / HABIT_TRAVEL_ANIM_MS),
-          )
+      const elapsed = Math.max(0, now - effectiveStart);
+      const preRoll = CAMERA_MOVE_MS + CAMERA_HOLD_MS;
+      const rocketAlpha = isFocusedRef.current
+        ? elapsed <= preRoll
+          ? 0
+          : Math.min(1, (elapsed - preRoll) / HABIT_TRAVEL_ANIM_MS)
         : 0;
 
-      animAlphaRef.current = alpha;
-      const easeOut = 1 - Math.pow(1 - alpha, 3);
+      animAlphaRef.current = rocketAlpha;
+      const ease = easeInOutCubic(rocketAlpha);
 
       const from = previousDistanceTraveled ?? distanceTraveled ?? 0;
       const to = distanceTraveled ?? 0;
       const effectiveTraveled = Math.min(
         initialDistance,
-        from + (to - from) * easeOut,
+        from + (to - from) * ease,
       );
 
       const t = Math.min(1, Math.max(0, effectiveTraveled / initialDistance));
 
       const startBody =
         PLANETS.find((b) => b.name === startingLocation) ?? earth;
+
       const targetBody = PLANETS.find((b) => b.name === target.name) ?? earth;
 
       const startCenter = adjustPositionForOrbits(
         startBody,
         toVec3(startBody.getPosition()),
       );
+
       const targetCenter = adjustPositionForOrbits(
         targetBody,
         toVec3(targetBody.getPosition()),
@@ -586,14 +710,17 @@ export function SolarSystemMap() {
       const dirN = dir.clone().divideScalar(dirLen);
       const startR =
         getVisualRadius(startBody.name) * (1 + ROCKET_SURFACE_OFFSET);
+
       const targetR =
         getVisualRadius(targetBody.name) * (1 + ROCKET_SURFACE_OFFSET);
+
       const startSurface = startCenter
         .clone()
         .add(dirN.clone().multiplyScalar(startR));
+
       const targetSurface = targetCenter
         .clone()
-        .sub(dirN.clone().multiplyScalar(targetR));
+        .sub(dirN.clone().multiplyScalar(targetR + ROCKET_LANDING_CLEARANCE));
 
       return startSurface.clone().lerp(targetSurface, t);
     }
@@ -688,9 +815,11 @@ export function SolarSystemMap() {
           Math.abs(n.y) < HELPER_AXIS_THRESHOLD
             ? new THREE.Vector3(0, 1, 0)
             : new THREE.Vector3(1, 0, 0);
+
         U = helper.clone().cross(n);
       }
     }
+
     U.normalize();
     const V = n.clone().cross(U).normalize();
 
@@ -730,6 +859,8 @@ export function SolarSystemMap() {
     return Gesture.Pinch()
       .onBegin(() => {
         pinchStartRadiusRef.current = radiusTargetRef.current;
+        // User interaction cancels scripted camera for this sequence
+        scriptedCameraActiveRef.current = false;
       })
       .onUpdate((e: PinchGestureHandlerEventPayload) => {
         const scale = e.scale; // 1 at start, >1 zoom out, <1 zoom in
@@ -752,6 +883,8 @@ export function SolarSystemMap() {
         isPanningRef.current = true;
         lastPanXRef.current = 0;
         lastPanYRef.current = 0;
+        // User interaction cancels scripted camera for this sequence
+        scriptedCameraActiveRef.current = false;
       })
       .onUpdate((e: PanGestureHandlerEventPayload) => {
         const dx = e.translationX - lastPanXRef.current;
@@ -917,6 +1050,7 @@ export function SolarSystemMap() {
           // eslint-disable-next-line @typescript-eslint/no-var-requires
           require('../../assets/Rocket.obj'),
         );
+
         await rocketAsset.downloadAsync();
         const loader = new OBJLoader();
         const uri = rocketAsset.localUri ?? rocketAsset.uri;
@@ -934,6 +1068,7 @@ export function SolarSystemMap() {
             });
           }
         });
+
         obj.scale.setScalar(ROCKET_MODEL_SCALE);
         rocketRef.current = obj;
         scene.add(obj);
@@ -941,8 +1076,10 @@ export function SolarSystemMap() {
         console.warn(
           '[SolarSystemMap] Failed to load Rocket.obj, skipping model',
         );
+
         console.warn(e);
       }
+
       const relevantSystems = getRelevantPlanetSystems();
 
       PLANETS.forEach((p) => {
@@ -974,6 +1111,7 @@ export function SolarSystemMap() {
         if (tiltDeg !== 0) {
           mesh.rotation.z += THREE.MathUtils.degToRad(tiltDeg);
         }
+
         // Initialize a random rotation phase around the spin axis (local Y) and keep static.
         // Using rotateOnAxis ensures the rotation is about the local spin axis after tilt.
         const randomPhase = Math.random() * Math.PI * 2;
@@ -988,6 +1126,7 @@ export function SolarSystemMap() {
         } else {
           mesh.visible = true;
         }
+
         scene.add(mesh);
 
         if (p instanceof Planet || p instanceof Moon) {
@@ -1064,6 +1203,45 @@ export function SolarSystemMap() {
           }
         }
 
+        // Camera pre-roll and in-flight vantage update tied to absolute journey progress
+        if (
+          isFocusedRef.current &&
+          scriptedCameraActiveRef.current &&
+          !isPanningRef.current &&
+          vantageStartRef.current &&
+          focusAnimStartRef.current &&
+          scheduleRef.current
+        ) {
+          const nowTs = getCurrentTime();
+          const elapsed = Math.max(0, nowTs - focusAnimStartRef.current);
+          const preRoll = CAMERA_MOVE_MS + CAMERA_HOLD_MS;
+          const { rocketEnd } = scheduleRef.current;
+          if (nowTs >= rocketEnd) {
+            scriptedCameraActiveRef.current = false;
+          } else if (elapsed < CAMERA_MOVE_MS && cameraStartRef.current) {
+            const u = clamp01(elapsed / CAMERA_MOVE_MS);
+            const start = cameraStartRef.current;
+            const v0 = vantageStartRef.current;
+            yawTargetRef.current = lerpAngle(start.yaw, v0.yaw, u);
+            pitchTargetRef.current = lerp(start.pitch, v0.pitch, u);
+            radiusTargetRef.current = ORBIT_INITIAL_RADIUS;
+          } else if (elapsed < preRoll) {
+            const v0 = vantageStartRef.current;
+            yawTargetRef.current = v0.yaw;
+            pitchTargetRef.current = v0.pitch;
+            radiusTargetRef.current = ORBIT_INITIAL_RADIUS;
+          } else {
+            // During rocket animation, smoothly shift vantage toward the end vantage
+            const v0 = vantageStartRef.current;
+            const v1 = vantageEndRef.current ?? v0;
+            const alpha = clamp01((elapsed - preRoll) / HABIT_TRAVEL_ANIM_MS);
+            const e = easeInOutCubic(alpha);
+            yawTargetRef.current = lerpAngle(v0.yaw, v1.yaw, e);
+            pitchTargetRef.current = lerp(v0.pitch, v1.pitch, e);
+            radiusTargetRef.current = ORBIT_INITIAL_RADIUS;
+          }
+        }
+
         // Update dynamic positions
         // 1) User rocket follows latest position and orientation
         if (rocketRef.current) {
@@ -1077,21 +1255,27 @@ export function SolarSystemMap() {
           const startBody = PLANETS.find((b) => b.name === startName) ?? earth;
           const targetBody =
             PLANETS.find((b) => b.name === targetName) ?? earth;
+
           const startCenter = adjustPositionForOrbits(
             startBody,
             toVec3(startBody.getPosition()),
           );
+
           const targetCenter = adjustPositionForOrbits(
             targetBody,
             toVec3(targetBody.getPosition()),
           );
+
           const dir = targetCenter.clone().sub(startCenter);
           const dirN = dir.clone().normalize();
           const targetR =
             getVisualRadius(targetBody.name) * (1 + ROCKET_SURFACE_OFFSET);
+
           const aimPos = targetCenter
             .clone()
-            .sub(dirN.clone().multiplyScalar(targetR));
+            .sub(
+              dirN.clone().multiplyScalar(targetR + ROCKET_LANDING_CLEARANCE),
+            );
 
           // Orient rocket so its forward axis points toward aim target
           const dirToTarget = aimPos.clone().sub(rocket.position);
@@ -1108,6 +1292,7 @@ export function SolarSystemMap() {
             } else {
               rocketSpinAngleRef.current *= 0.95;
             }
+
             rocket.quaternion.copy(qLook);
             rocket.rotateOnAxis(
               DEFAULT_ROCKET_FORWARD,
@@ -1146,6 +1331,7 @@ export function SolarSystemMap() {
                   line = created;
                 }
               }
+
               if (line) line.visible = allowed && showTrails;
             } else if (p instanceof Planet) {
               if (mesh) mesh.visible = true;
@@ -1159,6 +1345,7 @@ export function SolarSystemMap() {
                   line = created;
                 }
               }
+
               if (line) line.visible = showTrails;
             } else {
               // e.g., Sun — no trails
@@ -1237,6 +1424,7 @@ export function SolarSystemMap() {
                 pass.enabled = false;
                 return;
               }
+
               // Determine sphere radius in world units
               const ud = mesh.userData as PlanetMeshUserData;
               let r: number =
@@ -1246,6 +1434,7 @@ export function SolarSystemMap() {
                 r = g.parameters.radius;
                 (mesh.userData as PlanetMeshUserData).visualRadius = r;
               }
+
               r *= mesh.scale.x;
               const d = cam.position.distanceTo(mesh.position);
               const heightWorld = 2 * d * Math.tan(vFovRad / 2);
@@ -1257,9 +1446,11 @@ export function SolarSystemMap() {
                 0,
                 1,
               );
+
               const prev = outlineIntensityRef.current[p.name] ?? 0;
               const factor =
                 prev + (target - prev) * OUTLINE_INTENSITY_SMOOTHING;
+
               outlineIntensityRef.current[p.name] = factor;
               pass.edgeStrength = OUTLINE_EDGE_STRENGTH * factor;
               pass.enabled = factor > OUTLINE_MIN_ENABLED_FACTOR;
@@ -1274,6 +1465,7 @@ export function SolarSystemMap() {
           } else {
             renderer.render(scene, camera);
           }
+
           const elapsed = performance.now() - frameStart;
           const fps = 1000 / elapsed;
           if (logFPS) console.log(`FPS: ${fps.toFixed(2)}`);

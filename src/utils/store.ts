@@ -212,22 +212,27 @@ export const useStore = create<Store>()(
             name: planetName,
             position: getPlanetPosition(planetName),
           };
+
           // Initialize travel metrics toward target
           const startPos = getPlanetPosition(
             state.userPosition.startingLocation,
           );
+
           const targetPos = getPlanetPosition(planetName);
           const centerDistance = calculateDistance(startPos, targetPos);
           const startBody = cBodies.find(
             (b) => b.name === state.userPosition.startingLocation,
           );
+
           const targetBody = cBodies.find((b) => b.name === planetName);
           const radiusBuffer =
             (startBody?.radiusKm ?? 0) + (targetBody?.radiusKm ?? 0);
+
           state.userPosition.initialDistance = Math.max(
             0,
             centerDistance - radiusBuffer,
           );
+
           state.userPosition.distanceTraveled = 0;
           state.userPosition.previousDistanceTraveled = 0;
           state.userPosition.launchTime = undefined;
@@ -299,6 +304,7 @@ export const useStore = create<Store>()(
           if (habitToComplete) {
             habitToComplete.completions.push(getCurrentDate().toISOString());
           }
+
           const target = state.userPosition.target;
           if (
             target &&
@@ -487,6 +493,7 @@ export const useStore = create<Store>()(
         if (s.rocketColor === undefined) {
           s.rocketColor = randomColorInt();
         }
+
         // Defaults for newly added flags
         if (s.pendingTravelAnimation === undefined)
           s.pendingTravelAnimation = false;
