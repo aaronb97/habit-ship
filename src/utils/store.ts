@@ -491,4 +491,8 @@ export const useIsSetupFinished = () =>
   useStore((state) => state.isSetupFinished);
 export const useUserLevel = () => useStore((state) => state.userLevel);
 export const useIsTraveling = () =>
-  useStore((state) => !!state.userPosition.target);
+  useStore(
+    (state) =>
+      !!state.userPosition.target &&
+      (state.userPosition.distanceTraveled ?? 0) > 0,
+  );

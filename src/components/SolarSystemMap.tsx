@@ -26,7 +26,7 @@ import {
 } from '../planets';
 import { Coordinates } from '../types';
 import { getCurrentDate, getCurrentTime } from '../utils/time';
-import { useCurrentPosition, useStore } from '../utils/store';
+import { useCurrentPosition, useIsTraveling, useStore } from '../utils/store';
 import { useIsFocused } from '@react-navigation/native';
 
 // ==========================
@@ -459,6 +459,11 @@ export function SolarSystemMap() {
   }, [userPosState]);
 
   const { showTrails, showTextures, logFPS } = useStore();
+  const isTraveling = useIsTraveling();
+  const isTravelingRef = useRef(isTraveling);
+  useEffect(() => {
+    isTravelingRef.current = isTraveling;
+  }, [isTraveling]);
   const rocketColorFromStore = useStore((s) => s.rocketColor);
   const showTrailsRef = useRef(showTrails);
   useEffect(() => {
@@ -1088,35 +1093,28 @@ export function SolarSystemMap() {
           const rocket = rocketRef.current;
           rocket.position.copy(displayUserPosRef.current);
 
-          const isTraveling = !!latestUserPosStateRef.current.target;
-
           // Determine aim target in scene units (prefer surface endpoint when traveling)
-          let aimPos = toVec3(latestTargetPos.current ?? earth.getPosition());
-          if (isTraveling) {
-            const { target, currentLocation } = latestUserPosStateRef.current;
-            const startName = currentLocation;
-            const targetName = target?.name ?? 'Earth';
-            const startBody =
-              PLANETS.find((b) => b.name === startName) ?? earth;
-            const targetBody =
-              PLANETS.find((b) => b.name === targetName) ?? earth;
-            const startCenter = adjustPositionForOrbits(
-              startBody,
-              toVec3(startBody.getPosition()),
-            );
-            const targetCenter = adjustPositionForOrbits(
-              targetBody,
-              toVec3(targetBody.getPosition()),
-            );
-            const dir = targetCenter.clone().sub(startCenter);
-            const dirN = dir.clone().normalize();
-            const targetR =
-              getVisualRadius(targetBody.name) * (1 + ROCKET_SURFACE_OFFSET);
-            const surfaceTarget = targetCenter
-              .clone()
-              .sub(dirN.clone().multiplyScalar(targetR));
-            aimPos = surfaceTarget;
-          }
+          const { target, currentLocation } = latestUserPosStateRef.current;
+          const startName = currentLocation;
+          const targetName = target?.name ?? 'Earth';
+          const startBody = PLANETS.find((b) => b.name === startName) ?? earth;
+          const targetBody =
+            PLANETS.find((b) => b.name === targetName) ?? earth;
+          const startCenter = adjustPositionForOrbits(
+            startBody,
+            toVec3(startBody.getPosition()),
+          );
+          const targetCenter = adjustPositionForOrbits(
+            targetBody,
+            toVec3(targetBody.getPosition()),
+          );
+          const dir = targetCenter.clone().sub(startCenter);
+          const dirN = dir.clone().normalize();
+          const targetR =
+            getVisualRadius(targetBody.name) * (1 + ROCKET_SURFACE_OFFSET);
+          const aimPos = targetCenter
+            .clone()
+            .sub(dirN.clone().multiplyScalar(targetR));
 
           // Orient rocket so its forward axis points toward aim target
           const dirToTarget = aimPos.clone().sub(rocket.position);
@@ -1128,13 +1126,16 @@ export function SolarSystemMap() {
             );
 
             // Accumulate spin angle and apply twist around local forward using rotateOnAxis
-            if (isTraveling) {
+            if (isTravelingRef.current) {
               rocketSpinAngleRef.current += ROCKET_SPIN_SPEED;
             } else {
               rocketSpinAngleRef.current *= 0.95;
             }
             rocket.quaternion.copy(qLook);
-            rocket.rotateOnAxis(DEFAULT_ROCKET_FORWARD, rocketSpinAngleRef.current);
+            rocket.rotateOnAxis(
+              DEFAULT_ROCKET_FORWARD,
+              rocketSpinAngleRef.current,
+            );
           }
         }
 
@@ -1310,13 +1311,13 @@ export function SolarSystemMap() {
     [
       showTextures,
       updateCamera,
+      getRelevantPlanetSystems,
+      rocketColorFromStore,
       showTrails,
       computeDisplayUserPos,
-      getRelevantPlanetSystems,
       syncTravelVisuals,
-      logFPS,
-      rocketColorFromStore,
       getVisualRadius,
+      logFPS,
     ],
   );
 
