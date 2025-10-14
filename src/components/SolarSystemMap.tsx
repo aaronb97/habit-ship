@@ -593,7 +593,7 @@ export function SolarSystemMap() {
         .add(dirN.clone().multiplyScalar(startR));
       const targetSurface = targetCenter
         .clone()
-        .add(dirN.clone().multiplyScalar(Math.max(0, dirLen - targetR)));
+        .sub(dirN.clone().multiplyScalar(targetR));
 
       return startSurface.clone().lerp(targetSurface, t);
     }
