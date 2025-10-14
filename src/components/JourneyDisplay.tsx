@@ -7,12 +7,12 @@ import { ProgressBar } from './ProgressBar';
 export function JourneyDisplay() {
   const { userPosition, clearData } = useStore();
 
-  // Determine what to display
-  const displayLocation = userPosition.target
-    ? userPosition.target.name
-    : userPosition.startingLocation;
-
   const isTraveling = useIsTraveling();
+
+  // Determine what to display
+  const displayLocation = isTraveling
+    ? userPosition.target?.name
+    : userPosition.startingLocation;
 
   const planet = cBodies.find((p) => p.name === displayLocation);
   // No time remaining in distance-per-habit model
