@@ -17,4 +17,12 @@ module.exports = {
   settings: {
     'import/ignore': ['react-native'],
   },
+  overrides: [
+    {
+      files: ['**/*.ts', '**/*.tsx', '**/*.d.ts'],
+      parserOptions: {
+        project: './tsconfig.eslint.json',
+      },
+    },
+  ],
 };

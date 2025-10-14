@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, useWindowDimensions, StyleSheet } from 'react-native';
 import { GLView, type ExpoWebGLRenderingContext } from 'expo-gl';
-import { Renderer, TextureLoader } from 'expo-three';
+import { Renderer } from 'expo-three';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
@@ -17,408 +17,80 @@ import type {
 } from 'react-native-gesture-handler';
 
 import { colors } from '../styles/theme';
-import {
-  cBodies as PLANETS,
-  Planet,
-  Moon,
-  earth,
-  type CBody,
-} from '../planets';
-import { Coordinates } from '../types';
-import { getCurrentDate, getCurrentTime } from '../utils/time';
+import { cBodies as PLANETS, Planet, Moon, earth } from '../planets';
+import { getCurrentTime } from '../utils/time';
 import { isTraveling, useStore } from '../utils/store';
 import { useIsFocused } from '@react-navigation/native';
 
-// ==========================
-// Constants — Easy Tweaking
-// ==========================
-// Units & scaling
-// Scale real KM to scene units (keeps numbers in a reasonable range). 10,000,000 km => 1 scene unit.
-const KM_TO_SCENE = 1 / 1e7;
+// Modularized helpers/builders
+import {
+  toVec3,
+  getTrailForBody,
+  apparentScaleRatio,
+  adjustPositionForOrbits,
+} from './solarsystem/helpers';
+import {
+  createPlanetMesh,
+  createTrailLine,
+  type MappedMaterial,
+  type PlanetMeshUserData,
+} from './solarsystem/builders';
+import { loadBodyTextures } from './solarsystem/textures';
+import { createSky } from './solarsystem/sky';
+import {
+  MAX_PITCH_RAD,
+  ORBIT_INITIAL_RADIUS,
+  ORBIT_INITIAL_YAW,
+  ORBIT_DEFAULT_HEIGHT_RATIO,
+  AUTO_ROTATE_YAW_SPEED,
+  SMOOTHING_YAW,
+  SMOOTHING_PITCH,
+  SMOOTHING_RADIUS,
+  ZOOM_MIN_RADIUS,
+  ZOOM_MAX_RADIUS,
+  PAN_YAW_ROTATION_PER_FULL_DRAG,
+  PAN_PITCH_ROTATION_PER_FULL_DRAG,
+  INERTIA_FRAMES_PER_SECOND,
+  YAW_VELOCITY_CLAMP,
+  PITCH_VELOCITY_CLAMP,
+  INERTIA_FRICTION,
+  INERTIA_STOP_EPSILON,
+  RENDERER_CLEAR_COLOR,
+  RENDERER_CLEAR_ALPHA,
+  RENDERER_PIXEL_RATIO,
+  GL_MSAA_SAMPLES,
+  CAMERA_FOV,
+  CAMERA_NEAR,
+  CAMERA_FAR,
+  AMBIENT_LIGHT_INTENSITY,
+  SUNLIGHT_INTENSITY,
+  SUNLIGHT_DISTANCE,
+  SUNLIGHT_DECAY,
+  CBODY_RADIUS_MULTIPLIER,
+  PLANET_MESH_X_ROTATION,
+  OUTLINE_EDGE_GLOW,
+  OUTLINE_EDGE_THICKNESS,
+  OUTLINE_PULSE_PERIOD,
+  OUTLINE_MIN_PIXELS_FADE_OUT,
+  OUTLINE_MIN_PIXELS_FADE_IN,
+  OUTLINE_INTENSITY_SMOOTHING,
+  OUTLINE_EDGE_STRENGTH,
+  OUTLINE_MIN_ENABLED_FACTOR,
+  ROCKET_SURFACE_OFFSET,
+  ROCKET_LANDING_CLEARANCE,
+  ROCKET_MODEL_SCALE,
+  DEFAULT_ROCKET_FORWARD,
+  ROCKET_SPIN_SPEED,
+  PLANE_NORMAL_EPS,
+  HELPER_AXIS_THRESHOLD,
+  ECLIPTIC_UP,
+} from './solarsystem/constants';
 
-// Trail rendering
-// Maximum alpha (opacity) for the newest point in a trail.
-const TRAIL_MAX_ALPHA = 0.85;
-// Exponent for ease-in alpha ramp along trail (2 = quadratic ease-in).
-const TRAIL_EASE_EXPONENT = 3;
+// [moved] Helpers moved to './solarsystem/helpers'.
 
-// Apparent size scaling (for visual clarity vs physical accuracy)
-// Base scaling factor for all celestial body radii on screen.
-const CBODY_RADIUS_MULTIPLIER = 0.05;
-// Nonlinear compression exponent to reduce giant/dwarf disparities relative to Earth.
-const SIZE_EXPONENT = 0.6;
-// Minimum ratio clamp to prevent degenerate sizes when numbers are tiny.
-const MIN_SCALE_RATIO = 1e-6;
+// [moved] Texture loading moved to './solarsystem/textures'.
 
-// Orbit layout
-// Exaggerate separation of moons from their parent to avoid overlap with non-physical display radii.
-const ORBIT_OFFSET_MULTIPLIER = 30;
-
-// Camera and orbit behavior
-// Max elevation angle away from the orbital plane (~63 degrees).
-const MAX_PITCH_RAD = 1.1;
-// Default camera radius (zoom) from the orbit center (user position).
-const ORBIT_INITIAL_RADIUS = 0.2;
-// Default yaw angle at start.
-const ORBIT_INITIAL_YAW = 2;
-// Initial height as a fraction of the radius; pitch starts at asin of this value.
-const ORBIT_DEFAULT_HEIGHT_RATIO = 0.35;
-// Idle autorotation speed (radians per frame) when user is not interacting.
-const AUTO_ROTATE_YAW_SPEED = 0.001;
-// Smoothing factors for tweening toward target yaw/pitch/radius.
-const SMOOTHING_YAW = 0.15;
-const SMOOTHING_PITCH = 0.18;
-const SMOOTHING_RADIUS = 0.2;
-
-// Gesture settings
-// Min/max zoom radius for pinch gesture.
-const ZOOM_MIN_RADIUS = 0.1;
-const ZOOM_MAX_RADIUS = 20000;
-// Drag across full screen width rotates yaw by 360°, across height rotates pitch by 180°.
-const PAN_YAW_ROTATION_PER_FULL_DRAG = 2 * Math.PI;
-const PAN_PITCH_ROTATION_PER_FULL_DRAG = Math.PI;
-// Approximate frames per second used to convert gesture velocity (px/s) to per-frame values.
-const INERTIA_FRAMES_PER_SECOND = 60;
-// Clamp for inertial yaw/pitch velocity after pan end.
-const YAW_VELOCITY_CLAMP = 0.2;
-const PITCH_VELOCITY_CLAMP = 0.15;
-// Friction factor applied to inertial velocities each frame.
-const INERTIA_FRICTION = 0.92;
-// Threshold below which inertial velocities are snapped to zero.
-const INERTIA_STOP_EPSILON = 1e-6;
-
-// Renderer & scene
-// Clear color for the WebGL renderer.
-const RENDERER_CLEAR_COLOR = 0x101018;
-// Clear alpha for the renderer background.
-const RENDERER_CLEAR_ALPHA = 1;
-// Pixel ratio for the renderer (1 keeps things predictable across devices in GLView).
-const RENDERER_PIXEL_RATIO = 1;
-// MSAA samples for GLView; 0 disables to avoid unsupported configurations on some devices.
-const GL_MSAA_SAMPLES = 0;
-// Camera projection parameters.
-const CAMERA_FOV = 60;
-const CAMERA_NEAR = 0.05;
-const CAMERA_FAR = 20000;
-
-// Lighting
-// Low ambient to keep space dark while detailing planet shading.
-const AMBIENT_LIGHT_INTENSITY = 0.5;
-// Sun light intensity, infinite distance (0) and mild decay for falloff.
-const SUNLIGHT_INTENSITY = 5;
-const SUNLIGHT_DISTANCE = 0;
-const SUNLIGHT_DECAY = 0.1;
-
-// Sky dome
-// Radius and segments of the inverted sphere used as the starfield backdrop.
-const SKY_SPHERE_RADIUS = 1800;
-const SKY_SEGMENTS = 48;
-
-// Geometry quality
-// Number of segments used for planet spheres.
-const SPHERE_SEGMENTS = 24;
-
-// Material/texture knobs
-// Anisotropic filtering for textures (improves sharpness at glancing angles).
-const TEXTURE_ANISOTROPY = 4;
-
-// Mesh orientation
-// Rotate planet meshes so their equators are horizontal and textures align nicely.
-const PLANET_MESH_X_ROTATION = -Math.PI / 2;
-// (Removed continuous spin; we keep a static random phase.)
-
-// Numerics
-// Squared-length threshold to detect near-degenerate plane normals.
-const PLANE_NORMAL_EPS = 1e-8;
-// Threshold when choosing a helper axis for cross products (avoid near-parallel vectors).
-const HELPER_AXIS_THRESHOLD = 0.9;
-// Global ecliptic "up" direction (J2000 heliocentric ecliptic uses +Z as north)
-const ECLIPTIC_UP = new THREE.Vector3(0, 0, 1);
-
-// Post-processing outline
-// Controls for the OutlinePass used to accent selected meshes.
-const OUTLINE_EDGE_STRENGTH = 1.5;
-const OUTLINE_EDGE_GLOW = 1.0;
-const OUTLINE_EDGE_THICKNESS = 1.0;
-const OUTLINE_PULSE_PERIOD = 0.0;
-
-// Outline LOD & fading
-// Fade outlines based on screen-space radius (in pixels). Below FADE_OUT -> 0, above FADE_IN -> 1.
-const OUTLINE_MIN_PIXELS_FADE_OUT = 8; // start fading in around this size
-const OUTLINE_MIN_PIXELS_FADE_IN = 14; // fully visible by this size
-// Smoothing for outline intensity changes (per-frame lerp factor)
-const OUTLINE_INTENSITY_SMOOTHING = 0.15;
-// Below this intensity, disable the pass to avoid any processing cost
-const OUTLINE_MIN_ENABLED_FACTOR = 0.02;
-
-// Rocket model controls
-const ROCKET_MODEL_SCALE = 0.01; // uniform scale for OBJ model
-const ROCKET_SURFACE_OFFSET = 0.04; // extra offset above visual surface (fraction of visual radius)
-const ROCKET_SPIN_SPEED = 0.03; // radians per frame while traveling
-const DEFAULT_ROCKET_FORWARD = new THREE.Vector3(0, 1, 0); // assumed model forward axis
-// Additional fixed clearance applied at destination to avoid intersecting surface (scene units)
-const ROCKET_LANDING_CLEARANCE = 0.005;
-
-const TRAIL_LENGTH_MULTIPLIER = 0.75;
-
-function toVec3([x, y, z]: Coordinates): THREE.Vector3 {
-  return new THREE.Vector3(x * KM_TO_SCENE, y * KM_TO_SCENE, z * KM_TO_SCENE);
-}
-
-function getTrailForBody(body: Planet | Moon, segments = 500): THREE.Vector3[] {
-  const points: THREE.Vector3[] = [];
-  const today = getCurrentDate();
-  const periodDays = TRAIL_LENGTH_MULTIPLIER * body.orbitalPeriodDays;
-  const stepDays = periodDays / Math.max(1, segments);
-  const stepMs = stepDays * 24 * 60 * 60 * 1000;
-
-  const drawOrbitAroundParent = body instanceof Moon;
-  const parent = drawOrbitAroundParent
-    ? PLANETS.find((b) => b.name === (body as Moon).orbits)
-    : undefined;
-
-  // Scale offsets so the ring matches the visually exaggerated separation applied in
-  // adjustPositionForOrbits
-  const multiplier =
-    body instanceof Moon
-      ? body.orbitOffsetMultiplier ?? ORBIT_OFFSET_MULTIPLIER
-      : ORBIT_OFFSET_MULTIPLIER;
-
-  if (drawOrbitAroundParent && parent && parent instanceof Planet) {
-    // Anchor the moon's trail around the parent's CURRENT position,
-    // using historical relative offsets (moon - parent) for each day.
-    const parentAnchor = toVec3(parent.getPosition());
-
-    for (let i = segments; i >= 1; i--) {
-      const d = new Date(today.getTime() - i * stepMs);
-
-      const childKm = body.getPosition(d);
-      const parentKm = parent.getPosition(d);
-
-      const offset = toVec3([
-        (childKm[0] - parentKm[0]) * multiplier,
-        (childKm[1] - parentKm[1]) * multiplier,
-        (childKm[2] - parentKm[2]) * multiplier,
-      ]);
-
-      points.push(parentAnchor.clone().add(offset));
-    }
-
-    // Include today's point
-    const childToday = body.getPosition(today);
-    const parentToday = parent.getPosition(today);
-    {
-      const offset = toVec3([
-        (childToday[0] - parentToday[0]) * multiplier,
-        (childToday[1] - parentToday[1]) * multiplier,
-        (childToday[2] - parentToday[2]) * multiplier,
-      ]);
-
-      points.push(parentAnchor.clone().add(offset));
-    }
-
-    return points;
-  }
-
-  // Default: heliocentric trail (for planets orbiting the Sun)
-  for (let i = segments; i >= 1; i--) {
-    const d = new Date(today.getTime() - i * stepMs);
-    const coords = body.getPosition(d);
-    points.push(
-      new THREE.Vector3(
-        coords[0] * KM_TO_SCENE,
-        coords[1] * KM_TO_SCENE,
-        coords[2] * KM_TO_SCENE,
-      ),
-    );
-  }
-
-  // Include today's point
-  {
-    const coords = body.getPosition(today);
-    points.push(
-      new THREE.Vector3(
-        coords[0] * KM_TO_SCENE,
-        coords[1] * KM_TO_SCENE,
-        coords[2] * KM_TO_SCENE,
-      ),
-    );
-  }
-
-  return points;
-}
-
-function apparentScaleRatio(ratio: number): number {
-  // Prevent degenerate values; compress dynamic range using power law
-  const r = Math.max(ratio, MIN_SCALE_RATIO);
-  return Math.pow(r, SIZE_EXPONENT);
-}
-
-// If a body orbits a parent, push it outward along the parent->child direction
-// to avoid visual overlap given our non-physical display radii.
-function adjustPositionForOrbits(
-  body: CBody,
-  basePosition: THREE.Vector3,
-): THREE.Vector3 {
-  if (body instanceof Moon) {
-    const parent = PLANETS.find((b) => b.name === body.orbits);
-    if (parent) {
-      const parentPos = toVec3(parent.getPosition());
-      const dir = basePosition.clone().sub(parentPos);
-
-      return parentPos.add(
-        dir.multiplyScalar(
-          body.orbitOffsetMultiplier ?? ORBIT_OFFSET_MULTIPLIER,
-        ),
-      );
-    }
-  }
-
-  return basePosition;
-}
-
-// Map planet/star names to their texture assets in assets/cbodies
-// We use require() so Metro bundles the images and Expo Asset can resolve to a local URI.
-const BODY_TEXTURE_REQUIRE: Record<string, number> = {
-  Sun: require('../../assets/cbodies/sun.jpg'),
-  Earth: require('../../assets/cbodies/earth.jpg'),
-  'The Moon': require('../../assets/cbodies/moon.jpg'),
-  Mercury: require('../../assets/cbodies/mercury.jpg'),
-  Venus: require('../../assets/cbodies/venus.jpg'),
-  Mars: require('../../assets/cbodies/mars.jpg'),
-  Jupiter: require('../../assets/cbodies/jupiter.jpg'),
-  Saturn: require('../../assets/cbodies/saturn.jpg'),
-  Uranus: require('../../assets/cbodies/uranus.jpg'),
-  Neptune: require('../../assets/cbodies/neptune.jpg'),
-  Pluto: require('../../assets/cbodies/pluto.jpg'),
-  Io: require('../../assets/cbodies/io.jpg'),
-  Europa: require('../../assets/cbodies/europa.jpg'),
-  Ganymede: require('../../assets/cbodies/ganymede.jpg'),
-  Callisto: require('../../assets/cbodies/callisto.jpg'),
-  Titan: require('../../assets/cbodies/titan.jpg'),
-  Iapetus: require('../../assets/cbodies/iapetus.jpg'),
-  Triton: require('../../assets/cbodies/triton.png'),
-};
-
-async function loadBodyTextures(
-  names: string[],
-): Promise<Record<string, THREE.Texture>> {
-  const textures: Record<string, THREE.Texture> = {};
-  const loader = new TextureLoader();
-
-  for (const name of names) {
-    const req = BODY_TEXTURE_REQUIRE[name];
-    if (!req) continue;
-
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const asset = Asset.fromModule(req);
-      await asset.downloadAsync();
-      const tex = await loader.loadAsync(asset.localUri ?? asset.uri);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.anisotropy = TEXTURE_ANISOTROPY;
-      textures[name] = tex;
-    } catch (e) {
-      console.warn(`[SolarSystemMap] Failed to load texture for ${name}`, e);
-    }
-  }
-
-  return textures;
-}
-
-type MappedMaterial =
-  | THREE.MeshBasicMaterial
-  | THREE.MeshLambertMaterial
-  | THREE.MeshPhongMaterial;
-
-type PlanetMeshUserData = {
-  visualRadius?: number;
-};
-
-function createPlanetMesh(
-  name: string,
-  color: number,
-  radius: number,
-  texture?: THREE.Texture,
-): THREE.Mesh {
-  const geom = new THREE.SphereGeometry(
-    radius,
-    SPHERE_SEGMENTS,
-    SPHERE_SEGMENTS,
-  );
-
-  let mat: THREE.Material;
-
-  if (texture) {
-    if (name === 'Sun') {
-      // Sun should appear self-lit
-      mat = new THREE.MeshBasicMaterial({ map: texture });
-    } else {
-      // Use diffuse lighting so the day side is lit and night side is dark
-      mat = new THREE.MeshLambertMaterial({ map: texture });
-    }
-  } else {
-    // No texture: keep Sun self-lit, planets use Lambert for shading
-    mat =
-      name === 'Sun'
-        ? new THREE.MeshBasicMaterial({ color })
-        : new THREE.MeshLambertMaterial({ color });
-  }
-
-  const mesh = new THREE.Mesh(geom, mat);
-  mesh.name = name;
-  mesh.rotation.x = PLANET_MESH_X_ROTATION;
-  return mesh;
-}
-
-function createTrailLine(
-  points: THREE.Vector3[],
-  color: number,
-): THREE.Line | undefined {
-  if (points.length < 2) return undefined;
-  const geom = new THREE.BufferGeometry().setFromPoints(points);
-
-  // Build a per-vertex alpha attribute that fades from 0 (oldest)
-  // to ~TRAIL_MAX_ALPHA (newest, closest to the body) to simulate motion.
-  const n = points.length;
-  const alphas = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    const t = n > 1 ? i / (n - 1) : 1; // 0 .. 1 from oldest to newest
-    const eased = Math.pow(t, TRAIL_EASE_EXPONENT); // ease-in for smoother tail
-    alphas[i] = TRAIL_MAX_ALPHA * eased; // 0 -> max alpha
-  }
-
-  geom.setAttribute('alpha', new THREE.Float32BufferAttribute(alphas, 1));
-
-  // Color as uniform; fragment shader uses per-vertex alpha.
-  const mat = new THREE.ShaderMaterial({
-    uniforms: {
-      uColor: { value: new THREE.Color(color) },
-    },
-    vertexShader: `
-      attribute float alpha;
-      varying float vAlpha;
-      void main() {
-        vAlpha = alpha;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      precision mediump float;
-      uniform vec3 uColor;
-      varying float vAlpha;
-      void main() {
-        gl_FragColor = vec4(uColor, vAlpha);
-      }
-    `,
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.NormalBlending,
-  });
-
-  const line = new THREE.Line(geom, mat);
-  return line;
-}
+// [moved] Mesh builders moved to './solarsystem/builders'.
 
 export function SolarSystemMap() {
   const { width, height } = useWindowDimensions();
@@ -971,36 +643,8 @@ export function SolarSystemMap() {
 
       // Sky sphere: wrap the scene with a starfield texture
       try {
-        const spaceAsset = Asset.fromModule(
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          require('../../assets/cbodies/space.jpg'),
-        );
-
-        await spaceAsset.downloadAsync();
-
-        const loader = new TextureLoader();
-        const spaceTexture = await loader.loadAsync(
-          spaceAsset.localUri ?? spaceAsset.uri,
-        );
-
-        // Ensure correct color space for sRGB textures
-        spaceTexture.colorSpace = THREE.SRGBColorSpace;
-
-        const skyGeometry = new THREE.SphereGeometry(
-          SKY_SPHERE_RADIUS,
-          SKY_SEGMENTS,
-          SKY_SEGMENTS,
-        );
-
-        const skyMaterial = new THREE.MeshBasicMaterial({
-          map: spaceTexture,
-          side: THREE.BackSide,
-          depthWrite: false,
-        });
-
-        const skyMesh = new THREE.Mesh(skyGeometry, skyMaterial);
+        const skyMesh = await createSky();
         skyRef.current = skyMesh;
-
         scene.add(skyMesh);
       } catch (e) {
         console.warn('[SolarSystemMap] Failed to load sky texture', e);
