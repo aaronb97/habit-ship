@@ -8,6 +8,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { CopyShader } from 'three/examples/jsm/shaders/CopyShader.js';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { Asset } from 'expo-asset';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type {
@@ -56,8 +57,8 @@ const ORBIT_OFFSET_MULTIPLIER = 30;
 // Camera and orbit behavior
 // Max elevation angle away from the orbital plane (~63 degrees).
 const MAX_PITCH_RAD = 1.1;
-// Default camera radius from the orbit center (user position).
-const ORBIT_INITIAL_RADIUS = 1;
+// Default camera radius (zoom) from the orbit center (user position).
+const ORBIT_INITIAL_RADIUS = 0.2;
 // Default yaw angle at start.
 const ORBIT_INITIAL_YAW = 2;
 // Initial height as a fraction of the radius; pitch starts at asin of this value.
@@ -71,7 +72,7 @@ const SMOOTHING_RADIUS = 0.2;
 
 // Gesture settings
 // Min/max zoom radius for pinch gesture.
-const ZOOM_MIN_RADIUS = 0.5;
+const ZOOM_MIN_RADIUS = 0.1;
 const ZOOM_MAX_RADIUS = 20000;
 // Drag across full screen width rotates yaw by 360°, across height rotates pitch by 180°.
 const PAN_YAW_ROTATION_PER_FULL_DRAG = 2 * Math.PI;
@@ -97,7 +98,7 @@ const RENDERER_PIXEL_RATIO = 1;
 const GL_MSAA_SAMPLES = 0;
 // Camera projection parameters.
 const CAMERA_FOV = 60;
-const CAMERA_NEAR = 0.1;
+const CAMERA_NEAR = 0.05;
 const CAMERA_FAR = 20000;
 
 // Lighting
@@ -150,22 +151,12 @@ const OUTLINE_INTENSITY_SMOOTHING = 0.15;
 // Below this intensity, disable the pass to avoid any processing cost
 const OUTLINE_MIN_ENABLED_FACTOR = 0.02;
 
-// Rocket prototype (not currently rendered, kept for future use)
-const ROCKET_SIZE_MULTIPLIER = 0.1; // Scales all rocket dimensions
-const ROCKET_SEGMENTS = Math.floor(16 * ROCKET_SIZE_MULTIPLIER); // Cylinder/cone segment count
-const ROCKET_BODY_RADIUS = ROCKET_SIZE_MULTIPLIER;
-const ROCKET_BODY_HEIGHT = 1.2 * ROCKET_SIZE_MULTIPLIER;
-const ROCKET_NOSE_RADIUS = 0.22 * ROCKET_SIZE_MULTIPLIER;
-const ROCKET_NOSE_HEIGHT = 0.4 * ROCKET_SIZE_MULTIPLIER;
-const ROCKET_FIN_THICKNESS = 0.05 * ROCKET_SIZE_MULTIPLIER;
-const ROCKET_FIN_HEIGHT = 0.25 * ROCKET_SIZE_MULTIPLIER;
-const ROCKET_FIN_WIDTH = 0.25 * ROCKET_SIZE_MULTIPLIER;
-const ROCKET_FIN_OFFSET_X = 0.18 * ROCKET_SIZE_MULTIPLIER;
-const ROCKET_FIN_OFFSET_Y = -0.4 * ROCKET_SIZE_MULTIPLIER;
-const ROCKET_FIN_OFFSET_Z = 0.18 * ROCKET_SIZE_MULTIPLIER;
-const ROCKET_ORIENTATION_Z = Math.PI;
-// Vertical offset of the rocket nose relative to the group's origin.
-const ROCKET_NOSE_Y = 0.8 * ROCKET_SIZE_MULTIPLIER;
+// Rocket model controls
+const ROCKET_MODEL_SCALE = 0.01; // uniform scale for OBJ model
+const ROCKET_SURFACE_OFFSET = 0.04; // extra offset above visual surface (fraction of visual radius)
+const ROCKET_SPIN_SPEED = 0.03; // radians per frame while traveling
+const DEFAULT_ROCKET_FORWARD = new THREE.Vector3(0, 1, 0); // assumed model forward axis
+
 const TRAIL_LENGTH_MULTIPLIER = 0.75;
 
 function toVec3([x, y, z]: Coordinates): THREE.Vector3 {
@@ -253,68 +244,6 @@ function getTrailForBody(body: Planet | Moon, segments = 500): THREE.Vector3[] {
   }
 
   return points;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function createRocketMesh(): THREE.Group {
-  const group = new THREE.Group();
-
-  // Body
-  const bodyGeom = new THREE.CylinderGeometry(
-    ROCKET_BODY_RADIUS,
-    ROCKET_BODY_RADIUS,
-    ROCKET_BODY_HEIGHT,
-    ROCKET_SEGMENTS,
-  );
-
-  const bodyMat = new THREE.MeshBasicMaterial({
-    color: parseInt(colors.accent.replace('#', '0x')),
-  });
-
-  const body = new THREE.Mesh(bodyGeom, bodyMat);
-  body.position.y = 0;
-  group.add(body);
-
-  // Nose
-  const noseGeom = new THREE.ConeGeometry(
-    ROCKET_NOSE_RADIUS,
-    ROCKET_NOSE_HEIGHT,
-    ROCKET_SEGMENTS,
-  );
-
-  const noseMat = new THREE.MeshBasicMaterial({
-    color: parseInt(colors.primary.replace('#', '0x')),
-  });
-
-  const nose = new THREE.Mesh(noseGeom, noseMat);
-  nose.position.y = ROCKET_NOSE_Y;
-  group.add(nose);
-
-  // Fins
-  const finGeom = new THREE.BoxGeometry(
-    ROCKET_FIN_THICKNESS,
-    ROCKET_FIN_HEIGHT,
-    ROCKET_FIN_WIDTH,
-  );
-
-  const finMat = new THREE.MeshBasicMaterial({
-    color: parseInt(colors.cosmic.replace('#', '0x')),
-  });
-
-  const fin1 = new THREE.Mesh(finGeom, finMat);
-  fin1.position.set(ROCKET_FIN_OFFSET_X, ROCKET_FIN_OFFSET_Y, 0);
-  const fin2 = fin1.clone();
-  fin2.position.set(-ROCKET_FIN_OFFSET_X, ROCKET_FIN_OFFSET_Y, 0);
-  const fin3 = fin1.clone();
-  fin3.position.set(0, ROCKET_FIN_OFFSET_Y, ROCKET_FIN_OFFSET_Z);
-  const fin4 = fin1.clone();
-  fin4.position.set(0, ROCKET_FIN_OFFSET_Y, -ROCKET_FIN_OFFSET_Z);
-  group.add(fin1, fin2, fin3, fin4);
-
-  // Orient rocket to point "up"
-  group.rotation.z = ROCKET_ORIENTATION_Z; // point nose upward in +Y
-
-  return group;
 }
 
 function apparentScaleRatio(ratio: number): number {
@@ -530,6 +459,7 @@ export function SolarSystemMap() {
   }, [userPosState]);
 
   const { showTrails, showTextures, logFPS } = useStore();
+  const rocketColorFromStore = useStore((s) => s.rocketColor);
   const showTrailsRef = useRef(showTrails);
   useEffect(() => {
     showTrailsRef.current = showTrails;
@@ -613,6 +543,20 @@ export function SolarSystemMap() {
 
   const animAlphaRef = useRef(0);
   const animSyncedRef = useRef(true);
+  const rocketSpinAngleRef = useRef(0);
+
+  // Helper: read visual radius (scene units) for a body
+  const getVisualRadius = useCallback((name: string): number => {
+    const mesh = planetRefs.current[name];
+    if (!mesh) return 0;
+    const ud = mesh.userData as PlanetMeshUserData;
+    if (typeof ud.visualRadius === 'number')
+      return ud.visualRadius * mesh.scale.x;
+    const g = mesh.geometry as THREE.SphereGeometry;
+    const r = g.parameters.radius;
+    (mesh.userData as PlanetMeshUserData).visualRadius = r;
+    return r * mesh.scale.x;
+  }, []);
 
   const computeDisplayUserPos = useCallback((): THREE.Vector3 => {
     // If traveling, place user between start and target using distance proportion
@@ -651,15 +595,33 @@ export function SolarSystemMap() {
 
       const startBody =
         PLANETS.find((b) => b.name === currentLocation) ?? earth;
-
       const targetBody = PLANETS.find((b) => b.name === target.name) ?? earth;
 
-      const startBase = toVec3(startBody.getPosition());
-      const startAdj = adjustPositionForOrbits(startBody, startBase);
-      const targetBase = toVec3(targetBody.getPosition());
-      const targetAdj = adjustPositionForOrbits(targetBody, targetBase);
+      const startCenter = adjustPositionForOrbits(
+        startBody,
+        toVec3(startBody.getPosition()),
+      );
+      const targetCenter = adjustPositionForOrbits(
+        targetBody,
+        toVec3(targetBody.getPosition()),
+      );
 
-      return startAdj.clone().lerp(targetAdj, t);
+      // Move between surfaces instead of centers for apparent distance
+      const dir = targetCenter.clone().sub(startCenter);
+      const dirLen = Math.max(1e-9, dir.length());
+      const dirN = dir.clone().divideScalar(dirLen);
+      const startR =
+        getVisualRadius(startBody.name) * (1 + ROCKET_SURFACE_OFFSET);
+      const targetR =
+        getVisualRadius(targetBody.name) * (1 + ROCKET_SURFACE_OFFSET);
+      const startSurface = startCenter
+        .clone()
+        .add(dirN.clone().multiplyScalar(startR));
+      const targetSurface = targetCenter
+        .clone()
+        .add(dirN.clone().multiplyScalar(Math.max(0, dirLen - targetR)));
+
+      return startSurface.clone().lerp(targetSurface, t);
     }
 
     // Not traveling: snap to the current body's displayed position
@@ -668,9 +630,12 @@ export function SolarSystemMap() {
         (b) => b.name === latestUserPosStateRef.current.currentLocation,
       ) ?? earth;
 
-    const base = toVec3(body.getPosition());
-    return adjustPositionForOrbits(body, base);
-  }, []);
+    const center = adjustPositionForOrbits(body, toVec3(body.getPosition()));
+    const tgtPos = toVec3(latestTargetPos.current ?? earth.getPosition());
+    const dir = tgtPos.clone().sub(center).normalize();
+    const r = getVisualRadius(body.name) * (1 + ROCKET_SURFACE_OFFSET);
+    return center.clone().add(dir.multiplyScalar(r || 0));
+  }, [getVisualRadius]);
 
   // Simple orbit state (spherical coordinates around origin)
   const radiusRef = useRef(ORBIT_INITIAL_RADIUS);
@@ -970,9 +935,38 @@ export function SolarSystemMap() {
       sunLight.position.set(0, 0, 0);
       scene.add(sunLight);
 
-      const rocket = createRocketMesh();
-      rocketRef.current = rocket;
-      scene.add(rocket);
+      // Load Rocket OBJ and apply persistent color
+      try {
+        const rocketAsset = Asset.fromModule(
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          require('../../assets/Rocket.obj'),
+        );
+        await rocketAsset.downloadAsync();
+        const loader = new OBJLoader();
+        const uri = rocketAsset.localUri ?? rocketAsset.uri;
+        const obj: THREE.Group = await new Promise((resolve, reject) => {
+          loader.load(uri, resolve, undefined, reject);
+        });
+
+        const rocketColor = rocketColorFromStore;
+
+        obj.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            const mesh = child as THREE.Mesh;
+            mesh.material = new THREE.MeshLambertMaterial({
+              color: rocketColor,
+            });
+          }
+        });
+        obj.scale.setScalar(ROCKET_MODEL_SCALE);
+        rocketRef.current = obj;
+        scene.add(obj);
+      } catch (e) {
+        console.warn(
+          '[SolarSystemMap] Failed to load Rocket.obj, skipping model',
+        );
+        console.warn(e);
+      }
       const relevantSystems = getRelevantPlanetSystems();
 
       PLANETS.forEach((p) => {
@@ -1089,9 +1083,59 @@ export function SolarSystemMap() {
         }
 
         // Update dynamic positions
-        // 1) User rocket follows latest position
+        // 1) User rocket follows latest position and orientation
         if (rocketRef.current) {
-          rocketRef.current.position.copy(displayUserPosRef.current);
+          const rocket = rocketRef.current;
+          rocket.position.copy(displayUserPosRef.current);
+
+          const isTraveling = !!latestUserPosStateRef.current.target;
+
+          // Determine aim target in scene units (prefer surface endpoint when traveling)
+          let aimPos = toVec3(latestTargetPos.current ?? earth.getPosition());
+          if (isTraveling) {
+            const { target, currentLocation } = latestUserPosStateRef.current;
+            const startName = currentLocation;
+            const targetName = target?.name ?? 'Earth';
+            const startBody =
+              PLANETS.find((b) => b.name === startName) ?? earth;
+            const targetBody =
+              PLANETS.find((b) => b.name === targetName) ?? earth;
+            const startCenter = adjustPositionForOrbits(
+              startBody,
+              toVec3(startBody.getPosition()),
+            );
+            const targetCenter = adjustPositionForOrbits(
+              targetBody,
+              toVec3(targetBody.getPosition()),
+            );
+            const dir = targetCenter.clone().sub(startCenter);
+            const dirN = dir.clone().normalize();
+            const targetR =
+              getVisualRadius(targetBody.name) * (1 + ROCKET_SURFACE_OFFSET);
+            const surfaceTarget = targetCenter
+              .clone()
+              .sub(dirN.clone().multiplyScalar(targetR));
+            aimPos = surfaceTarget;
+          }
+
+          // Orient rocket so its forward axis points toward aim target
+          const dirToTarget = aimPos.clone().sub(rocket.position);
+          if (dirToTarget.lengthSq() > 1e-12) {
+            dirToTarget.normalize();
+            const qLook = new THREE.Quaternion().setFromUnitVectors(
+              DEFAULT_ROCKET_FORWARD,
+              dirToTarget,
+            );
+
+            // Accumulate spin angle and apply twist around local forward using rotateOnAxis
+            if (isTraveling) {
+              rocketSpinAngleRef.current += ROCKET_SPIN_SPEED;
+            } else {
+              rocketSpinAngleRef.current *= 0.95;
+            }
+            rocket.quaternion.copy(qLook);
+            rocket.rotateOnAxis(DEFAULT_ROCKET_FORWARD, rocketSpinAngleRef.current);
+          }
         }
 
         // 2) Update planet positions (in case date offset changes)
@@ -1271,6 +1315,8 @@ export function SolarSystemMap() {
       getRelevantPlanetSystems,
       syncTravelVisuals,
       logFPS,
+      rocketColorFromStore,
+      getVisualRadius,
     ],
   );
 

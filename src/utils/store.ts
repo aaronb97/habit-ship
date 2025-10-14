@@ -44,6 +44,13 @@ export function calculateDistance(a: Coordinates, b: Coordinates): number {
   );
 }
 
+function randomColorInt(): number {
+  // Generate a pastel color
+  const base = Math.floor(Math.random() * 0x7f7f7f);
+  const pastel = base + 0x7f7f7f;
+  return pastel;
+}
+
 export function getPlanetPosition(planetName: string): Coordinates {
   const planet = cBodies.find((p) => p.name === planetName);
   if (!planet) throw new Error(`Planet ${planetName} not found`);
@@ -82,6 +89,9 @@ type Store = {
   showTrails: boolean;
   showTextures: boolean;
   logFPS: boolean;
+
+  // Rocket appearance
+  rocketColor: number;
 
   // Actions
   setIsSetupFinished: (value: boolean) => void;
@@ -140,6 +150,7 @@ const initialData = {
   showTrails: true,
   showTextures: true,
   logFPS: false,
+  rocketColor: randomColorInt(),
 } satisfies Partial<Store>;
 
 export const useStore = create<Store>()(
@@ -190,9 +201,16 @@ export const useStore = create<Store>()(
             state.userPosition.currentLocation,
           );
           const targetPos = getPlanetPosition(planetName);
-          state.userPosition.initialDistance = calculateDistance(
-            startPos,
-            targetPos,
+          const centerDistance = calculateDistance(startPos, targetPos);
+          const startBody = cBodies.find(
+            (b) => b.name === state.userPosition.currentLocation,
+          );
+          const targetBody = cBodies.find((b) => b.name === planetName);
+          const radiusBuffer =
+            (startBody?.radiusKm ?? 0) + (targetBody?.radiusKm ?? 0);
+          state.userPosition.initialDistance = Math.max(
+            0,
+            centerDistance - radiusBuffer,
           );
           state.userPosition.distanceTraveled = 0;
           state.userPosition.previousDistanceTraveled = 0;
@@ -236,9 +254,13 @@ export const useStore = create<Store>()(
               name: 'The Moon',
               position: moon.getPosition(),
             },
-            initialDistance: calculateDistance(
-              getPlanetPosition('Earth'),
-              moon.getPosition(),
+            initialDistance: Math.max(
+              0,
+              calculateDistance(
+                getPlanetPosition('Earth'),
+                moon.getPosition(),
+              ) -
+                (earth.radiusKm + moon.radiusKm),
             ),
             distanceTraveled: 0,
             previousDistanceTraveled: 0,
@@ -418,6 +440,14 @@ export const useStore = create<Store>()(
     {
       name: 'space-explorer-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      version: 2,
+      migrate: (persistedState, _version) => {
+        const s = (persistedState || {}) as Partial<Store>;
+        if (s.rocketColor === undefined) {
+          s.rocketColor = randomColorInt();
+        }
+        return s as Store;
+      },
     },
   ),
 );
