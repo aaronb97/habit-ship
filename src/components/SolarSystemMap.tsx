@@ -8,8 +8,6 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { CopyShader } from 'three/examples/jsm/shaders/CopyShader.js';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
-import { Asset } from 'expo-asset';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type {
   PinchGestureHandlerEventPayload,
@@ -37,6 +35,17 @@ import {
 } from './solarsystem/builders';
 import { loadBodyTextures } from './solarsystem/textures';
 import { createSky } from './solarsystem/sky';
+import {
+  updateOrbitCamera,
+  vantageForProgress,
+  computeScriptedCameraTargets,
+  CameraPhase,
+} from './solarsystem/camera';
+import {
+  loadRocket,
+  computeAimPosition,
+  orientAndSpinRocket,
+} from './solarsystem/rocket';
 import {
   MAX_PITCH_RAD,
   ORBIT_INITIAL_RADIUS,
@@ -78,12 +87,9 @@ import {
   OUTLINE_MIN_ENABLED_FACTOR,
   ROCKET_SURFACE_OFFSET,
   ROCKET_LANDING_CLEARANCE,
-  ROCKET_MODEL_SCALE,
-  DEFAULT_ROCKET_FORWARD,
-  ROCKET_SPIN_SPEED,
-  PLANE_NORMAL_EPS,
-  HELPER_AXIS_THRESHOLD,
-  ECLIPTIC_UP,
+  HABIT_TRAVEL_ANIM_MS,
+  CAMERA_MOVE_MS,
+  CAMERA_HOLD_MS,
 } from './solarsystem/constants';
 
 // [moved] Helpers moved to './solarsystem/helpers'.
@@ -156,44 +162,15 @@ export function SolarSystemMap() {
     return systems;
   }, []);
 
-  // Animate between previous and current traveled distances per habit completion
-  const HABIT_TRAVEL_ANIM_MS = 3000; // duration for visual travel per completion
-  const CAMERA_MOVE_MS = 5000;
-  const CAMERA_HOLD_MS = 1000; // then holds 1s before rocket anim begins
+  // Animation durations imported from constants
 
   // Helpers
   const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
   const easeInOutCubic = (t: number) =>
     t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-  const lerpAngle = (a: number, b: number, t: number) => {
-    let diff = ((b - a + Math.PI) % (2 * Math.PI)) - Math.PI; // shortest path
-    if (diff < -Math.PI) diff += 2 * Math.PI;
-    return a + diff * t;
-  };
-
-  const vantageForProgress = useCallback((p: number) => {
-    // Map absolute journey progress to camera yaw/pitch
-    const PITCH_HIGH = MAX_PITCH_RAD * 0.95; // almost straight-down
-    const PITCH_LOW = 0.06; // near-plane
-    const YAW_AHEAD = 0; // in direction of travel
-    const YAW_SIDE = Math.PI / 2; // side-on
-    const YAW_BEHIND = Math.PI; // behind rocket
-    const s = (e0: number, e1: number, x: number) => {
-      const t = Math.min(1, Math.max(0, (x - e0) / Math.max(1e-9, e1 - e0)));
-      return t * t * (3 - 2 * t);
-    };
-
-    const l = (a: number, b: number, t: number) => a + (b - a) * t;
-    const yaw =
-      p <= 0.5
-        ? l(YAW_AHEAD, YAW_SIDE, s(0.0, 0.5, p))
-        : l(YAW_SIDE, YAW_BEHIND, s(0.5, 1.0, p));
-
-    const pitch = l(PITCH_HIGH, PITCH_LOW, s(0.1, 0.9, p));
-    return { yaw, pitch };
-  }, []);
+  // Use modular vantage calculator
+  const vantageForProgressCb = useCallback(vantageForProgress, []);
 
   // When focused, drive animation timing from focus start or latest distance change
   const focusAnimStartRef = useRef<number | null>(null);
@@ -225,8 +202,8 @@ export function SolarSystemMap() {
       );
 
       const toAbs = Math.min(1, Math.max(0, (distanceTraveled ?? 0) / denom));
-      vantageStartRef.current = vantageForProgress(fromAbs);
-      vantageEndRef.current = vantageForProgress(toAbs);
+      vantageStartRef.current = vantageForProgressCb(fromAbs);
+      vantageEndRef.current = vantageForProgressCb(toAbs);
       if (pending) {
         yawVelocityRef.current = 0;
         pitchVelocityRef.current = 0;
@@ -245,7 +222,7 @@ export function SolarSystemMap() {
     } else {
       focusAnimStartRef.current = null;
     }
-  }, [isFocusedValue, vantageForProgress]);
+  }, [isFocusedValue, vantageForProgressCb]);
 
   // Reset animation start when distance updates while focused
   const prevDistanceRef = useRef<{ prev?: number; curr?: number }>({});
@@ -272,8 +249,8 @@ export function SolarSystemMap() {
 
       const fromAbs = clamp01((previousDistanceTraveledVal ?? 0) / denom);
       const toAbs = clamp01((distanceTraveledVal ?? 0) / denom);
-      vantageStartRef.current = vantageForProgress(fromAbs);
-      vantageEndRef.current = vantageForProgress(toAbs);
+      vantageStartRef.current = vantageForProgressCb(fromAbs);
+      vantageEndRef.current = vantageForProgressCb(toAbs);
       // Stop inertial motion and set zoom radius target for the move
       yawVelocityRef.current = 0;
       pitchVelocityRef.current = 0;
@@ -293,7 +270,7 @@ export function SolarSystemMap() {
       prev: previousDistanceTraveledVal,
       curr: distanceTraveledVal,
     };
-  }, [distanceTraveledVal, previousDistanceTraveledVal, vantageForProgress]);
+  }, [distanceTraveledVal, previousDistanceTraveledVal, vantageForProgressCb]);
 
   const animAlphaRef = useRef(0);
   const animSyncedRef = useRef(true);
@@ -311,6 +288,7 @@ export function SolarSystemMap() {
   );
 
   const scriptedCameraActiveRef = useRef(false);
+  const lastCameraPhaseRef = useRef<CameraPhase>(CameraPhase.Idle);
 
   // Helper: read visual radius (scene units) for a body
   const getVisualRadius = useCallback((name: string): number => {
@@ -431,16 +409,7 @@ export function SolarSystemMap() {
     const camera = cameraRef.current;
     if (!camera) return;
 
-    const r = radiusRef.current;
-    const theta = yawRef.current; // orbit angle within the plane
-    const phi = THREE.MathUtils.clamp(
-      pitchRef.current,
-      -MAX_PITCH_RAD,
-      MAX_PITCH_RAD,
-    );
-
     // Positions in scene units
-    const sun = new THREE.Vector3(0, 0, 0);
     const user = rocketRef.current
       ? rocketRef.current.position.clone()
       : displayUserPosRef.current.clone();
@@ -451,69 +420,14 @@ export function SolarSystemMap() {
     // Center of orbit: the user's position.
     const center = user.clone();
 
-    // Plane normal defined by the three points (sun, user, target)
-    const n = new THREE.Vector3();
-    {
-      const a = user.clone().sub(sun);
-      const b = target.clone().sub(sun);
-      n.copy(a.cross(b));
-    }
-
-    // Handle degeneracy (collinear or very small normal)
-    if (n.lengthSq() < PLANE_NORMAL_EPS) {
-      const a = user.clone().sub(sun);
-      const helper =
-        Math.abs(a.y) < HELPER_AXIS_THRESHOLD
-          ? new THREE.Vector3(0, 1, 0)
-          : new THREE.Vector3(1, 0, 0);
-
-      n.copy(a.clone().cross(helper));
-      if (n.lengthSq() < PLANE_NORMAL_EPS) n.set(0, 1, 0);
-    }
-
-    // Normalize and enforce a consistent hemisphere so the view never flips.
-    n.normalize();
-    if (n.dot(ECLIPTIC_UP) > 0) n.multiplyScalar(-1);
-
-    // Orthonormal basis (U, V) spanning the plane with a stable orientation.
-    // Start from the target direction projected into the plane. If degenerate, use
-    // a stable reference (ECLIPTIC_UP x n) instead of arbitrary axes.
-    let U = target.clone().sub(center).projectOnPlane(n);
-    if (U.lengthSq() < PLANE_NORMAL_EPS) {
-      U = ECLIPTIC_UP.clone().cross(n);
-      if (U.lengthSq() < PLANE_NORMAL_EPS) {
-        // Fallback if n is nearly aligned with ECLIPTIC_UP
-        const helper =
-          Math.abs(n.y) < HELPER_AXIS_THRESHOLD
-            ? new THREE.Vector3(0, 1, 0)
-            : new THREE.Vector3(1, 0, 0);
-
-        U = helper.clone().cross(n);
-      }
-    }
-
-    U.normalize();
-    const V = n.clone().cross(U).normalize();
-
-    // Spherical placement: radius r from center, yaw around (U,V) plane by theta,
-    // elevation from plane by phi along normal n.
-    const rCos = r * Math.cos(phi);
-    const rSin = r * Math.sin(phi);
-    const circleOffset = U.clone()
-      .multiplyScalar(Math.cos(theta) * rCos)
-      .add(V.clone().multiplyScalar(Math.sin(theta) * rCos));
-
-    const desiredPos = center
-      .clone()
-      .add(n.clone().multiplyScalar(rSin))
-      .add(circleOffset);
-
-    camera.position.copy(desiredPos);
-    // Keep camera "up" aligned to the (sign-stabilized) plane normal to minimize roll
-    camera.up.copy(n);
-
-    // Look at the center of the plane to keep sun, user, and target framed
-    camera.lookAt(center);
+    updateOrbitCamera(
+      camera,
+      center,
+      target,
+      yawRef.current,
+      pitchRef.current,
+      radiusRef.current,
+    );
   }, []);
 
   // Double-tap: smoothly zoom camera to default radius
@@ -690,37 +604,11 @@ export function SolarSystemMap() {
 
       // Load Rocket OBJ and apply persistent color
       try {
-        const rocketAsset = Asset.fromModule(
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          require('../../assets/Rocket.obj'),
-        );
-
-        await rocketAsset.downloadAsync();
-        const loader = new OBJLoader();
-        const uri = rocketAsset.localUri ?? rocketAsset.uri;
-        const obj: THREE.Group = await new Promise((resolve, reject) => {
-          loader.load(uri, resolve, undefined, reject);
-        });
-
-        const rocketColor = rocketColorFromStore;
-
-        obj.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            const mesh = child as THREE.Mesh;
-            mesh.material = new THREE.MeshLambertMaterial({
-              color: rocketColor,
-            });
-          }
-        });
-
-        obj.scale.setScalar(ROCKET_MODEL_SCALE);
+        const obj = await loadRocket(rocketColorFromStore);
         rocketRef.current = obj;
         scene.add(obj);
       } catch (e) {
-        console.warn(
-          '[SolarSystemMap] Failed to load Rocket.obj, skipping model',
-        );
-
+        console.warn('[SolarSystemMap] Failed to load Rocket.obj, skipping model');
         console.warn(e);
       }
 
@@ -854,35 +742,25 @@ export function SolarSystemMap() {
           !isPanningRef.current &&
           vantageStartRef.current &&
           focusAnimStartRef.current &&
-          scheduleRef.current
+          scheduleRef.current &&
+          cameraStartRef.current
         ) {
           const nowTs = getCurrentTime();
-          const elapsed = Math.max(0, nowTs - focusAnimStartRef.current);
-          const preRoll = CAMERA_MOVE_MS + CAMERA_HOLD_MS;
           const { rocketEnd } = scheduleRef.current;
           if (nowTs >= rocketEnd) {
             scriptedCameraActiveRef.current = false;
-          } else if (elapsed < CAMERA_MOVE_MS && cameraStartRef.current) {
-            const u = clamp01(elapsed / CAMERA_MOVE_MS);
-            const start = cameraStartRef.current;
-            const v0 = vantageStartRef.current;
-            yawTargetRef.current = lerpAngle(start.yaw, v0.yaw, u);
-            pitchTargetRef.current = lerp(start.pitch, v0.pitch, u);
-            radiusTargetRef.current = ORBIT_INITIAL_RADIUS;
-          } else if (elapsed < preRoll) {
-            const v0 = vantageStartRef.current;
-            yawTargetRef.current = v0.yaw;
-            pitchTargetRef.current = v0.pitch;
-            radiusTargetRef.current = ORBIT_INITIAL_RADIUS;
           } else {
-            // During rocket animation, smoothly shift vantage toward the end vantage
-            const v0 = vantageStartRef.current;
-            const v1 = vantageEndRef.current ?? v0;
-            const alpha = clamp01((elapsed - preRoll) / HABIT_TRAVEL_ANIM_MS);
-            const e = easeInOutCubic(alpha);
-            yawTargetRef.current = lerpAngle(v0.yaw, v1.yaw, e);
-            pitchTargetRef.current = lerp(v0.pitch, v1.pitch, e);
-            radiusTargetRef.current = ORBIT_INITIAL_RADIUS;
+            const res = computeScriptedCameraTargets({
+              nowTs,
+              focusAnimStart: focusAnimStartRef.current,
+              cameraStart: cameraStartRef.current,
+              vantageStart: vantageStartRef.current,
+              vantageEnd: vantageEndRef.current ?? vantageStartRef.current,
+            });
+            lastCameraPhaseRef.current = res.phase;
+            yawTargetRef.current = res.yawTarget;
+            pitchTargetRef.current = res.pitchTarget;
+            radiusTargetRef.current = res.radiusTarget;
           }
         }
 
@@ -910,39 +788,17 @@ export function SolarSystemMap() {
             toVec3(targetBody.getPosition()),
           );
 
-          const dir = targetCenter.clone().sub(startCenter);
-          const dirN = dir.clone().normalize();
-          const targetR =
-            getVisualRadius(targetBody.name) * (1 + ROCKET_SURFACE_OFFSET);
-
-          const aimPos = targetCenter
-            .clone()
-            .sub(
-              dirN.clone().multiplyScalar(targetR + ROCKET_LANDING_CLEARANCE),
-            );
-
-          // Orient rocket so its forward axis points toward aim target
-          const dirToTarget = aimPos.clone().sub(rocket.position);
-          if (dirToTarget.lengthSq() > 1e-12) {
-            dirToTarget.normalize();
-            const qLook = new THREE.Quaternion().setFromUnitVectors(
-              DEFAULT_ROCKET_FORWARD,
-              dirToTarget,
-            );
-
-            // Accumulate spin angle and apply twist around local forward using rotateOnAxis
-            if (isTraveling(useStore.getState())) {
-              rocketSpinAngleRef.current += ROCKET_SPIN_SPEED;
-            } else {
-              rocketSpinAngleRef.current *= 0.95;
-            }
-
-            rocket.quaternion.copy(qLook);
-            rocket.rotateOnAxis(
-              DEFAULT_ROCKET_FORWARD,
-              rocketSpinAngleRef.current,
-            );
-          }
+          const aimPos = computeAimPosition(
+            startCenter,
+            targetCenter,
+            getVisualRadius(targetBody.name),
+          );
+          rocketSpinAngleRef.current = orientAndSpinRocket(
+            rocket,
+            aimPos,
+            isTraveling(useStore.getState()),
+            rocketSpinAngleRef.current,
+          );
         }
 
         // 2) Update planet positions (in case date offset changes)

@@ -1,0 +1,196 @@
+import * as THREE from 'three';
+import {
+  MAX_PITCH_RAD,
+  PLANE_NORMAL_EPS,
+  HELPER_AXIS_THRESHOLD,
+  ECLIPTIC_UP,
+  ORBIT_INITIAL_RADIUS,
+  CAMERA_MOVE_MS,
+  CAMERA_HOLD_MS,
+  HABIT_TRAVEL_ANIM_MS,
+} from './constants';
+
+export type CameraState = {
+  yaw: number;
+  pitch: number;
+  radius: number;
+};
+
+export type Vantage = { yaw: number; pitch: number };
+
+export type CameraStart = CameraState;
+
+export type ScriptSchedule = { preRollEnd: number; rocketEnd: number };
+
+// eslint-disable-next-line no-shadow
+export enum CameraPhase {
+  Idle = 'Idle',
+  PreRollMove = 'PreRollMove',
+  Hold = 'Hold',
+  RocketFollow = 'RocketFollow',
+  Complete = 'Complete',
+}
+
+export function clamp01(x: number) {
+  return Math.min(1, Math.max(0, x));
+}
+
+export function easeInOutCubic(t: number) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+export function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t;
+}
+
+export function lerpAngle(a: number, b: number, t: number) {
+  let diff = ((b - a + Math.PI) % (2 * Math.PI)) - Math.PI;
+  if (diff < -Math.PI) diff += 2 * Math.PI;
+  return a + diff * t;
+}
+
+export function vantageForProgress(p: number): Vantage {
+  // Map absolute journey progress to camera yaw/pitch
+  const PITCH_HIGH = MAX_PITCH_RAD * 0.95; // almost straight-down
+  const PITCH_LOW = 0.06; // near-plane
+  const YAW_AHEAD = 0; // in direction of travel
+  const YAW_SIDE = Math.PI / 2; // side-on
+  const YAW_BEHIND = Math.PI; // behind rocket
+  const s = (e0: number, e1: number, x: number) => {
+    const t = Math.min(1, Math.max(0, (x - e0) / Math.max(1e-9, e1 - e0)));
+    return t * t * (3 - 2 * t);
+  };
+
+  const l = (a: number, b: number, t: number) => a + (b - a) * t;
+  const yaw =
+    p <= 0.5
+      ? l(YAW_AHEAD, YAW_SIDE, s(0.0, 0.5, p))
+      : l(YAW_SIDE, YAW_BEHIND, s(0.5, 1.0, p));
+
+  const pitch = l(PITCH_HIGH, PITCH_LOW, s(0.1, 0.9, p));
+  return { yaw, pitch };
+}
+
+export function updateOrbitCamera(
+  camera: THREE.PerspectiveCamera,
+  center: THREE.Vector3,
+  target: THREE.Vector3,
+  yaw: number,
+  pitch: number,
+  radius: number,
+) {
+  // Positions in scene units
+  const sun = new THREE.Vector3(0, 0, 0);
+
+  const theta = yaw; // orbit angle within the plane
+  const phi = THREE.MathUtils.clamp(pitch, -MAX_PITCH_RAD, MAX_PITCH_RAD);
+
+  // Plane normal defined by the three points (sun, user, target)
+  const n = new THREE.Vector3();
+  {
+    const a = center.clone().sub(sun);
+    const b = target.clone().sub(sun);
+    n.copy(a.cross(b));
+  }
+
+  // Handle degeneracy (collinear or very small normal)
+  if (n.lengthSq() < PLANE_NORMAL_EPS) {
+    const a = center.clone().sub(sun);
+    const helper =
+      Math.abs(a.y) < HELPER_AXIS_THRESHOLD
+        ? new THREE.Vector3(0, 1, 0)
+        : new THREE.Vector3(1, 0, 0);
+
+    n.copy(a.clone().cross(helper));
+    if (n.lengthSq() < PLANE_NORMAL_EPS) n.set(0, 1, 0);
+  }
+
+  // Normalize and enforce a consistent hemisphere so the view never flips.
+  n.normalize();
+  if (n.dot(ECLIPTIC_UP) > 0) n.multiplyScalar(-1);
+
+  // Orthonormal basis (U, V) spanning the plane with a stable orientation.
+  // Start from the target direction projected into the plane. If degenerate, use
+  // a stable reference (ECLIPTIC_UP x n) instead of arbitrary axes.
+  let U = target.clone().sub(center).projectOnPlane(n);
+  if (U.lengthSq() < PLANE_NORMAL_EPS) {
+    U = ECLIPTIC_UP.clone().cross(n);
+    if (U.lengthSq() < PLANE_NORMAL_EPS) {
+      // Fallback if n is nearly aligned with ECLIPTIC_UP
+      const helper =
+        Math.abs(n.y) < HELPER_AXIS_THRESHOLD
+          ? new THREE.Vector3(0, 1, 0)
+          : new THREE.Vector3(1, 0, 0);
+      U = helper.clone().cross(n);
+    }
+  }
+
+  U.normalize();
+  const V = n.clone().cross(U).normalize();
+
+  // Spherical placement: radius r from center, yaw around (U,V) plane by theta,
+  // elevation from plane by phi along normal n.
+  const rCos = radius * Math.cos(phi);
+  const rSin = radius * Math.sin(phi);
+  const circleOffset = U.clone()
+    .multiplyScalar(Math.cos(theta) * rCos)
+    .add(V.clone().multiplyScalar(Math.sin(theta) * rCos));
+
+  const desiredPos = center
+    .clone()
+    .add(n.clone().multiplyScalar(rSin))
+    .add(circleOffset);
+
+  camera.position.copy(desiredPos);
+  // Keep camera "up" aligned to the (sign-stabilized) plane normal to minimize roll
+  camera.up.copy(n);
+
+  // Look at the center of the plane to keep sun, user, and target framed
+  camera.lookAt(center);
+}
+
+export function computeScriptedCameraTargets(params: {
+  nowTs: number;
+  focusAnimStart: number;
+  cameraStart: CameraStart;
+  vantageStart: Vantage;
+  vantageEnd: Vantage;
+}): {
+  phase: CameraPhase;
+  yawTarget: number;
+  pitchTarget: number;
+  radiusTarget: number;
+} {
+  const { nowTs, focusAnimStart, cameraStart, vantageStart, vantageEnd } =
+    params;
+  const elapsed = Math.max(0, nowTs - focusAnimStart);
+  const preRoll = CAMERA_MOVE_MS + CAMERA_HOLD_MS;
+
+  if (elapsed < CAMERA_MOVE_MS) {
+    const u = clamp01(elapsed / CAMERA_MOVE_MS);
+    return {
+      phase: CameraPhase.PreRollMove,
+      yawTarget: lerpAngle(cameraStart.yaw, vantageStart.yaw, u),
+      pitchTarget: lerp(cameraStart.pitch, vantageStart.pitch, u),
+      radiusTarget: ORBIT_INITIAL_RADIUS,
+    };
+  }
+
+  if (elapsed < preRoll) {
+    return {
+      phase: CameraPhase.Hold,
+      yawTarget: vantageStart.yaw,
+      pitchTarget: vantageStart.pitch,
+      radiusTarget: ORBIT_INITIAL_RADIUS,
+    };
+  }
+
+  const alpha = clamp01((elapsed - preRoll) / HABIT_TRAVEL_ANIM_MS);
+  const e = easeInOutCubic(alpha);
+  return {
+    phase: CameraPhase.RocketFollow,
+    yawTarget: lerpAngle(vantageStart.yaw, vantageEnd.yaw, e),
+    pitchTarget: lerp(vantageStart.pitch, vantageEnd.pitch, e),
+    radiusTarget: ORBIT_INITIAL_RADIUS,
+  };
+}

@@ -131,3 +131,8 @@ export const DEFAULT_ROCKET_FORWARD = new THREE.Vector3(0, 1, 0); // assumed mod
 export const ROCKET_LANDING_CLEARANCE = 0.005;
 
 export const TRAIL_LENGTH_MULTIPLIER = 0.75;
+
+// Animation durations (ms)
+export const HABIT_TRAVEL_ANIM_MS = 3000; // duration for visual travel per completion
+export const CAMERA_MOVE_MS = 2000; // camera move into starting vantage
+export const CAMERA_HOLD_MS = 1000; // hold before rocket animation begins
