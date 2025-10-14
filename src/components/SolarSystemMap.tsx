@@ -50,7 +50,6 @@ import {
   MAX_PITCH_RAD,
   ORBIT_INITIAL_RADIUS,
   ORBIT_INITIAL_YAW,
-  ORBIT_DEFAULT_HEIGHT_RATIO,
   AUTO_ROTATE_YAW_SPEED,
   SMOOTHING_YAW,
   SMOOTHING_PITCH,
@@ -393,8 +392,7 @@ export function SolarSystemMap() {
   const radiusRef = useRef(ORBIT_INITIAL_RADIUS);
   const radiusTargetRef = useRef(radiusRef.current);
   const yawRef = useRef(ORBIT_INITIAL_YAW); // phase angle for orbit within the plane
-  // Elevation angle from the plane; default matches previous fixed height (~ORBIT_DEFAULT_HEIGHT_RATIO of radius)
-  const pitchRef = useRef(Math.asin(ORBIT_DEFAULT_HEIGHT_RATIO));
+  const pitchRef = useRef(0);
   // Tweened camera orbit state
   const yawTargetRef = useRef(yawRef.current);
   const yawVelocityRef = useRef(0);
@@ -608,7 +606,9 @@ export function SolarSystemMap() {
         rocketRef.current = obj;
         scene.add(obj);
       } catch (e) {
-        console.warn('[SolarSystemMap] Failed to load Rocket.obj, skipping model');
+        console.warn(
+          '[SolarSystemMap] Failed to load Rocket.obj, skipping model',
+        );
         console.warn(e);
       }
 
@@ -708,6 +708,7 @@ export function SolarSystemMap() {
       // Animation loop
       const renderLoop = () => {
         const { showTrails, logFPS } = useStore.getState();
+        console.log({ pitch: pitchRef.current, yaw: yawRef.current });
 
         // No per-frame spin integration; positions only
         // Compute display user position for this frame
@@ -759,13 +760,10 @@ export function SolarSystemMap() {
             });
             lastCameraPhaseRef.current = res.phase;
             yawTargetRef.current = res.yawTarget;
-            pitchTargetRef.current = res.pitchTarget;
+            // Do not modify pitch via scripted animation; user panning controls pitch exclusively
             radiusTargetRef.current = res.radiusTarget;
           }
         }
-
-        // Update dynamic positions
-        // 1) User rocket follows latest position and orientation
         if (rocketRef.current) {
           const rocket = rocketRef.current;
           rocket.position.copy(displayUserPosRef.current);

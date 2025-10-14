@@ -171,7 +171,8 @@ export function computeScriptedCameraTargets(params: {
     return {
       phase: CameraPhase.PreRollMove,
       yawTarget: lerpAngle(cameraStart.yaw, vantageStart.yaw, u),
-      pitchTarget: lerp(cameraStart.pitch, vantageStart.pitch, u),
+      // Keep pitch anchored at the starting value during pre-roll so initial load pitch stays at 0
+      pitchTarget: cameraStart.pitch,
       radiusTarget: ORBIT_INITIAL_RADIUS,
     };
   }
@@ -180,7 +181,8 @@ export function computeScriptedCameraTargets(params: {
     return {
       phase: CameraPhase.Hold,
       yawTarget: vantageStart.yaw,
-      pitchTarget: vantageStart.pitch,
+      // Continue holding the starting pitch value during the hold phase
+      pitchTarget: cameraStart.pitch,
       radiusTarget: ORBIT_INITIAL_RADIUS,
     };
   }
@@ -190,7 +192,8 @@ export function computeScriptedCameraTargets(params: {
   return {
     phase: CameraPhase.RocketFollow,
     yawTarget: lerpAngle(vantageStart.yaw, vantageEnd.yaw, e),
-    pitchTarget: lerp(vantageStart.pitch, vantageEnd.pitch, e),
+    // Keep pitch anchored at the starting value during rocket follow as well
+    pitchTarget: cameraStart.pitch,
     radiusTarget: ORBIT_INITIAL_RADIUS,
   };
 }

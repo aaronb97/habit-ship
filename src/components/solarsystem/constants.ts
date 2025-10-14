@@ -33,7 +33,7 @@ export const ORBIT_INITIAL_RADIUS = 0.2;
 // Default yaw angle at start.
 export const ORBIT_INITIAL_YAW = 2;
 // Initial height as a fraction of the radius; pitch starts at asin of this value.
-export const ORBIT_DEFAULT_HEIGHT_RATIO = 0.35;
+export const ORBIT_DEFAULT_HEIGHT_RATIO = 0;
 // Idle autorotation speed (radians per frame) when user is not interacting.
 export const AUTO_ROTATE_YAW_SPEED = 0.001;
 // Smoothing factors for tweening toward target yaw/pitch/radius.
