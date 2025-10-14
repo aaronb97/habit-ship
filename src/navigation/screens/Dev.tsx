@@ -10,7 +10,7 @@ import { colors, fonts } from '../../styles/theme';
 import { useStore } from '../../utils/store';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { advanceTime, getCurrentDate } from '../../utils/time';
-import { cBodies, Planet } from '../../planets';
+import { cBodies } from '../../planets';
 
 export function Dev() {
   const store = useStore();
@@ -61,17 +61,15 @@ export function Dev() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Warp To Planet</Text>
           <View style={styles.buttonGrid}>
-            {cBodies
-              .filter((b) => b instanceof Planet)
-              .map((p) => (
-                <TouchableOpacity
-                  key={p.name}
-                  style={styles.warpButton}
-                  onPress={() => warpTo(p.name)}
-                >
-                  <Text style={styles.warpButtonText}>{p.name}</Text>
-                </TouchableOpacity>
-              ))}
+            {cBodies.map((p) => (
+              <TouchableOpacity
+                key={p.name}
+                style={styles.warpButton}
+                onPress={() => warpTo(p.name)}
+              >
+                <Text style={styles.warpButtonText}>{p.name}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
