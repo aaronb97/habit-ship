@@ -7,7 +7,7 @@ export type DailyPosition = {
 };
 
 export type UserPosition = {
-  currentLocation: string; // Planet/moon name if landed or the starting position if traveling
+  startingLocation: string; // Planet/moon name if landed or the starting position if traveling
   target?: {
     name: string;
     position: Coordinates;

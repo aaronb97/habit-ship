@@ -10,7 +10,7 @@ export function JourneyDisplay() {
   // Determine what to display
   const displayLocation = userPosition.target
     ? userPosition.target.name
-    : userPosition.currentLocation;
+    : userPosition.startingLocation;
 
   const isTraveling = useIsTraveling();
 

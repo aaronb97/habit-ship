@@ -37,7 +37,7 @@ describe('store', () => {
       isSetupFinished: false,
       habits: [],
       userPosition: {
-        currentLocation: 'Earth',
+        startingLocation: 'Earth',
       },
       completedPlanets: [],
     });
@@ -248,7 +248,7 @@ describe('store', () => {
     }
 
     expect(traveling.current).toBe(false);
-    expect(result.current.userPosition.currentLocation).toBe('The Moon');
+    expect(result.current.userPosition.startingLocation).toBe('The Moon');
     expect(result.current.userPosition.target).toBeUndefined();
     expect(result.current.completedPlanets.includes('The Moon')).toBe(true);
   });
@@ -268,7 +268,7 @@ describe('store', () => {
 
     expect(result.current.isSetupFinished).toBe(false);
     expect(result.current.habits).toEqual([]);
-    expect(result.current.userPosition.currentLocation).toBe('Earth');
+    expect(result.current.userPosition.startingLocation).toBe('Earth');
     expect(result.current.userPosition.target).toBeUndefined();
     expect(result.current.completedPlanets).toEqual(['Earth']);
   });

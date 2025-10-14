@@ -26,7 +26,7 @@ export function usePlanets(): PlanetWithDistance[] {
     .filter((body) => body instanceof Planet || body instanceof Moon)
     .filter((planet) => {
       // Filter out current location when not traveling
-      if (!isTraveling && planet.name === userPosition.currentLocation) {
+      if (!isTraveling && planet.name === userPosition.startingLocation) {
         return false;
       }
 
@@ -40,7 +40,7 @@ export function usePlanets(): PlanetWithDistance[] {
       let disabledReason: string | undefined;
 
       if (
-        planet.name === userPosition.currentLocation &&
+        planet.name === userPosition.startingLocation &&
         !userPosition.target
       ) {
         disabledReason = 'You are currently on this planet';

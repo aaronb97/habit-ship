@@ -60,7 +60,7 @@ export function Home() {
     setHasShownLandingPrompt(true);
     Alert.alert(
       '🎉 Congratulations!',
-      `You have landed on ${userPosition.currentLocation}! Please select your next destination to continue your journey.`,
+      `You have landed on ${userPosition.startingLocation}! Please select your next destination to continue your journey.`,
       [
         {
           text: 'OK',

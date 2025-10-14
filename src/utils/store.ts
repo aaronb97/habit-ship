@@ -133,7 +133,7 @@ const initialData = {
   isSetupFinished: false,
   habits: [],
   userPosition: {
-    currentLocation: 'Earth',
+    startingLocation: 'Earth',
   },
   completedPlanets: ['Earth'],
   userLevel: {
@@ -198,12 +198,12 @@ export const useStore = create<Store>()(
           };
           // Initialize travel metrics toward target
           const startPos = getPlanetPosition(
-            state.userPosition.currentLocation,
+            state.userPosition.startingLocation,
           );
           const targetPos = getPlanetPosition(planetName);
           const centerDistance = calculateDistance(startPos, targetPos);
           const startBody = cBodies.find(
-            (b) => b.name === state.userPosition.currentLocation,
+            (b) => b.name === state.userPosition.startingLocation,
           );
           const targetBody = cBodies.find((b) => b.name === planetName);
           const radiusBuffer =
@@ -221,7 +221,7 @@ export const useStore = create<Store>()(
       warpTo: (planetName) => {
         set((state) => {
           // Instantly move to the specified planet and clear any travel state
-          state.userPosition.currentLocation = planetName;
+          state.userPosition.startingLocation = planetName;
           state.userPosition.target = undefined;
           state.userPosition.launchTime = undefined;
           state.userPosition.initialDistance = undefined;
@@ -249,7 +249,7 @@ export const useStore = create<Store>()(
             },
           ],
           userPosition: {
-            currentLocation: 'Earth',
+            startingLocation: 'Earth',
             target: {
               name: 'The Moon',
               position: moon.getPosition(),
@@ -311,7 +311,7 @@ export const useStore = create<Store>()(
               const isNewPlanet =
                 !state.completedPlanets.includes(destinationName);
 
-              state.userPosition.currentLocation = destinationName;
+              state.userPosition.startingLocation = destinationName;
               state.userPosition.target = undefined;
               state.userPosition.launchTime = undefined;
               state.userPosition.initialDistance = undefined;
@@ -464,7 +464,7 @@ function getCurrentPosition(position: UserPosition) {
     position.initialDistance !== undefined &&
     position.distanceTraveled !== undefined
   ) {
-    const start = getPlanetPosition(position.currentLocation);
+    const start = getPlanetPosition(position.startingLocation);
     const target = getPlanetPosition(position.target.name);
     const denom = position.initialDistance === 0 ? 1 : position.initialDistance;
     const t = Math.min(1, Math.max(0, position.distanceTraveled / denom));
@@ -478,7 +478,7 @@ function getCurrentPosition(position: UserPosition) {
 
   // Otherwise, use the current body's true position
   return (
-    cBodies.find((p) => p.name === position.currentLocation) ?? earth
+    cBodies.find((p) => p.name === position.startingLocation) ?? earth
   ).getPosition();
 }
 

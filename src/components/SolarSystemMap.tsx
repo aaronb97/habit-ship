@@ -459,7 +459,7 @@ export function SolarSystemMap() {
   // Determine which planet systems are relevant for rendering moons
   const getRelevantPlanetSystems = useCallback((): Set<string> => {
     const systems = new Set<string>();
-    const { currentLocation, target } = useStore.getState().userPosition;
+    const { startingLocation, target } = useStore.getState().userPosition;
 
     const addSystemForName = (name: string | undefined) => {
       if (!name) return;
@@ -472,7 +472,7 @@ export function SolarSystemMap() {
       }
     };
 
-    addSystemForName(currentLocation);
+    addSystemForName(startingLocation);
     addSystemForName(target?.name);
 
     return systems;
@@ -533,7 +533,7 @@ export function SolarSystemMap() {
     // If traveling, place user between start and target using distance proportion
     const {
       target,
-      currentLocation,
+      startingLocation,
       initialDistance,
       distanceTraveled,
       previousDistanceTraveled,
@@ -565,7 +565,7 @@ export function SolarSystemMap() {
       const t = Math.min(1, Math.max(0, effectiveTraveled / initialDistance));
 
       const startBody =
-        PLANETS.find((b) => b.name === currentLocation) ?? earth;
+        PLANETS.find((b) => b.name === startingLocation) ?? earth;
       const targetBody = PLANETS.find((b) => b.name === target.name) ?? earth;
 
       const startCenter = adjustPositionForOrbits(
@@ -598,7 +598,7 @@ export function SolarSystemMap() {
     // Not traveling: snap to the current body's displayed position
     const body =
       PLANETS.find(
-        (b) => b.name === useStore.getState().userPosition.currentLocation,
+        (b) => b.name === useStore.getState().userPosition.startingLocation,
       ) ?? earth;
 
     const center = adjustPositionForOrbits(body, toVec3(body.getPosition()));
@@ -1064,8 +1064,8 @@ export function SolarSystemMap() {
           rocket.position.copy(displayUserPosRef.current);
 
           // Determine aim target in scene units (prefer surface endpoint when traveling)
-          const { target, currentLocation } = useStore.getState().userPosition;
-          const startName = currentLocation;
+          const { target, startingLocation } = useStore.getState().userPosition;
+          const startName = startingLocation;
           const targetName = target?.name ?? 'Earth';
           const startBody = PLANETS.find((b) => b.name === startName) ?? earth;
           const targetBody =
