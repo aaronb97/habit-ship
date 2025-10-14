@@ -93,6 +93,14 @@ type Store = {
   // Rocket appearance
   rocketColor: number;
 
+  // Animation/landing flow flags
+  // True when there is visual travel to animate between previousDistanceTraveled -> distanceTraveled
+  pendingTravelAnimation: boolean;
+  // True when user has reached target distance but landing should be finalized after the map animation
+  pendingLanding: boolean;
+  // True after landing has been finalized and Home should prompt/select next destination
+  justLanded: boolean;
+
   // Actions
   setIsSetupFinished: (value: boolean) => void;
   setDestination: (planetName: string) => void;
@@ -127,6 +135,11 @@ type Store = {
   startTimer: (habitId: HabitId) => Promise<boolean>; // Returns true on success, false on failure
   cancelTimer: () => Promise<void>;
   expireTimer: () => void; // Sync action is sufficient here
+
+  // Finalize landing after the SolarSystemMap finishes animating the last step
+  finalizeLandingAfterAnimation: () => void;
+  // Clear the justLanded flag after Home acknowledged the landing
+  acknowledgeLandingOnHome: () => void;
 };
 
 const initialData = {
@@ -151,6 +164,9 @@ const initialData = {
   showTextures: true,
   logFPS: false,
   rocketColor: randomColorInt(),
+  pendingTravelAnimation: false,
+  pendingLanding: false,
+  justLanded: false,
 } satisfies Partial<Store>;
 
 export const useStore = create<Store>()(
@@ -304,29 +320,13 @@ export const useStore = create<Store>()(
             // Record update time; do NOT update previousDistanceTraveled here.
             state.userPosition.distanceTraveled = next;
             state.lastUpdateTime = getCurrentTime();
+            state.pendingTravelAnimation = true;
 
-            // Check arrival
+            // If we've reached the destination distance, mark landing as pending.
+            // Finalization (updating startingLocation, awarding XP) will occur
+            // after the SolarSystemMap finishes animating this step.
             if (next >= (state.userPosition.initialDistance ?? 0)) {
-              const destinationName = target.name;
-              const isNewPlanet =
-                !state.completedPlanets.includes(destinationName);
-
-              state.userPosition.startingLocation = destinationName;
-              state.userPosition.target = undefined;
-              state.userPosition.launchTime = undefined;
-              state.userPosition.initialDistance = undefined;
-              state.userPosition.distanceTraveled = undefined;
-              state.userPosition.previousDistanceTraveled = undefined;
-              state.lastUpdateTime = undefined;
-
-              if (isNewPlanet) {
-                state.completedPlanets.push(destinationName);
-              }
-
-              if (isNewPlanet) {
-                // Award XP for planet completion
-                get().addXP(XP_REWARDS.PLANET_COMPLETION, 'planet_completion');
-              }
+              state.pendingLanding = true;
             }
           }
         });
@@ -415,6 +415,47 @@ export const useStore = create<Store>()(
           }
 
           console.log('Synced travel visuals');
+          state.pendingTravelAnimation = false;
+        });
+      },
+
+      finalizeLandingAfterAnimation: () => {
+        set((state) => {
+          const target = state.userPosition.target;
+          const initialDistance = state.userPosition.initialDistance ?? 0;
+          const traveled = state.userPosition.distanceTraveled ?? 0;
+          if (!target) return;
+          // Only finalize if marked pending or if traveled >= initialDistance
+          if (!state.pendingLanding && traveled < initialDistance) return;
+
+          const destinationName = target.name;
+          const isNewPlanet = !state.completedPlanets.includes(destinationName);
+
+          state.userPosition.startingLocation = destinationName;
+          state.userPosition.target = undefined;
+          state.userPosition.launchTime = undefined;
+          state.userPosition.initialDistance = undefined;
+          state.userPosition.distanceTraveled = undefined;
+          state.userPosition.previousDistanceTraveled = undefined;
+          state.lastUpdateTime = undefined;
+
+          if (isNewPlanet) {
+            state.completedPlanets.push(destinationName);
+          }
+
+          if (isNewPlanet) {
+            // Award XP for planet completion
+            get().addXP(XP_REWARDS.PLANET_COMPLETION, 'planet_completion');
+          }
+
+          state.pendingLanding = false;
+          state.justLanded = true;
+        });
+      },
+
+      acknowledgeLandingOnHome: () => {
+        set((state) => {
+          state.justLanded = false;
         });
       },
 
@@ -440,12 +481,17 @@ export const useStore = create<Store>()(
     {
       name: 'space-explorer-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 2,
+      version: 4,
       migrate: (persistedState, _version) => {
         const s = (persistedState || {}) as Partial<Store>;
         if (s.rocketColor === undefined) {
           s.rocketColor = randomColorInt();
         }
+        // Defaults for newly added flags
+        if (s.pendingTravelAnimation === undefined)
+          s.pendingTravelAnimation = false;
+        if (s.pendingLanding === undefined) s.pendingLanding = false;
+        if (s.justLanded === undefined) s.justLanded = false;
         return s as Store;
       },
     },

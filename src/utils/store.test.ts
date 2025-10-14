@@ -150,7 +150,10 @@ describe('store', () => {
     expect(result.current.habits[0]!.completions).toHaveLength(1);
     const move = getHabitDistanceForLevel(result.current.userLevel.level);
     expect(result.current.userPosition.distanceTraveled).toBeDefined();
-    expect(result.current.userPosition!.distanceTraveled).toBe(move);
+    const initialDist = result.current.userPosition.initialDistance!;
+    expect(result.current.userPosition!.distanceTraveled).toBe(
+      Math.min(initialDist, move),
+    );
     expect(traveling.current).toBe(true);
   });
 
@@ -220,7 +223,7 @@ describe('store', () => {
     })();
   });
 
-  it('should land when reaching destination after enough completions', async () => {
+  it('should land when reaching destination after enough completions (finalized after animation)', async () => {
     const { result } = renderHook(() => useStore());
     const { result: traveling } = renderHook(() => useIsTraveling());
 
@@ -246,6 +249,11 @@ describe('store', () => {
         await result.current.completeHabit(habitId);
       });
     }
+
+    // Landing is now finalized after the map animation via finalizeLandingAfterAnimation
+    act(() => {
+      result.current.finalizeLandingAfterAnimation();
+    });
 
     expect(traveling.current).toBe(false);
     expect(result.current.userPosition.startingLocation).toBe('The Moon');

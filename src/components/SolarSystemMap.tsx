@@ -444,6 +444,9 @@ export function SolarSystemMap() {
 
   const rocketColorFromStore = useStore((s) => s.rocketColor);
   const syncTravelVisuals = useStore((s) => s.syncTravelVisuals);
+  const finalizeLandingAfterAnimation = useStore(
+    (s) => s.finalizeLandingAfterAnimation,
+  );
   const isFocusedValue = useIsFocused();
   const isFocusedRef = useRef<boolean>(isFocusedValue);
   useEffect(() => {
@@ -479,7 +482,7 @@ export function SolarSystemMap() {
   }, []);
 
   // Animate between previous and current traveled distances per habit completion
-  const HABIT_TRAVEL_ANIM_MS = 1000; // duration for visual travel per completion
+  const HABIT_TRAVEL_ANIM_MS = 3000; // duration for visual travel per completion
 
   // When focused, drive animation timing from focus start or latest distance change
   const focusAnimStartRef = useRef<number | null>(null);
@@ -1051,6 +1054,10 @@ export function SolarSystemMap() {
           if (complete) {
             try {
               syncTravelVisuals();
+              // If a landing was reached by the last completion, finalize it now
+              if (useStore.getState().pendingLanding) {
+                finalizeLandingAfterAnimation();
+              }
             } finally {
               animSyncedRef.current = true;
             }
@@ -1285,6 +1292,7 @@ export function SolarSystemMap() {
       rocketColorFromStore,
       computeDisplayUserPos,
       syncTravelVisuals,
+      finalizeLandingAfterAnimation,
       getVisualRadius,
     ],
   );

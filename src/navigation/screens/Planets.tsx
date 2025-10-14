@@ -8,9 +8,17 @@ import { PlanetListItem } from '../../components/PlanetListItem';
 export function Planets() {
   const { setDestination } = useStore();
   const isTraveling = useIsTraveling();
+  const justLanded = useStore((s) => s.justLanded);
   const planetsWithDistance = useLandablePlanets();
 
   const handleSetDestination = (planetName: string) => {
+    if (justLanded) {
+      Alert.alert(
+        'Select on Home',
+        'You just landed! Please go to the Home tab to choose your next destination.',
+      );
+      return;
+    }
     if (isTraveling) {
       Alert.alert(
         'Change Destination',

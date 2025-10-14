@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Alert,
   FlatList,
   StyleSheet,
   Text,
@@ -30,11 +29,12 @@ export function Home() {
     startTimer,
     completeHabit,
     userPosition,
+    acknowledgeLandingOnHome,
   } = useStore();
 
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [hasShownLandingPrompt, setHasShownLandingPrompt] = useState(false);
+  const justLanded = useStore((s) => s.justLanded);
 
   const handleCreate = (habit: {
     title: string;
@@ -53,27 +53,12 @@ export function Home() {
     setEditingHabit(null);
   };
 
-  // Show congratulations when user lands on a planet (no target means landed)
-  const isLanded = !userPosition.target;
-
-  if (isLanded && isFocused && !hasShownLandingPrompt) {
-    setHasShownLandingPrompt(true);
-    Alert.alert(
-      '🎉 Congratulations!',
-      `You have landed on ${userPosition.startingLocation}! Please select your next destination to continue your journey.`,
-      [
-        {
-          text: 'OK',
-        },
-      ],
-      { cancelable: false },
-    );
-  }
-
-  // Reset the flag when user starts traveling again
-  if (!isLanded && hasShownLandingPrompt) {
-    setHasShownLandingPrompt(false);
-  }
+  // When user visits Home after landing, acknowledge to clear the Home tab badge
+  useEffect(() => {
+    if (isFocused && justLanded) {
+      acknowledgeLandingOnHome();
+    }
+  }, [isFocused, justLanded, acknowledgeLandingOnHome]);
 
   return (
     <SafeAreaView style={styles.container}>

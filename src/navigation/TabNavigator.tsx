@@ -5,11 +5,16 @@ import { SolarMap } from './screens/SolarMap';
 import { Dev } from './screens/Dev';
 import { colors } from '../styles/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { useStore } from '../utils/store';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
 export function TabNavigator() {
   const isDevelopment = __DEV__;
+  const pendingMapAnim = useStore(
+    (s) => s.pendingTravelAnimation || s.pendingLanding,
+  );
+  const homeNeedsSelection = useStore((s) => s.justLanded);
 
   return (
     <Tab.Navigator
@@ -28,6 +33,15 @@ export function TabNavigator() {
         component={Home}
         options={{
           title: 'Home',
+          tabBarBadge: homeNeedsSelection ? '' : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: colors.accent,
+            maxWidth: 10,
+            maxHeight: 10,
+            fontSize: 8,
+            lineHeight: 9,
+            alignSelf: undefined,
+          },
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
           ),
@@ -48,6 +62,15 @@ export function TabNavigator() {
         component={SolarMap}
         options={{
           title: 'Map',
+          tabBarBadge: pendingMapAnim ? '' : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: colors.accent,
+            maxWidth: 10,
+            maxHeight: 10,
+            fontSize: 8,
+            lineHeight: 9,
+            alignSelf: undefined,
+          },
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="planet" size={size} color={color} />
           ),
