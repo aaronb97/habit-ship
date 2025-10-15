@@ -6,7 +6,6 @@ import { Renderer } from 'expo-three';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { CopyShader } from 'three/examples/jsm/shaders/CopyShader.js';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -23,21 +22,13 @@ import { useIsFocused } from '@react-navigation/native';
 import { useDebugValues } from '../hooks/useDebugValues';
 
 // Modularized helpers/builders
-import {
-  toVec3,
-  getTrailForBody,
-  apparentScaleRatio,
-} from './solarsystem/helpers';
-import {
-  createPlanetMesh,
-  createTrailLine,
-  type MappedMaterial,
-  type PlanetMeshUserData,
-} from './solarsystem/builders';
+import { toVec3 } from './solarsystem/helpers';
+import { type MappedMaterial } from './solarsystem/builders';
 import { loadBodyTextures } from './solarsystem/textures';
 import { createSky } from './solarsystem/sky';
 import { vantageForProgress, CameraController } from './solarsystem/camera';
 import { Rocket } from './solarsystem/rocket';
+import { CelestialBodyNode, BodyNodesRegistry } from './solarsystem/bodies';
 import {
   RENDERER_CLEAR_COLOR,
   RENDERER_CLEAR_ALPHA,
@@ -50,16 +41,6 @@ import {
   SUNLIGHT_INTENSITY,
   SUNLIGHT_DISTANCE,
   SUNLIGHT_DECAY,
-  CBODY_RADIUS_MULTIPLIER,
-  PLANET_MESH_X_ROTATION,
-  OUTLINE_EDGE_GLOW,
-  OUTLINE_EDGE_THICKNESS,
-  OUTLINE_PULSE_PERIOD,
-  OUTLINE_MIN_PIXELS_FADE_OUT,
-  OUTLINE_MIN_PIXELS_FADE_IN,
-  OUTLINE_INTENSITY_SMOOTHING,
-  OUTLINE_EDGE_STRENGTH,
-  OUTLINE_MIN_ENABLED_FACTOR,
   ROCKET_LANDING_CLEARANCE,
   HABIT_TRAVEL_ANIM_MS,
   CAMERA_MOVE_MS,
@@ -85,14 +66,11 @@ export function SolarSystemMap() {
   const frameRef = useRef<number | null>(null);
   const glRef = useRef<ExpoWebGLRenderingContext | null>(null);
   const composerRef = useRef<EffectComposer | null>(null);
-  const outlinePassesRef = useRef<Record<string, OutlinePass>>({});
-  const outlineIntensityRef = useRef<Record<string, number>>({});
+  const bodyRegistryRef = useRef<BodyNodesRegistry>(new BodyNodesRegistry());
   const copyPassRef = useRef<ShaderPass | null>(null);
 
   const rocketRef = useRef<Rocket | null>(null);
-  const planetRefs = useRef<Partial<Record<string, THREE.Mesh>>>({});
   const displayUserPosRef = useRef<THREE.Vector3>(new THREE.Vector3());
-  const trailRefs = useRef<Partial<Record<string, THREE.Line>>>({});
   const skyRef = useRef<THREE.Mesh | null>(null);
 
   const showTextures = useStore((s) => s.showTextures);
@@ -265,15 +243,7 @@ export function SolarSystemMap() {
 
   // Helper: read visual radius (scene units) for a body
   const getVisualRadius = (name: string): number => {
-    const mesh = planetRefs.current[name];
-    if (!mesh) return 0;
-    const ud = mesh.userData as PlanetMeshUserData;
-    if (typeof ud.visualRadius === 'number')
-      return ud.visualRadius * mesh.scale.x;
-    const g = mesh.geometry as THREE.SphereGeometry;
-    const r = g.parameters.radius;
-    (mesh.userData as PlanetMeshUserData).visualRadius = r;
-    return r * mesh.scale.x;
+    return bodyRegistryRef.current.getVisualRadius(name);
   };
 
   const computeDisplayUserPos = (): THREE.Vector3 => {
@@ -538,85 +508,29 @@ export function SolarSystemMap() {
 
     const relevantSystems = getRelevantPlanetSystems();
 
+    // Create body nodes with encapsulated mesh/trail/outline behavior
+    const resolution = new THREE.Vector2(
+      drawingBufferWidth,
+      drawingBufferHeight,
+    );
     PLANETS.forEach((p) => {
-      // Scale each body's visual radius according to its real radius (km) relative to Earth,
-      // apply an exponential clamp to compress extremes so giants shrink and dwarfs grow relatively.
-      // Earth's displayed size remains unchanged. The Sun is kept modest for readability.
-      const radius = Math.max(100, p.radiusKm);
-      const ratioToEarth = radius / earth.radiusKm;
-      const clampedRatio = apparentScaleRatio(ratioToEarth);
-      const visualRadius = CBODY_RADIUS_MULTIPLIER * clampedRatio;
+      const texture = showTextures ? texturesByName[p.name] : undefined;
+      const node = new CelestialBodyNode({
+        body: p,
+        scene,
+        camera,
+        composer,
+        resolution,
+        texture,
+        initialTrailsEnabled: useStore.getState().showTrails,
+      });
 
-      const initialTexture = showTextures ? texturesByName[p.name] : undefined;
-
-      const mesh = createPlanetMesh(
-        p.name,
-        p.color,
-        visualRadius,
-        initialTexture,
-      );
-
-      planetRefs.current[p.name] = mesh;
-      // Store radius for screen-space calculations
-      (mesh.userData as PlanetMeshUserData).visualRadius = visualRadius;
-      // Apply base equatorial alignment and then axial tilt (deg -> rad)
-      const tiltDeg = p.axialTiltDeg ?? 0;
-      mesh.rotation.x = PLANET_MESH_X_ROTATION;
-      if (tiltDeg !== 0) {
-        mesh.rotation.z += THREE.MathUtils.degToRad(tiltDeg);
-      }
-
-      // Initialize a random rotation phase around the spin axis (local Y) and keep static.
-      // Using rotateOnAxis ensures the rotation is about the local spin axis after tilt.
-      const randomPhase = Math.random() * Math.PI * 2;
-      mesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), randomPhase);
-      mesh.position.copy(toVec3(p.getVisualPosition()));
-      // Only render moons for relevant systems on init
+      // Set initial visibility for moons based on relevant systems to reduce flicker
       if (p instanceof Moon) {
-        const allowed = relevantSystems.has(p.orbits);
-        mesh.visible = allowed;
-      } else {
-        mesh.visible = true;
+        node.setVisible(relevantSystems.has(p.orbits));
       }
 
-      scene.add(mesh);
-
-      if (p instanceof Planet || p instanceof Moon) {
-        if (useStore.getState().showTrails) {
-          const trailPoints = getTrailForBody(p);
-          const trail = createTrailLine(trailPoints, p.color);
-          if (trail) {
-            scene.add(trail);
-            trailRefs.current[p.name] = trail;
-            if (p instanceof Moon) {
-              trail.visible = relevantSystems.has(p.orbits);
-            }
-          }
-        }
-
-        // Outline pass for this planet with its associated color
-        if (composerRef.current) {
-          const outlinePass = new OutlinePass(
-            new THREE.Vector2(drawingBufferWidth, drawingBufferHeight),
-            scene,
-            camera,
-            [mesh],
-          );
-
-          // Start disabled and at zero strength; we will fade in based on screen-space size
-          outlinePass.edgeStrength = 0;
-          outlinePass.edgeGlow = OUTLINE_EDGE_GLOW;
-          outlinePass.edgeThickness = OUTLINE_EDGE_THICKNESS;
-          outlinePass.pulsePeriod = OUTLINE_PULSE_PERIOD;
-          outlinePass.visibleEdgeColor.set(p.color);
-          outlinePass.hiddenEdgeColor.set(0);
-          // Disabled until it meets the screen-space size threshold
-          outlinePass.enabled = false;
-          composerRef.current.addPass(outlinePass);
-          outlinePassesRef.current[p.name] = outlinePass;
-          outlineIntensityRef.current[p.name] = 0;
-        }
-      }
+      bodyRegistryRef.current.add(node);
     });
 
     // Add a stable final copy pass that always renders to screen
@@ -690,55 +604,19 @@ export function SolarSystemMap() {
         }
       }
 
-      // 2) Update planet positions (in case date offset changes)
-      PLANETS.forEach((p) => {
-        const mesh = planetRefs.current[p.name];
-        if (mesh) {
-          mesh.position.copy(toVec3(p.getVisualPosition()));
-        }
-      });
-
-      // Update moon visibility based on current/target systems
+      // Update all body nodes (positions, visibility, trails, outline fade)
       {
         const relevantSystemsNow = getRelevantPlanetSystems();
-        PLANETS.forEach((p) => {
-          const mesh = planetRefs.current[p.name];
-          let line = trailRefs.current[p.name];
-          if (p instanceof Moon) {
-            const allowed = relevantSystemsNow.has(p.orbits);
-            if (mesh) mesh.visible = allowed;
-            // Ensure trail exists if trails are shown and moon allowed
-            if (!line && showTrails && allowed) {
-              const points = getTrailForBody(p);
-              const created = createTrailLine(points, p.color);
-              if (created) {
-                created.visible = true;
-                trailRefs.current[p.name] = created;
-                scene.add(created);
-                line = created;
-              }
-            }
-
-            if (line) line.visible = allowed && showTrails;
-          } else if (p instanceof Planet) {
-            if (mesh) mesh.visible = true;
-            if (!line && showTrails) {
-              const points = getTrailForBody(p);
-              const created = createTrailLine(points, p.color);
-              if (created) {
-                created.visible = true;
-                trailRefs.current[p.name] = created;
-                scene.add(created);
-                line = created;
-              }
-            }
-
-            if (line) line.visible = showTrails;
-          } else {
-            // e.g., Sun — no trails
-            if (mesh) mesh.visible = true;
-          }
-        });
+        const glCtx = glRef.current;
+        if (glCtx) {
+          bodyRegistryRef.current.forEach((node) =>
+            node.update({
+              glHeight: glCtx.drawingBufferHeight,
+              relevantSystems: relevantSystemsNow,
+              showTrails,
+            }),
+          );
+        }
       }
 
       // CameraController: compute center/target and tick
@@ -765,55 +643,7 @@ export function SolarSystemMap() {
         }
       }
 
-      // Update outline visibility and fade based on apparent pixel radius
-      {
-        const cam = cameraRef.current;
-        const glCtx = glRef.current;
-        if (cam && glCtx) {
-          const heightPx = glCtx.drawingBufferHeight;
-          const vFovRad = (cam.fov * Math.PI) / 180;
-          PLANETS.forEach((p) => {
-            const mesh = planetRefs.current[p.name];
-            const pass = outlinePassesRef.current[p.name];
-            if (!mesh || !pass) return;
-            // Skip outlines for invisible meshes
-            if (!mesh.visible) {
-              outlineIntensityRef.current[p.name] = 0;
-              pass.enabled = false;
-              return;
-            }
-
-            // Determine sphere radius in world units
-            const ud = mesh.userData as PlanetMeshUserData;
-            let r: number =
-              typeof ud.visualRadius === 'number' ? ud.visualRadius : 0;
-            if (r <= 0) {
-              const g = mesh.geometry as THREE.SphereGeometry;
-              r = g.parameters.radius;
-              (mesh.userData as PlanetMeshUserData).visualRadius = r;
-            }
-
-            r *= mesh.scale.x;
-            const d = cam.position.distanceTo(mesh.position);
-            const heightWorld = 2 * d * Math.tan(vFovRad / 2);
-            const px = (r / Math.max(1e-6, heightWorld)) * heightPx;
-            const start = OUTLINE_MIN_PIXELS_FADE_OUT;
-            const end = OUTLINE_MIN_PIXELS_FADE_IN;
-            const target = THREE.MathUtils.clamp(
-              (px - start) / (end - start),
-              0,
-              1,
-            );
-
-            const prev = outlineIntensityRef.current[p.name] ?? 0;
-            const factor = prev + (target - prev) * OUTLINE_INTENSITY_SMOOTHING;
-
-            outlineIntensityRef.current[p.name] = factor;
-            pass.edgeStrength = OUTLINE_EDGE_STRENGTH * factor;
-            pass.enabled = factor > OUTLINE_MIN_ENABLED_FACTOR;
-          });
-        }
-      }
+      // (Outline fade handled within CelestialBodyNode.update)
 
       let fps = 0;
       const frameStart = performance.now();
@@ -860,10 +690,10 @@ export function SolarSystemMap() {
         composer.setSize(drawingBufferWidth, drawingBufferHeight);
       }
 
-      // Update outline pass resolution so edges stay crisp on resize
-      Object.values(outlinePassesRef.current).forEach((pass) => {
-        pass.resolution.set(drawingBufferWidth, drawingBufferHeight);
-      });
+      // Update body node outline resolutions so edges stay crisp on resize
+      bodyRegistryRef.current.setResolution(
+        new THREE.Vector2(drawingBufferWidth, drawingBufferHeight),
+      );
 
       // Update rocket outline resolution
       if (rocketRef.current) {
@@ -877,8 +707,15 @@ export function SolarSystemMap() {
   // Cleanup
   useEffect(() => {
     console.log('[SolarSystemMap] mounted');
+    const registryAtMount = bodyRegistryRef.current;
     return () => {
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
+      // Dispose body nodes first to remove their meshes and trails
+      try {
+        registryAtMount.disposeAll();
+      } catch (e) {
+        console.warn(e);
+      }
       const scene = sceneRef.current;
       if (scene) {
         scene.traverse((obj: THREE.Object3D) => {
@@ -927,16 +764,6 @@ export function SolarSystemMap() {
 
           composerRef.current = null;
         }
-
-        Object.values(outlinePassesRef.current).forEach((pass) => {
-          try {
-            pass.dispose();
-          } catch (e) {
-            console.warn(e);
-          }
-        });
-
-        outlinePassesRef.current = {};
 
         rendererRef.current.dispose();
       }
