@@ -90,13 +90,6 @@ export function Dev() {
             />
           </View>
           <View style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>Log FPS</Text>
-            <Switch
-              value={!!store.logFPS}
-              onValueChange={(v) => store.setLogFPS(v)}
-            />
-          </View>
-          <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Debug Overlay</Text>
             <Switch
               value={!!store.showDebugOverlay}

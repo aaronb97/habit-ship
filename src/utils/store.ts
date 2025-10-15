@@ -88,7 +88,6 @@ type Store = {
   // Render/debug toggles
   showTrails: boolean;
   showTextures: boolean;
-  logFPS: boolean;
   showDebugOverlay: boolean;
 
   // Rocket appearance
@@ -130,7 +129,6 @@ type Store = {
   clearData: () => void;
   setShowTrails: (value: boolean) => void;
   setShowTextures: (value: boolean) => void;
-  setLogFPS: (value: boolean) => void;
   setShowDebugOverlay: (value: boolean) => void;
 
   completeHabit: (habitId: HabitId) => Promise<void>;
@@ -164,7 +162,6 @@ const initialData = {
   timeOffset: 0,
   showTrails: true,
   showTextures: true,
-  logFPS: false,
   showDebugOverlay: false,
   rocketColor: randomColorInt(),
   pendingTravelAnimation: false,
@@ -258,11 +255,15 @@ export const useStore = create<Store>()(
       resetAllSwipes: () => set({ swipedHabitId: undefined }),
       setShowTrails: (value) => set({ showTrails: value }),
       setShowTextures: (value) => set({ showTextures: value }),
-      setLogFPS: (value) => set({ logFPS: value }),
       setShowDebugOverlay: (value) => set({ showDebugOverlay: value }),
       quickReset: () => {
+        //preserve debug values
+        const { showDebugOverlay, showTextures, showTrails } = get();
         set({
           ...initialData,
+          showDebugOverlay,
+          showTextures,
+          showTrails,
           isSetupFinished: true,
           habits: [
             {
