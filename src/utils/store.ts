@@ -89,6 +89,7 @@ type Store = {
   showTrails: boolean;
   showTextures: boolean;
   logFPS: boolean;
+  showDebugOverlay: boolean;
 
   // Rocket appearance
   rocketColor: number;
@@ -130,6 +131,7 @@ type Store = {
   setShowTrails: (value: boolean) => void;
   setShowTextures: (value: boolean) => void;
   setLogFPS: (value: boolean) => void;
+  setShowDebugOverlay: (value: boolean) => void;
 
   completeHabit: (habitId: HabitId) => Promise<void>;
   startTimer: (habitId: HabitId) => Promise<boolean>; // Returns true on success, false on failure
@@ -163,6 +165,7 @@ const initialData = {
   showTrails: true,
   showTextures: true,
   logFPS: false,
+  showDebugOverlay: false,
   rocketColor: randomColorInt(),
   pendingTravelAnimation: false,
   pendingLanding: false,
@@ -256,6 +259,7 @@ export const useStore = create<Store>()(
       setShowTrails: (value) => set({ showTrails: value }),
       setShowTextures: (value) => set({ showTextures: value }),
       setLogFPS: (value) => set({ logFPS: value }),
+      setShowDebugOverlay: (value) => set({ showDebugOverlay: value }),
       quickReset: () => {
         set({
           ...initialData,
@@ -520,6 +524,7 @@ export const useStore = create<Store>()(
           s.pendingTravelAnimation = false;
         if (s.pendingLanding === undefined) s.pendingLanding = false;
         if (s.justLanded === undefined) s.justLanded = false;
+        if (s.showDebugOverlay === undefined) s.showDebugOverlay = false;
         return s as Store;
       },
     },

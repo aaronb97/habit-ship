@@ -1,6 +1,12 @@
 // react compiler is being used, avoid using useCallback or useMemo
-import { useEffect, useRef } from 'react';
-import { View, useWindowDimensions, StyleSheet } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  View,
+  useWindowDimensions,
+  StyleSheet,
+  Text,
+  Pressable,
+} from 'react-native';
 import { GLView, type ExpoWebGLRenderingContext } from 'expo-gl';
 import { Renderer } from 'expo-three';
 import * as THREE from 'three';
@@ -20,6 +26,7 @@ import { cBodies as PLANETS, Planet, Moon, earth } from '../planets';
 import { getCurrentTime } from '../utils/time';
 import { isTraveling, useStore } from '../utils/store';
 import { useIsFocused } from '@react-navigation/native';
+import { useDebugValues } from '../hooks/useDebugValues';
 
 // Modularized helpers/builders
 import {
@@ -94,6 +101,7 @@ export function SolarSystemMap() {
   const skyRef = useRef<THREE.Mesh | null>(null);
 
   const showTextures = useStore((s) => s.showTextures);
+  const showDebugOverlay = useStore((s) => s.showDebugOverlay);
 
   const userPosState = useStore((s) => s.userPosition);
 
@@ -114,6 +122,8 @@ export function SolarSystemMap() {
       console.log('SolarSystemMap unmounted');
     };
   }, []);
+
+  // [debug publishing provided by useDebugValues hook]
 
   // Determine which planet systems are relevant for rendering moons
   const getRelevantPlanetSystems = (): Set<string> => {
@@ -249,13 +259,21 @@ export function SolarSystemMap() {
     vantageEnd: { yaw: number; pitch: number };
   } | null>(null);
 
+  // ----- Debug overlay state (generic hook) -----
+  const [debugExpanded, setDebugExpanded] = useState(false);
+  const {
+    values: debugValues,
+    history: debugHistory,
+    minMax: debugMinMax,
+    publish: publishDebug,
+  } = useDebugValues({ windowMs: 10000 });
+
   // Helper: read visual radius (scene units) for a body
   const getVisualRadius = (name: string): number => {
     const mesh = planetRefs.current[name];
     if (!mesh) return 0;
     const ud = mesh.userData as PlanetMeshUserData;
-    if (typeof ud.visualRadius === 'number')
-      return ud.visualRadius * mesh.scale.x;
+    if (typeof ud.visualRadius === 'number') return ud.visualRadius * mesh.scale.x;
     const g = mesh.geometry as THREE.SphereGeometry;
     const r = g.parameters.radius;
     (mesh.userData as PlanetMeshUserData).visualRadius = r;
@@ -611,11 +629,6 @@ export function SolarSystemMap() {
     // Animation loop
     const renderLoop = () => {
       const { showTrails, logFPS } = useStore.getState();
-      // console.log({
-      //   pitch: pitchRef.current,
-      //   yaw: yawRef.current,
-      //   targetYaw: yawTargetRef.current,
-      // });
 
       // No per-frame spin integration; positions only
       // Compute display user position for this frame
@@ -794,17 +807,27 @@ export function SolarSystemMap() {
         }
       }
 
+      let fps = 0;
+      const frameStart = performance.now();
       if (isFocusedRef.current) {
-        const frameStart = performance.now();
         if (composerRef.current) {
           composerRef.current.render();
         } else {
           renderer.render(scene, camera);
         }
-
         const elapsed = performance.now() - frameStart;
-        const fps = 1000 / elapsed;
+        fps = elapsed > 0 ? 1000 / elapsed : 0;
         if (logFPS) console.log(`FPS: ${fps.toFixed(2)}`);
+      }
+
+      // Collect debug metrics and publish via single function
+      {
+        const controller = cameraControllerRef.current;
+        const state = controller?.state;
+        const yaw = state?.yaw ?? 0;
+        const pitch = state?.pitch ?? 0;
+        const animAlpha = animAlphaRef.current;
+        publishDebug({ fps, yaw, pitch, animAlpha });
       }
 
       gl.endFrameEXP();
@@ -921,8 +944,109 @@ export function SolarSystemMap() {
           msaaSamples={GL_MSAA_SAMPLES}
           onContextCreate={onContextCreate}
         />
+        {showDebugOverlay ? (
+          <DebugOverlay
+            values={debugValues}
+            expanded={debugExpanded}
+            onToggle={() => setDebugExpanded((e) => !e)}
+            history={debugHistory}
+            minMax={debugMinMax}
+          />
+        ) : null}
       </View>
     </GestureDetector>
+  );
+}
+
+// ----- Debug Overlay Component -----
+function DebugOverlay(props: {
+  values: { [k: string]: number };
+  expanded: boolean;
+  onToggle: () => void;
+  history: Record<string, { t: number; v: number }[]>;
+  minMax: Record<string, { min: number; max: number }>;
+}) {
+  const { values, expanded, onToggle, history, minMax } = props;
+  const entries = Object.entries(values);
+
+  return (
+    <Pressable onPress={onToggle} style={styles.debugOverlay}>
+      {entries.map(([k, v]) => (
+        <View key={k} style={styles.debugRow}>
+          <Text style={styles.debugText}>
+            {k}: {Number.isFinite(v) ? v.toFixed(3) : '—'}
+          </Text>
+        </View>
+      ))}
+      {expanded ? (
+        <View style={styles.debugGraphs}>
+          {entries.map(([k]) => {
+            const stats = minMax[k];
+            const min = stats?.min ?? 0;
+            const max = stats?.max ?? 1;
+            return (
+              <View key={`g-${k}`} style={styles.debugGraphBlock}>
+                <Text style={styles.debugGraphLabel}>{k} (10s)</Text>
+                <MiniBarGraph
+                data={history[k] ?? []}
+                height={50}
+                width={220}
+                min={min}
+                max={max}
+              />
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
+    </Pressable>
+  );
+}
+
+function MiniBarGraph(props: {
+  data: { t: number; v: number }[];
+  width: number;
+  height: number;
+  min: number;
+  max: number;
+}) {
+  const { data, width, height, min, max } = props;
+  // Use last 10s already pruned; cap bars for perf
+  const cap = 120;
+  const len = data.length;
+  const step = len > cap ? Math.ceil(len / cap) : 1;
+  const sampled: number[] = [];
+  for (let i = Math.max(0, len - cap * step); i < len; i += step) {
+    const di = data[i];
+    if (di) sampled.push(di.v);
+  }
+  const range = Math.max(1e-6, max - min);
+  const barW = Math.max(1, Math.floor(width / Math.max(1, sampled.length)));
+
+  return (
+    <View style={[styles.graphContainer, { width, height }]}>
+      <View style={styles.graphBars}>
+        {sampled.map((v, idx) => {
+          const h = ((v - min) / range) * height;
+          return (
+            <View
+              key={idx}
+              style={{
+                width: barW,
+                height: Math.max(1, Math.floor(h)),
+                backgroundColor: 'rgba(0,200,255,0.9)',
+                marginRight: 1,
+                alignSelf: 'flex-end',
+              }}
+            />
+          );
+        })}
+      </View>
+      <View style={styles.graphAxisLabels}>
+        <Text style={styles.graphAxisText}>{max.toFixed(2)}</Text>
+        <Text style={styles.graphAxisText}>{min.toFixed(2)}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -939,5 +1063,63 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: 'transparent',
+  },
+  debugOverlay: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 8,
+    zIndex: 10,
+    maxWidth: 260,
+  },
+  debugHeader: {
+    color: '#9BE7FF',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  debugRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  debugText: {
+    color: '#fff',
+    fontSize: 12,
+  },
+  debugGraphs: {
+    marginTop: 8,
+  },
+  debugGraphBlock: {
+    marginBottom: 8,
+  },
+  debugGraphLabel: {
+    color: '#fff',
+    fontSize: 10,
+    marginBottom: 4,
+  },
+  graphContainer: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 4,
+    padding: 4,
+  },
+  graphBars: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    height: '100%',
+  },
+  graphAxisLabels: {
+    position: 'absolute',
+    top: 2,
+    right: 4,
+    bottom: 2,
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  graphAxisText: {
+    color: '#9BE7FF',
+    fontSize: 9,
   },
 });

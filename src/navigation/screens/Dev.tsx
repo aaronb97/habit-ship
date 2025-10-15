@@ -96,6 +96,13 @@ export function Dev() {
               onValueChange={(v) => store.setLogFPS(v)}
             />
           </View>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Debug Overlay</Text>
+            <Switch
+              value={!!store.showDebugOverlay}
+              onValueChange={(v) => store.setShowDebugOverlay(v)}
+            />
+          </View>
         </View>
 
         <View style={styles.section}>
