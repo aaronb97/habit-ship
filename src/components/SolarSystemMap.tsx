@@ -738,10 +738,15 @@ export function SolarSystemMap() {
           const controller = cameraControllerRef.current;
           const cam = cameraRef.current;
           if (controller && cam) {
-            const targetPos = useStore.getState().userPosition.target?.position;
-            const target = toVec3(targetPos ?? earth.getPosition());
+            const { target: targetState } = useStore.getState().userPosition;
+            const targetBody =
+              PLANETS.find((b) => b.name === targetState?.name) ?? earth;
+            const targetAdjusted = adjustPositionForOrbits(
+              targetBody,
+              toVec3(targetBody.getPosition()),
+            );
             const center = displayUserPosRef.current.clone();
-            controller.tick(center, target, { nowTs: getCurrentTime() });
+            controller.tick(center, targetAdjusted, { nowTs: getCurrentTime() });
           }
         }
 
