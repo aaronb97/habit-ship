@@ -214,6 +214,11 @@ export class Rocket {
     if (this.outlinePass) this.outlinePass.resolution.copy(v);
   }
 
+  setVisible(visible: boolean) {
+    this.group.visible = visible;
+    if (this.outlinePass) this.outlinePass.enabled = visible;
+  }
+
   update(
     position: THREE.Vector3,
     aimPos: THREE.Vector3,

@@ -531,6 +531,9 @@ export function SolarSystemMap() {
 
       rocketRef.current = rocket;
       scene.add(rocket.group);
+      // Hide rocket until a target is set
+      const hasTarget = !!useStore.getState().userPosition.target;
+      rocket.setVisible(hasTarget);
     } catch (e) {
       console.warn('[SolarSystemMap] Failed to create Rocket, skipping model');
       console.warn(e);
@@ -657,31 +660,35 @@ export function SolarSystemMap() {
 
       // Scripted camera progression is handled inside CameraController.tick()
       if (rocketRef.current) {
-        // Determine aim target in scene units (prefer surface endpoint when traveling)
         const { target, startingLocation } = useStore.getState().userPosition;
-        const startName = startingLocation;
-        const targetName = target?.name ?? 'Earth';
-        const startBody = PLANETS.find((b) => b.name === startName) ?? earth;
-        const targetBody = PLANETS.find((b) => b.name === targetName) ?? earth;
+        if (!target) {
+          // No target selected: keep rocket hidden and skip updates
+          rocketRef.current.setVisible(false);
+        } else {
+          rocketRef.current.setVisible(true);
+          // Determine aim target in scene units (prefer surface endpoint when traveling)
+          const startBody = PLANETS.find((b) => b.name === startingLocation) ?? earth;
+          const targetBody = PLANETS.find((b) => b.name === target.name) ?? earth;
 
-        const startCenter = toVec3(startBody.getVisualPosition());
-        const targetCenter = toVec3(targetBody.getVisualPosition());
+          const startCenter = toVec3(startBody.getVisualPosition());
+          const targetCenter = toVec3(targetBody.getVisualPosition());
 
-        const aimPos = Rocket.computeAimPosition(
-          startCenter,
-          targetCenter,
-          getVisualRadius(targetBody.name),
-        );
+          const aimPos = Rocket.computeAimPosition(
+            startCenter,
+            targetCenter,
+            getVisualRadius(targetBody.name),
+          );
 
-        // Only spin/move/exhaust when a travel animation is pending
-        const shouldAnimateTravel =
-          isFocusedRef.current && !animSyncedRef.current;
-        rocketRef.current.update(
-          displayUserPosRef.current,
-          aimPos,
-          shouldAnimateTravel,
-          animAlphaRef.current,
-        );
+          // Only spin/move/exhaust when a travel animation is pending
+          const shouldAnimateTravel =
+            isFocusedRef.current && !animSyncedRef.current;
+          rocketRef.current.update(
+            displayUserPosRef.current,
+            aimPos,
+            shouldAnimateTravel,
+            animAlphaRef.current,
+          );
+        }
       }
 
       // 2) Update planet positions (in case date offset changes)
