@@ -44,31 +44,27 @@ export function JourneyDisplay() {
         <Text style={styles.planetTitle}>{planet.name}</Text>
       </View>
 
-      {isTraveling && (
-        <>
-          <View style={styles.progressContainer}>
-            <View style={styles.progressRow}>
-              <Text style={styles.progressLabel}>Journey Progress</Text>
-              <Text style={styles.progressValue}>
-                {(distancePercentage * 100).toFixed(1)}%
-              </Text>
-            </View>
-            <ProgressBar progress={distancePercentage} color={colors.primary} />
-          </View>
+      <View style={styles.progressContainer}>
+        <View style={styles.progressRow}>
+          <Text style={styles.progressLabel}>Journey Progress</Text>
+          <Text style={styles.progressValue}>
+            {(distancePercentage * 100).toFixed(1)}%
+          </Text>
+        </View>
+        <ProgressBar progress={distancePercentage} color={colors.primary} />
+      </View>
 
-          <View style={styles.progressContainer}>
-            <View style={styles.progressRow}>
-              <Text style={styles.progressLabel}>Distance Remaining</Text>
-              <Text style={styles.progressValue}>
-                {distanceRemaining.toLocaleString(undefined, {
-                  maximumFractionDigits: 0,
-                })}{' '}
-                km
-              </Text>
-            </View>
-          </View>
-        </>
-      )}
+      <View style={styles.progressContainer}>
+        <View style={styles.progressRow}>
+          <Text style={styles.progressLabel}>Distance Remaining</Text>
+          <Text style={styles.progressValue}>
+            {distanceRemaining.toLocaleString(undefined, {
+              maximumFractionDigits: 0,
+            })}{' '}
+            km
+          </Text>
+        </View>
+      </View>
 
       {!isTraveling && (
         <Text style={styles.landedText}>
