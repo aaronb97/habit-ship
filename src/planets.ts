@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import { getCurrentDate } from './utils/time';
 import { Coordinates } from './types';
+import { ORBIT_OFFSET_MULTIPLIER } from './components/solarsystem/constants';
 
 // ================================================================
 // Orbital mechanics utils (heliocentric ecliptic, epoch J2000.0)
@@ -198,6 +199,12 @@ export abstract class CBody {
 
   abstract getPosition(date?: Date): Coordinates;
 
+  // Visual position used for rendering (e.g., exaggerated moon offsets)
+  // Default implementation returns the true physical position; subclasses may override.
+  getVisualPosition(): Coordinates {
+    return this.getPosition();
+  }
+
   get isLandable(): boolean {
     return this.minLevel !== undefined;
   }
@@ -257,6 +264,7 @@ export class Planet extends CBody {
     const coords = heliocentricFromKepler(this.kepler, d);
     return coords;
   }
+  // Planets use the default getVisualPosition() from CBody
 }
 
 export class Moon extends CBody {
@@ -264,6 +272,7 @@ export class Moon extends CBody {
   public orbits: HelioName;
   public satellite: SatelliteOrbit;
   public orbitOffsetMultiplier?: number;
+  private cachedParent?: Planet;
 
   constructor(options: MoonOptions) {
     super({
@@ -283,8 +292,8 @@ export class Moon extends CBody {
   getPosition(date?: Date): Coordinates {
     const dRaw = date ?? getCurrentDate();
     const d = quantizeToSecond(dRaw);
-    const parent = cBodies.find((b) => b.name === this.orbits);
-    if (!parent || !(parent instanceof Planet)) {
+    const parent = this.getCachedParent();
+    if (!parent) {
       throw new Error(`Parent body ${this.orbits} not found for ${this.name}`);
     }
     const parentPos: Coordinates = parent.getPosition(d);
@@ -298,6 +307,32 @@ export class Moon extends CBody {
       parentPos[1] + rel[1],
       parentPos[2] + rel[2],
     ];
+  }
+
+  getVisualPosition(): Coordinates {
+    // Mirror adjustPositionForOrbits but operate in KM space
+    const base = this.getPosition();
+    const parent = this.getCachedParent();
+    if (!parent) {
+      throw new Error(`Parent body ${this.orbits} not found for ${this.name}`);
+    }
+
+    const parentPos = parent.getPosition();
+    const mult = this.orbitOffsetMultiplier ?? ORBIT_OFFSET_MULTIPLIER;
+    return [
+      parentPos[0] + (base[0] - parentPos[0]) * mult,
+      parentPos[1] + (base[1] - parentPos[1]) * mult,
+      parentPos[2] + (base[2] - parentPos[2]) * mult,
+    ];
+  }
+
+  private getCachedParent(): Planet | undefined {
+    if (!this.cachedParent) {
+      this.cachedParent = cBodies.find(
+        (b) => b.name === this.orbits && b instanceof Planet,
+      ) as Planet | undefined;
+    }
+    return this.cachedParent;
   }
 }
 

@@ -25,7 +25,6 @@ import {
   toVec3,
   getTrailForBody,
   apparentScaleRatio,
-  adjustPositionForOrbits,
 } from './solarsystem/helpers';
 import {
   createPlanetMesh,
@@ -306,15 +305,8 @@ export function SolarSystemMap() {
 
       const targetBody = PLANETS.find((b) => b.name === target.name) ?? earth;
 
-      const startCenter = adjustPositionForOrbits(
-        startBody,
-        toVec3(startBody.getPosition()),
-      );
-
-      const targetCenter = adjustPositionForOrbits(
-        targetBody,
-        toVec3(targetBody.getPosition()),
-      );
+      const startCenter = toVec3(startBody.getVisualPosition());
+      const targetCenter = toVec3(targetBody.getVisualPosition());
 
       // Move between surfaces instead of centers for apparent distance
       const dir = targetCenter.clone().sub(startCenter);
@@ -343,9 +335,10 @@ export function SolarSystemMap() {
         (b) => b.name === useStore.getState().userPosition.startingLocation,
       ) ?? earth;
 
-    const center = adjustPositionForOrbits(body, toVec3(body.getPosition()));
-    const targetPos = useStore.getState().userPosition.target?.position;
-    const tgtPos = toVec3(targetPos ?? earth.getPosition());
+    const center = toVec3(body.getVisualPosition());
+    const targetState = useStore.getState().userPosition.target;
+    const targetBody = PLANETS.find((b) => b.name === targetState?.name) ?? earth;
+    const tgtPos = toVec3(targetBody.getVisualPosition());
     const dir = tgtPos.clone().sub(center).normalize();
     const r = getVisualRadius(body.name) * (1 + ROCKET_SURFACE_OFFSET);
     return center.clone().add(dir.multiplyScalar(r || 0));
@@ -552,9 +545,7 @@ export function SolarSystemMap() {
         // Using rotateOnAxis ensures the rotation is about the local spin axis after tilt.
         const randomPhase = Math.random() * Math.PI * 2;
         mesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), randomPhase);
-        const basePos = toVec3(p.getPosition());
-        const adjustedPos = adjustPositionForOrbits(p, basePos);
-        mesh.position.copy(adjustedPos);
+        mesh.position.copy(toVec3(p.getVisualPosition()));
         // Only render moons for relevant systems on init
         if (p instanceof Moon) {
           const allowed = relevantSystems.has(p.orbits);
@@ -657,15 +648,8 @@ export function SolarSystemMap() {
           const targetBody =
             PLANETS.find((b) => b.name === targetName) ?? earth;
 
-          const startCenter = adjustPositionForOrbits(
-            startBody,
-            toVec3(startBody.getPosition()),
-          );
-
-          const targetCenter = adjustPositionForOrbits(
-            targetBody,
-            toVec3(targetBody.getPosition()),
-          );
+          const startCenter = toVec3(startBody.getVisualPosition());
+          const targetCenter = toVec3(targetBody.getVisualPosition());
 
           const aimPos = computeAimPosition(
             startCenter,
@@ -684,9 +668,7 @@ export function SolarSystemMap() {
         PLANETS.forEach((p) => {
           const mesh = planetRefs.current[p.name];
           if (mesh) {
-            const basePos = toVec3(p.getPosition());
-            const adjustedPos = adjustPositionForOrbits(p, basePos);
-            mesh.position.copy(adjustedPos);
+            mesh.position.copy(toVec3(p.getVisualPosition()));
           }
         });
 
@@ -741,12 +723,9 @@ export function SolarSystemMap() {
             const { target: targetState } = useStore.getState().userPosition;
             const targetBody =
               PLANETS.find((b) => b.name === targetState?.name) ?? earth;
-            const targetAdjusted = adjustPositionForOrbits(
-              targetBody,
-              toVec3(targetBody.getPosition()),
-            );
+            const targetVisual = toVec3(targetBody.getVisualPosition());
             const center = displayUserPosRef.current.clone();
-            controller.tick(center, targetAdjusted, { nowTs: getCurrentTime() });
+            controller.tick(center, targetVisual, { nowTs: getCurrentTime() });
           }
         }
 
