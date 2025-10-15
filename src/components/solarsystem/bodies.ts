@@ -36,6 +36,7 @@ export class CelestialBodyNode {
   private outlinePass?: OutlinePass;
   private outlineIntensity = 0;
   private trail?: THREE.Line;
+  private trailComputedAtPos?: THREE.Vector3;
   private disposed = false;
 
   // Cache visual radius on creation (in scene units before mesh scaling)
@@ -149,6 +150,8 @@ export class CelestialBodyNode {
         if (line) {
           this.scene.add(line);
           this.trail = line;
+          // Cache the position at which the trail was computed
+          this.trailComputedAtPos = this.mesh.position.clone();
         }
       }
     }
@@ -177,6 +180,49 @@ export class CelestialBodyNode {
       // e.g., Sun — no trails
       this.mesh.visible = true;
       if (this.trail) this.trail.visible = false;
+    }
+
+    // Keep trails in sync with current visual position without excess recompute.
+    // If we've moved more than one visual radius from the position used to build
+    // the trail, rebuild the trail and cache the new position. Log when it occurs.
+    if (
+      (this.body instanceof Planet || this.body instanceof Moon) &&
+      this.trail &&
+      this.trail.visible
+    ) {
+      const currentPos = this.mesh.position;
+      if (!this.trailComputedAtPos) {
+        this.trailComputedAtPos = currentPos.clone();
+      } else {
+        const dist = currentPos.distanceTo(this.trailComputedAtPos);
+        const threshold = this.getVisualRadius();
+        if (dist > threshold) {
+          // Dispose old trail
+          this.scene.remove(this.trail);
+          this.trail.geometry.dispose();
+          (this.trail.material as THREE.Material).dispose();
+
+          // Rebuild
+          const pts = getTrailForBody(this.body);
+          const line = createTrailLine(pts, this.body.color);
+          if (line) {
+            this.scene.add(line);
+            this.trail = line;
+            this.trail.visible = this.mesh.visible && opts.showTrails;
+            this.trailComputedAtPos = currentPos.clone();
+            console.log(
+              `[CelestialBodyNode] Rebuilt trail for ${
+                this.body.name
+              } (dist=${dist.toFixed(4)}, threshold=${threshold.toFixed(
+                4,
+              )}) @ ${new Date().toISOString()}`,
+            );
+          } else {
+            this.trail = undefined;
+            this.trailComputedAtPos = undefined;
+          }
+        }
+      }
     }
 
     // Outline intensity based on screen-space size
@@ -244,6 +290,8 @@ export class CelestialBodyNode {
       // No removePass API on EffectComposer; rely on composer.dispose() later.
       this.outlinePass = undefined;
     }
+
+    this.trailComputedAtPos = undefined;
   }
 }
 
