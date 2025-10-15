@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Animated,
   StyleSheet,
@@ -24,12 +24,12 @@ export function WelcomeTransition() {
   const buttonOpacity = useState(new Animated.Value(0))[0];
   const buttonTranslateY = useState(new Animated.Value(30))[0];
 
-  const handleContinue = useCallback(() => {
+  const handleContinue = () => {
     navigation.reset({
       index: 0,
       routes: [{ name: 'Home' }],
     });
-  }, [navigation]);
+  };
 
   useEffect(() => {
     // Sequential animations for each element

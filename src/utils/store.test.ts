@@ -2,6 +2,9 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { useIsSetupFinished, useIsTraveling, useStore } from './store';
+import { getHabitDistanceForLevel } from '../types';
+
 vi.mock('@react-native-async-storage/async-storage', () => {
   let storage: Record<string, string> = {};
   return {
@@ -27,9 +30,6 @@ vi.mock('expo-notifications', () => {
     SchedulableTriggerInputTypes: { TIME_INTERVAL: 'timeInterval' },
   };
 });
-
-import { useIsSetupFinished, useIsTraveling, useStore } from './store';
-import { getHabitDistanceForLevel } from '../types';
 
 describe('store', () => {
   beforeEach(() => {
@@ -244,7 +244,7 @@ describe('store', () => {
     const needed = Math.ceil(initialDist / perHabit);
     for (let i = 1; i < needed; i++) {
       // i already completed once
-      // eslint-disable-next-line no-await-in-loop
+
       await act(async () => {
         await result.current.completeHabit(habitId);
       });

@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Animated,
   StyleSheet,
@@ -28,17 +28,17 @@ export function SetupFirstHabit() {
 
   const isFormComplete = title.trim() !== '';
 
-  const handleNext = useCallback(() => {
-    navigation.navigate('SetupFirstPlanet', {
-      habit: {
-        title,
-        description,
-        timerLength,
-      },
-    });
-  }, [navigation, title, description, timerLength]);
-
   useEffect(() => {
+    const handleNext = () => {
+      navigation.navigate('SetupFirstPlanet', {
+        habit: {
+          title,
+          description,
+          timerLength,
+        },
+      });
+    };
+
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity
@@ -63,7 +63,7 @@ export function SetupFirstHabit() {
         headerRight: undefined,
       });
     };
-  }, [navigation, isFormComplete, handleNext]);
+  }, [navigation, isFormComplete, title, description, timerLength]);
 
   useEffect(() => {
     // Animate elements in sequence

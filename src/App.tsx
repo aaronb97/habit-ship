@@ -10,7 +10,7 @@ import { DefaultTheme } from '@react-navigation/native';
 import { Asset } from 'expo-asset';
 import { createURL } from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
-import { useCallback, useMemo, useEffect } from 'react';
+import { useEffect } from 'react';
 import { StatusBar, Platform, Appearance } from 'react-native';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
@@ -20,11 +20,10 @@ import { Navigation } from './navigation';
 import { colors } from './styles/theme';
 import { useIsSetupFinished } from './utils/store';
 
-void Asset.loadAsync([...NavigationAssets]);
-
-void SplashScreen.preventAutoHideAsync();
-
 const prefix = createURL('/');
+
+void Asset.loadAsync([...NavigationAssets]);
+void SplashScreen.preventAutoHideAsync();
 
 Appearance.setColorScheme('dark');
 
@@ -58,11 +57,11 @@ export function App() {
 
   const isSetupFinished = useIsSetupFinished();
 
-  const onLayoutRootView = useCallback(async () => {
+  const onLayoutRootView = async () => {
     if (fontsLoaded) {
       await SplashScreen.hideAsync();
     }
-  }, [fontsLoaded]);
+  };
 
   useEffect(() => {
     void registerForPushNotificationsAsync();
@@ -88,24 +87,21 @@ export function App() {
     };
   }, []);
 
-  const linking = useMemo(
-    () => ({
-      prefixes: [prefix],
-      config: {
-        screens: {
-          SetupFirstHabit: 'setup/habit',
-          SetupFirstPlanet: 'setup/planet',
-          WelcomeTransition: 'welcome',
-          Home: 'home',
-          NotFound: '*',
-        },
-        initialRouteName: isSetupFinished
-          ? ('Home' as const)
-          : ('SetupFirstHabit' as const),
+  const linking = {
+    prefixes: [prefix],
+    config: {
+      screens: {
+        SetupFirstHabit: 'setup/habit',
+        SetupFirstPlanet: 'setup/planet',
+        WelcomeTransition: 'welcome',
+        Home: 'home',
+        NotFound: '*',
       },
-    }),
-    [isSetupFinished],
-  );
+      initialRouteName: isSetupFinished
+        ? ('Home' as const)
+        : ('SetupFirstHabit' as const),
+    },
+  };
 
   if (!fontsLoaded) {
     return null;

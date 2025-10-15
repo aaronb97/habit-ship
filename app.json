@@ -32,6 +32,9 @@
         }
       ],
       "react-native-edge-to-edge"
-    ]
+    ],
+    "experiments": {
+      "reactCompiler": true
+    }
   }
 }

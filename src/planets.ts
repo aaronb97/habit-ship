@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { getCurrentDate } from './utils/time';
 import { Coordinates } from './types';
 import { ORBIT_OFFSET_MULTIPLIER } from './components/solarsystem/constants';

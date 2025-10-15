@@ -36,7 +36,6 @@ export type CameraStart = CameraState;
 
 export type ScriptSchedule = { preRollEnd: number; rocketEnd: number };
 
-// eslint-disable-next-line no-shadow
 export enum CameraPhase {
   Idle = 'Idle',
   PreRollMove = 'PreRollMove',

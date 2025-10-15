@@ -1,5 +1,5 @@
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Animated,
   StyleSheet,
@@ -37,21 +37,14 @@ export function SetupFirstPlanet() {
 
   const { habit } = params;
 
-  const handleFinish = useCallback(() => {
-    addHabit(habit);
-    setDestination(selectedPlanet!);
-    setIsSetupFinished(true);
-    navigation.navigate('WelcomeTransition');
-  }, [
-    addHabit,
-    habit,
-    selectedPlanet,
-    setDestination,
-    setIsSetupFinished,
-    navigation,
-  ]);
-
   useEffect(() => {
+    const handleFinish = () => {
+      addHabit(habit);
+      setDestination(selectedPlanet!);
+      setIsSetupFinished(true);
+      navigation.navigate('WelcomeTransition');
+    };
+
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity
@@ -76,7 +69,14 @@ export function SetupFirstPlanet() {
         headerRight: undefined,
       });
     };
-  }, [navigation, handleFinish, selectedPlanet]);
+  }, [
+    navigation,
+    selectedPlanet,
+    addHabit,
+    habit,
+    setDestination,
+    setIsSetupFinished,
+  ]);
 
   useEffect(() => {
     // Animate elements in sequence

@@ -5,14 +5,15 @@ import { SKY_SEGMENTS, SKY_SPHERE_RADIUS } from './constants';
 
 export async function createSky(): Promise<THREE.Mesh> {
   const spaceAsset = Asset.fromModule(
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     require('../../../assets/cbodies/space.jpg'),
   );
 
   await spaceAsset.downloadAsync();
 
   const loader = new TextureLoader();
-  const spaceTexture = await loader.loadAsync(spaceAsset.localUri ?? spaceAsset.uri);
+  const spaceTexture = await loader.loadAsync(
+    spaceAsset.localUri ?? spaceAsset.uri,
+  );
 
   // Ensure correct color space for sRGB textures
   spaceTexture.colorSpace = THREE.SRGBColorSpace;
