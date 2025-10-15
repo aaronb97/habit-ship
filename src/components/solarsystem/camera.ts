@@ -176,7 +176,6 @@ export function computeScriptedCameraTargets(params: {
 } {
   const { nowTs, focusAnimStart, cameraStart, vantageStart, vantageEnd } =
     params;
-  console.log({ vantageStart, vantageEnd });
   const elapsed = Math.max(0, nowTs - focusAnimStart);
   const preRoll = CAMERA_MOVE_MS + CAMERA_HOLD_MS;
 
