@@ -18,7 +18,7 @@ import type {
 import { colors } from '../styles/theme';
 import { cBodies as PLANETS, Planet, Moon, earth } from '../planets';
 import { getCurrentTime } from '../utils/time';
-import { isTraveling, useStore } from '../utils/store';
+import { useStore } from '../utils/store';
 import { useIsFocused } from '@react-navigation/native';
 import { useDebugValues } from '../hooks/useDebugValues';
 
@@ -288,13 +288,14 @@ export function SolarSystemMap() {
 
     if (target && typeof initialDistance === 'number' && initialDistance > 0) {
       const now = getCurrentTime();
-      // If not focused, freeze at the starting point (alpha = 0)
+      // Only animate rocket when there is a pending distance delta to show
+      const shouldAnimateTravel = isFocusedRef.current && !animSyncedRef.current;
       const effectiveStart =
-        (isFocusedRef.current ? focusAnimStartRef.current : null) ?? now;
+        (shouldAnimateTravel ? focusAnimStartRef.current : null) ?? now;
 
       const elapsed = Math.max(0, now - effectiveStart);
       const preRoll = CAMERA_MOVE_MS + CAMERA_HOLD_MS;
-      const rocketAlpha = isFocusedRef.current
+      const rocketAlpha = shouldAnimateTravel
         ? elapsed <= preRoll
           ? 0
           : Math.min(1, (elapsed - preRoll) / HABIT_TRAVEL_ANIM_MS)
@@ -670,10 +671,12 @@ export function SolarSystemMap() {
           getVisualRadius(targetBody.name),
         );
 
+        // Only spin/move/exhaust when a travel animation is pending
+        const shouldAnimateTravel = isFocusedRef.current && !animSyncedRef.current;
         rocketRef.current.update(
           displayUserPosRef.current,
           aimPos,
-          isTraveling(useStore.getState()),
+          shouldAnimateTravel,
           animAlphaRef.current,
         );
       }
