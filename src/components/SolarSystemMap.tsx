@@ -36,11 +36,7 @@ import {
 import { loadBodyTextures } from './solarsystem/textures';
 import { createSky } from './solarsystem/sky';
 import { vantageForProgress, CameraController } from './solarsystem/camera';
-import {
-  loadRocket,
-  computeAimPosition,
-  orientAndSpinRocket,
-} from './solarsystem/rocket';
+import { Rocket } from './solarsystem/rocket';
 import {
   RENDERER_CLEAR_COLOR,
   RENDERER_CLEAR_ALPHA,
@@ -91,7 +87,7 @@ export function SolarSystemMap() {
   const outlineIntensityRef = useRef<Record<string, number>>({});
   const copyPassRef = useRef<ShaderPass | null>(null);
 
-  const rocketRef = useRef<THREE.Group | null>(null);
+  const rocketRef = useRef<Rocket | null>(null);
   const planetRefs = useRef<Partial<Record<string, THREE.Mesh>>>({});
   const displayUserPosRef = useRef<THREE.Vector3>(new THREE.Vector3());
   const trailRefs = useRef<Partial<Record<string, THREE.Line>>>({});
@@ -243,7 +239,6 @@ export function SolarSystemMap() {
 
   const animAlphaRef = useRef(0);
   const animSyncedRef = useRef(true);
-  const rocketSpinAngleRef = useRef(0);
 
   const vantageStartRef = useRef<{ yaw: number; pitch: number } | null>(null);
   const vantageEndRef = useRef<{ yaw: number; pitch: number } | null>(null);
@@ -502,16 +497,25 @@ export function SolarSystemMap() {
     sunLight.position.set(0, 0, 0);
     scene.add(sunLight);
 
-    // Load Rocket OBJ and apply persistent color
+    // Create Rocket instance (with outline matching rocket color)
     try {
-      const obj = await loadRocket(rocketColorFromStore);
-      rocketRef.current = obj;
-      scene.add(obj);
-    } catch (e) {
-      console.warn(
-        '[SolarSystemMap] Failed to load Rocket.obj, skipping model',
+      const resolution = new THREE.Vector2(
+        drawingBufferWidth,
+        drawingBufferHeight,
       );
 
+      const rocket = await Rocket.create({
+        color: rocketColorFromStore,
+        scene,
+        camera,
+        composer,
+        resolution,
+      });
+
+      rocketRef.current = rocket;
+      scene.add(rocket.group);
+    } catch (e) {
+      console.warn('[SolarSystemMap] Failed to create Rocket, skipping model');
       console.warn(e);
     }
 
@@ -588,7 +592,7 @@ export function SolarSystemMap() {
           outlinePass.edgeThickness = OUTLINE_EDGE_THICKNESS;
           outlinePass.pulsePeriod = OUTLINE_PULSE_PERIOD;
           outlinePass.visibleEdgeColor.set(p.color);
-          outlinePass.hiddenEdgeColor.set(p.color);
+          outlinePass.hiddenEdgeColor.set(0);
           // Disabled until it meets the screen-space size threshold
           outlinePass.enabled = false;
           composerRef.current.addPass(outlinePass);
@@ -641,9 +645,6 @@ export function SolarSystemMap() {
 
       // Scripted camera progression is handled inside CameraController.tick()
       if (rocketRef.current) {
-        const rocket = rocketRef.current;
-        rocket.position.copy(displayUserPosRef.current);
-
         // Determine aim target in scene units (prefer surface endpoint when traveling)
         const { target, startingLocation } = useStore.getState().userPosition;
         const startName = startingLocation;
@@ -654,17 +655,17 @@ export function SolarSystemMap() {
         const startCenter = toVec3(startBody.getVisualPosition());
         const targetCenter = toVec3(targetBody.getVisualPosition());
 
-        const aimPos = computeAimPosition(
+        const aimPos = Rocket.computeAimPosition(
           startCenter,
           targetCenter,
           getVisualRadius(targetBody.name),
         );
 
-        rocketSpinAngleRef.current = orientAndSpinRocket(
-          rocket,
+        rocketRef.current.update(
+          displayUserPosRef.current,
           aimPos,
           isTraveling(useStore.getState()),
-          rocketSpinAngleRef.current,
+          animAlphaRef.current,
         );
       }
 
@@ -833,6 +834,13 @@ export function SolarSystemMap() {
       Object.values(outlinePassesRef.current).forEach((pass) => {
         pass.resolution.set(drawingBufferWidth, drawingBufferHeight);
       });
+
+      // Update rocket outline resolution
+      if (rocketRef.current) {
+        rocketRef.current.setResolution(
+          new THREE.Vector2(drawingBufferWidth, drawingBufferHeight),
+        );
+      }
     }
   }, [width, height]);
 
@@ -872,6 +880,13 @@ export function SolarSystemMap() {
       }
 
       if (rendererRef.current) {
+        // Dispose rocket resources first
+        try {
+          rocketRef.current?.dispose();
+        } catch (e) {
+          console.warn(e);
+        }
+
         // Dispose postprocessing passes and composer
         if (composerRef.current) {
           try {

@@ -132,7 +132,10 @@ export const ROCKET_LANDING_CLEARANCE = 0.005;
 
 export const TRAIL_LENGTH_MULTIPLIER = 0.75;
 
+// Overall scale for rocket exhaust visuals: affects sprite size and travel distance
+export const ROCKET_EXHAUST_SCALE = 0.5;
+
 // Animation durations (ms)
-export const HABIT_TRAVEL_ANIM_MS = 3000; // duration for visual travel per completion
+export const HABIT_TRAVEL_ANIM_MS = 5000; // duration for visual travel per completion
 export const CAMERA_MOVE_MS = 2000; // camera move into starting vantage
-export const CAMERA_HOLD_MS = 1000; // hold before rocket animation begins
+export const CAMERA_HOLD_MS = 500; // hold before rocket animation begins
