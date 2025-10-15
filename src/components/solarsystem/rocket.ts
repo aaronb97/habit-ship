@@ -7,7 +7,6 @@ import {
   DEFAULT_ROCKET_FORWARD,
   ROCKET_MODEL_SCALE,
   ROCKET_SPIN_SPEED,
-  ROCKET_SURFACE_OFFSET,
   ROCKET_LANDING_CLEARANCE,
   OUTLINE_EDGE_GLOW,
   OUTLINE_EDGE_THICKNESS,
@@ -47,79 +46,6 @@ function applyRocketMaterials(obj: THREE.Group, baseColor: number) {
       }
     }
   });
-}
-
-/**
- * Loads the Rocket OBJ and applies the provided color as a Lambert material.
- * Returns the THREE.Group ready to add to the scene.
- */
-export async function loadRocket(rocketColor: number): Promise<THREE.Group> {
-  const rocketAsset = Asset.fromModule(
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('../../../assets/Rocket.obj'),
-  );
-
-  await rocketAsset.downloadAsync();
-  const loader = new OBJLoader();
-  const uri = rocketAsset.localUri ?? rocketAsset.uri;
-
-  const obj: THREE.Group = await new Promise((resolve, reject) => {
-    loader.load(uri, resolve, undefined, reject);
-  });
-
-  applyRocketMaterials(obj, rocketColor);
-
-  obj.scale.setScalar(ROCKET_MODEL_SCALE);
-  return obj;
-}
-
-/**
- * Computes the "aim" position near the target surface, offset along the inbound direction so
- * the rocket looks at a point just above the surface rather than the target center.
- */
-export function computeAimPosition(
-  startCenter: THREE.Vector3,
-  targetCenter: THREE.Vector3,
-  targetVisualRadius: number,
-): THREE.Vector3 {
-  const dir = targetCenter.clone().sub(startCenter);
-  const dirN = dir.clone().normalize();
-  const targetR = targetVisualRadius * (1 + ROCKET_SURFACE_OFFSET);
-  return targetCenter
-    .clone()
-    .sub(dirN.clone().multiplyScalar(targetR + ROCKET_LANDING_CLEARANCE));
-}
-
-/**
- * Orients the rocket so its forward axis points toward aimPos and applies a spin around its
- * forward axis. Returns the updated spin angle to persist between frames.
- */
-export function orientAndSpinRocket(
-  rocket: THREE.Group,
-  aimPos: THREE.Vector3,
-  isTraveling: boolean,
-  spinAngle: number,
-): number {
-  const dirToTarget = aimPos.clone().sub(rocket.position);
-  if (dirToTarget.lengthSq() > 1e-12) {
-    dirToTarget.normalize();
-    const qLook = new THREE.Quaternion().setFromUnitVectors(
-      DEFAULT_ROCKET_FORWARD,
-      dirToTarget,
-    );
-
-    // Accumulate spin angle and apply twist around local forward using rotateOnAxis
-    if (isTraveling) {
-      spinAngle += ROCKET_SPIN_SPEED;
-    } else {
-      spinAngle *= 0.95;
-    }
-
-    rocket.quaternion.copy(qLook);
-    rocket.rotateOnAxis(DEFAULT_ROCKET_FORWARD, spinAngle);
-  }
-
-  return spinAngle;
 }
 
 // ==========================
@@ -356,9 +282,12 @@ export class Rocket {
   ): THREE.Vector3 {
     const dir = targetCenter.clone().sub(startCenter);
     const dirN = dir.clone().normalize();
-    const targetR = targetVisualRadius * (1 + ROCKET_SURFACE_OFFSET);
     return targetCenter
       .clone()
-      .sub(dirN.clone().multiplyScalar(targetR + ROCKET_LANDING_CLEARANCE));
+      .sub(
+        dirN
+          .clone()
+          .multiplyScalar(targetVisualRadius + ROCKET_LANDING_CLEARANCE),
+      );
   }
 }

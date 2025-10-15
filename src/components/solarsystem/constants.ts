@@ -124,7 +124,6 @@ export const OUTLINE_MIN_ENABLED_FACTOR = 0.02;
 
 // Rocket model controls
 export const ROCKET_MODEL_SCALE = 0.01; // uniform scale for OBJ model
-export const ROCKET_SURFACE_OFFSET = 0.04; // extra offset above visual surface (fraction of visual radius)
 export const ROCKET_SPIN_SPEED = 0.03; // radians per frame while traveling
 export const DEFAULT_ROCKET_FORWARD = new THREE.Vector3(0, 1, 0); // assumed model forward axis
 // Additional fixed clearance applied at destination to avoid intersecting surface (scene units)

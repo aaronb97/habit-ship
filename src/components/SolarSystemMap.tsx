@@ -60,7 +60,6 @@ import {
   OUTLINE_INTENSITY_SMOOTHING,
   OUTLINE_EDGE_STRENGTH,
   OUTLINE_MIN_ENABLED_FACTOR,
-  ROCKET_SURFACE_OFFSET,
   ROCKET_LANDING_CLEARANCE,
   HABIT_TRAVEL_ANIM_MS,
   CAMERA_MOVE_MS,
@@ -327,11 +326,9 @@ export function SolarSystemMap() {
       const dir = targetCenter.clone().sub(startCenter);
       const dirLen = Math.max(1e-9, dir.length());
       const dirN = dir.clone().divideScalar(dirLen);
-      const startR =
-        getVisualRadius(startBody.name) * (1 + ROCKET_SURFACE_OFFSET);
+      const startR = getVisualRadius(startBody.name);
 
-      const targetR =
-        getVisualRadius(targetBody.name) * (1 + ROCKET_SURFACE_OFFSET);
+      const targetR = getVisualRadius(targetBody.name);
 
       const startSurface = startCenter
         .clone()
@@ -357,7 +354,7 @@ export function SolarSystemMap() {
 
     const tgtPos = toVec3(targetBody.getVisualPosition());
     const dir = tgtPos.clone().sub(center).normalize();
-    const r = getVisualRadius(body.name) * (1 + ROCKET_SURFACE_OFFSET);
+    const r = getVisualRadius(body.name);
     return center.clone().add(dir.multiplyScalar(r || 0));
   };
 
@@ -667,8 +664,10 @@ export function SolarSystemMap() {
         } else {
           rocketRef.current.setVisible(true);
           // Determine aim target in scene units (prefer surface endpoint when traveling)
-          const startBody = PLANETS.find((b) => b.name === startingLocation) ?? earth;
-          const targetBody = PLANETS.find((b) => b.name === target.name) ?? earth;
+          const startBody =
+            PLANETS.find((b) => b.name === startingLocation) ?? earth;
+          const targetBody =
+            PLANETS.find((b) => b.name === target.name) ?? earth;
 
           const startCenter = toVec3(startBody.getVisualPosition());
           const targetCenter = toVec3(targetBody.getVisualPosition());
