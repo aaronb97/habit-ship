@@ -16,6 +16,39 @@ import {
   ROCKET_EXHAUST_SCALE,
 } from './constants';
 
+// Apply per-part materials/colors to the loaded rocket model
+function applyRocketMaterials(obj: THREE.Group, baseColor: number) {
+  const base = new THREE.Color(baseColor);
+  const hsl = { h: 0, s: 0, l: 0 };
+  base.getHSL(hsl);
+  // Darker variant for non-body, non-window parts
+  const altL = Math.max(0, Math.min(1, hsl.l - 0.5));
+
+  const hours = new Date().getHours();
+  const isDaytime = hours >= 8 && hours <= 20;
+
+  obj.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      const name = child.name || '';
+      if (name.includes('Window')) {
+        const mat = new THREE.MeshBasicMaterial();
+        mat.color.set(isDaytime ? 0xfff8e3 : 0x000000);
+        child.material = mat;
+      } else if (name.includes('Body')) {
+        const mat = new THREE.MeshStandardMaterial();
+        mat.color.set(base);
+        child.material = mat;
+      } else {
+        const mat = new THREE.MeshStandardMaterial();
+        const other = new THREE.Color();
+        other.setHSL(hsl.h, hsl.s, altL);
+        mat.color.set(other);
+        child.material = mat;
+      }
+    }
+  });
+}
+
 /**
  * Loads the Rocket OBJ and applies the provided color as a Lambert material.
  * Returns the THREE.Group ready to add to the scene.
@@ -34,12 +67,7 @@ export async function loadRocket(rocketColor: number): Promise<THREE.Group> {
     loader.load(uri, resolve, undefined, reject);
   });
 
-  obj.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
-      const mesh = child as THREE.Mesh;
-      mesh.material = new THREE.MeshLambertMaterial({ color: rocketColor });
-    }
-  });
+  applyRocketMaterials(obj, rocketColor);
 
   obj.scale.setScalar(ROCKET_MODEL_SCALE);
   return obj;
@@ -151,12 +179,9 @@ export class Rocket {
       loader.load(uri, resolve, undefined, reject);
     });
 
-    obj.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        const mesh = child as THREE.Mesh;
-        mesh.material = new THREE.MeshLambertMaterial({ color });
-      }
-    });
+    obj.rotation.x = THREE.MathUtils.degToRad(-90);
+
+    applyRocketMaterials(obj, color);
 
     obj.scale.setScalar(ROCKET_MODEL_SCALE);
 
