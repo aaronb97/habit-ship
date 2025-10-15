@@ -100,7 +100,7 @@ function MiniBarGraph(props: {
 
 const styles = StyleSheet.create({
   debugOverlay: {
-    position: 'absolute',
+    position: 'relative',
     top: 8,
     left: 8,
     paddingHorizontal: 10,

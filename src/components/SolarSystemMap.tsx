@@ -67,6 +67,7 @@ import {
   CAMERA_HOLD_MS,
 } from './solarsystem/constants';
 import { DebugOverlay } from './DebugOverlay';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [moved] Helpers moved to './solarsystem/helpers'.
 
@@ -289,7 +290,8 @@ export function SolarSystemMap() {
     if (target && typeof initialDistance === 'number' && initialDistance > 0) {
       const now = getCurrentTime();
       // Only animate rocket when there is a pending distance delta to show
-      const shouldAnimateTravel = isFocusedRef.current && !animSyncedRef.current;
+      const shouldAnimateTravel =
+        isFocusedRef.current && !animSyncedRef.current;
       const effectiveStart =
         (shouldAnimateTravel ? focusAnimStartRef.current : null) ?? now;
 
@@ -672,7 +674,8 @@ export function SolarSystemMap() {
         );
 
         // Only spin/move/exhaust when a travel animation is pending
-        const shouldAnimateTravel = isFocusedRef.current && !animSyncedRef.current;
+        const shouldAnimateTravel =
+          isFocusedRef.current && !animSyncedRef.current;
         rocketRef.current.update(
           displayUserPosRef.current,
           aimPos,
@@ -943,13 +946,15 @@ export function SolarSystemMap() {
           onContextCreate={onContextCreate}
         />
         {showDebugOverlay ? (
-          <DebugOverlay
-            values={debugValues}
-            expanded={debugExpanded}
-            onToggle={() => setDebugExpanded((e) => !e)}
-            history={debugHistory}
-            minMax={debugMinMax}
-          />
+          <SafeAreaView style={styles.debug}>
+            <DebugOverlay
+              values={debugValues}
+              expanded={debugExpanded}
+              onToggle={() => setDebugExpanded((e) => !e)}
+              history={debugHistory}
+              minMax={debugMinMax}
+            />
+          </SafeAreaView>
         ) : null}
       </View>
     </GestureDetector>
@@ -969,5 +974,8 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: 'transparent',
+  },
+  debug: {
+    position: 'absolute',
   },
 });
