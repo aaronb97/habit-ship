@@ -35,34 +35,13 @@ import {
 } from './solarsystem/builders';
 import { loadBodyTextures } from './solarsystem/textures';
 import { createSky } from './solarsystem/sky';
-import {
-  updateOrbitCamera,
-  vantageForProgress,
-  computeScriptedCameraTargets,
-  CameraPhase,
-} from './solarsystem/camera';
+import { vantageForProgress, CameraController } from './solarsystem/camera';
 import {
   loadRocket,
   computeAimPosition,
   orientAndSpinRocket,
 } from './solarsystem/rocket';
 import {
-  MAX_PITCH_RAD,
-  ORBIT_INITIAL_RADIUS,
-  ORBIT_INITIAL_YAW,
-  AUTO_ROTATE_YAW_SPEED,
-  SMOOTHING_YAW,
-  SMOOTHING_PITCH,
-  SMOOTHING_RADIUS,
-  ZOOM_MIN_RADIUS,
-  ZOOM_MAX_RADIUS,
-  PAN_YAW_ROTATION_PER_FULL_DRAG,
-  PAN_PITCH_ROTATION_PER_FULL_DRAG,
-  INERTIA_FRAMES_PER_SECOND,
-  YAW_VELOCITY_CLAMP,
-  PITCH_VELOCITY_CLAMP,
-  INERTIA_FRICTION,
-  INERTIA_STOP_EPSILON,
   RENDERER_CLEAR_COLOR,
   RENDERER_CLEAR_ALPHA,
   RENDERER_PIXEL_RATIO,
@@ -104,6 +83,7 @@ export function SolarSystemMap() {
   const rendererRef = useRef<Renderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const cameraControllerRef = useRef<CameraController | null>(null);
   const frameRef = useRef<number | null>(null);
   const glRef = useRef<ExpoWebGLRenderingContext | null>(null);
   const composerRef = useRef<EffectComposer | null>(null);
@@ -177,12 +157,6 @@ export function SolarSystemMap() {
     if (isFocusedValue) {
       const start = getCurrentTime();
       focusAnimStartRef.current = start;
-      // Ensure camera pre-roll has the correct endpoints when the user opens the Map
-      cameraStartRef.current = {
-        yaw: yawRef.current,
-        pitch: pitchRef.current,
-        radius: radiusRef.current,
-      };
 
       const { initialDistance, previousDistanceTraveled, distanceTraveled } =
         useStore.getState().userPosition;
@@ -192,31 +166,31 @@ export function SolarSystemMap() {
         (typeof distanceTraveled === 'number' &&
           distanceTraveled !== previousDistanceTraveled);
 
-      const denom =
-        initialDistance && initialDistance > 0 ? initialDistance : 1;
-
+      const denom = initialDistance && initialDistance > 0 ? initialDistance : 1;
       const fromAbs = Math.min(
         1,
         Math.max(0, (previousDistanceTraveled ?? 0) / denom),
       );
-
       const toAbs = Math.min(1, Math.max(0, (distanceTraveled ?? 0) / denom));
-      vantageStartRef.current = vantageForProgressCb(fromAbs);
-      vantageEndRef.current = vantageForProgressCb(toAbs);
-      if (pending) {
-        yawVelocityRef.current = 0;
-        pitchVelocityRef.current = 0;
-        radiusTargetRef.current = ORBIT_INITIAL_RADIUS;
-        scheduleRef.current = {
-          preRollEnd: start + CAMERA_MOVE_MS + CAMERA_HOLD_MS,
-          rocketEnd:
-            start + CAMERA_MOVE_MS + CAMERA_HOLD_MS + HABIT_TRAVEL_ANIM_MS,
-        };
 
-        scriptedCameraActiveRef.current = true;
+      const vStart = vantageForProgressCb(fromAbs);
+      const vEnd = vantageForProgressCb(toAbs);
+      vantageStartRef.current = vStart;
+      vantageEndRef.current = vEnd;
+
+      if (pending) {
+        const controller = cameraControllerRef.current;
+        if (controller) {
+          controller.startScriptedCamera(start, controller.state, vStart, vEnd);
+        } else {
+          pendingScriptedStartRef.current = {
+            nowTs: start,
+            vantageStart: vStart,
+            vantageEnd: vEnd,
+          };
+        }
       } else {
-        scheduleRef.current = null;
-        scriptedCameraActiveRef.current = false;
+        pendingScriptedStartRef.current = null;
       }
     } else {
       focusAnimStartRef.current = null;
@@ -235,32 +209,26 @@ export function SolarSystemMap() {
     if (changed && isFocusedRef.current) {
       const start = getCurrentTime();
       focusAnimStartRef.current = start;
-      // Capture camera state at animation start and desired vantage endpoints
-      cameraStartRef.current = {
-        yaw: yawRef.current,
-        pitch: pitchRef.current,
-        radius: radiusRef.current,
-      };
 
       const { initialDistance } = useStore.getState().userPosition;
-      const denom =
-        initialDistance && initialDistance > 0 ? initialDistance : 1;
-
+      const denom = initialDistance && initialDistance > 0 ? initialDistance : 1;
       const fromAbs = clamp01((previousDistanceTraveledVal ?? 0) / denom);
       const toAbs = clamp01((distanceTraveledVal ?? 0) / denom);
-      vantageStartRef.current = vantageForProgressCb(fromAbs);
-      vantageEndRef.current = vantageForProgressCb(toAbs);
-      // Stop inertial motion and set zoom radius target for the move
-      yawVelocityRef.current = 0;
-      pitchVelocityRef.current = 0;
-      radiusTargetRef.current = ORBIT_INITIAL_RADIUS;
-      scheduleRef.current = {
-        preRollEnd: start + CAMERA_MOVE_MS + CAMERA_HOLD_MS,
-        rocketEnd:
-          start + CAMERA_MOVE_MS + CAMERA_HOLD_MS + HABIT_TRAVEL_ANIM_MS,
-      };
+      const vStart = vantageForProgressCb(fromAbs);
+      const vEnd = vantageForProgressCb(toAbs);
+      vantageStartRef.current = vStart;
+      vantageEndRef.current = vEnd;
 
-      scriptedCameraActiveRef.current = true;
+      const controller = cameraControllerRef.current;
+      if (controller) {
+        controller.startScriptedCamera(start, controller.state, vStart, vEnd);
+      } else {
+        pendingScriptedStartRef.current = {
+          nowTs: start,
+          vantageStart: vStart,
+          vantageEnd: vEnd,
+        };
+      }
     }
 
     // If values differ, an animation is pending; if equal, batch already synced
@@ -274,20 +242,15 @@ export function SolarSystemMap() {
   const animAlphaRef = useRef(0);
   const animSyncedRef = useRef(true);
   const rocketSpinAngleRef = useRef(0);
-  const cameraStartRef = useRef<{
-    yaw: number;
-    pitch: number;
-    radius: number;
-  } | null>(null);
 
   const vantageStartRef = useRef<{ yaw: number; pitch: number } | null>(null);
   const vantageEndRef = useRef<{ yaw: number; pitch: number } | null>(null);
-  const scheduleRef = useRef<{ preRollEnd: number; rocketEnd: number } | null>(
-    null,
-  );
 
-  const scriptedCameraActiveRef = useRef(false);
-  const lastCameraPhaseRef = useRef<CameraPhase>(CameraPhase.Idle);
+  const pendingScriptedStartRef = useRef<{
+    nowTs: number;
+    vantageStart: { yaw: number; pitch: number };
+    vantageEnd: { yaw: number; pitch: number };
+  } | null>(null);
 
   // Helper: read visual radius (scene units) for a body
   const getVisualRadius = useCallback((name: string): number => {
@@ -388,53 +351,15 @@ export function SolarSystemMap() {
     return center.clone().add(dir.multiplyScalar(r || 0));
   }, [getVisualRadius]);
 
-  // Simple orbit state (spherical coordinates around origin)
-  const radiusRef = useRef(ORBIT_INITIAL_RADIUS);
-  const radiusTargetRef = useRef(radiusRef.current);
-  const yawRef = useRef(ORBIT_INITIAL_YAW); // phase angle for orbit within the plane
-  const pitchRef = useRef(0);
-  // Tweened camera orbit state
-  const yawTargetRef = useRef(yawRef.current);
-  const yawVelocityRef = useRef(0);
-  const pitchTargetRef = useRef(pitchRef.current);
-  const pitchVelocityRef = useRef(0);
-  const isPanningRef = useRef(false);
+  // Pan delta accumulators (used to compute dx/dy from translation)
   const lastPanXRef = useRef(0);
   const lastPanYRef = useRef(0);
-  const pinchStartRadiusRef = useRef(0);
 
-  const updateCamera = useCallback(() => {
-    const camera = cameraRef.current;
-    if (!camera) return;
-
-    // Positions in scene units
-    const user = rocketRef.current
-      ? rocketRef.current.position.clone()
-      : displayUserPosRef.current.clone();
-
-    const targetPos = useStore.getState().userPosition.target?.position;
-    const target = toVec3(targetPos ?? earth.getPosition());
-
-    // Center of orbit: the user's position.
-    const center = user.clone();
-
-    updateOrbitCamera(
-      camera,
-      center,
-      target,
-      yawRef.current,
-      pitchRef.current,
-      radiusRef.current,
-    );
-  }, []);
+  // Removed: updateCamera — CameraController.tick() now applies orbit updates
 
   // Double-tap: smoothly zoom camera to default radius
   const zoomCamera = useCallback(() => {
-    radiusTargetRef.current = ORBIT_INITIAL_RADIUS;
-
-    // Stop inertial motion so reset feels snappy
-    yawVelocityRef.current = 0;
-    pitchVelocityRef.current = 0;
+    cameraControllerRef.current?.resetZoom();
   }, []);
 
   // Gestures: pinch to zoom radius; pan to spin camera around the orbit plane
@@ -442,68 +367,37 @@ export function SolarSystemMap() {
   const pinchGesture = useMemo(() => {
     return Gesture.Pinch()
       .onBegin(() => {
-        pinchStartRadiusRef.current = radiusTargetRef.current;
-        // User interaction cancels scripted camera for this sequence
-        scriptedCameraActiveRef.current = false;
+        cameraControllerRef.current?.beginPinch();
       })
       .onUpdate((e: PinchGestureHandlerEventPayload) => {
-        const scale = e.scale; // 1 at start, >1 zoom out, <1 zoom in
-        const newR = THREE.MathUtils.clamp(
-          pinchStartRadiusRef.current / scale,
-          ZOOM_MIN_RADIUS,
-          ZOOM_MAX_RADIUS,
-        );
-
-        radiusTargetRef.current = newR;
+        cameraControllerRef.current?.updatePinch(e.scale);
       })
       .runOnJS(true);
   }, []);
 
   const panGesture = useMemo(() => {
-    const RAD_PER_PX_X = PAN_YAW_ROTATION_PER_FULL_DRAG / Math.max(1, width);
-    const RAD_PER_PX_Y = PAN_PITCH_ROTATION_PER_FULL_DRAG / Math.max(1, height);
     return Gesture.Pan()
       .onBegin(() => {
-        isPanningRef.current = true;
+        cameraControllerRef.current?.beginPan();
         lastPanXRef.current = 0;
         lastPanYRef.current = 0;
-        // User interaction cancels scripted camera for this sequence
-        scriptedCameraActiveRef.current = false;
       })
       .onUpdate((e: PanGestureHandlerEventPayload) => {
         const dx = e.translationX - lastPanXRef.current;
         const dy = e.translationY - lastPanYRef.current;
         lastPanXRef.current = e.translationX;
         lastPanYRef.current = e.translationY;
-        // Dragging right rotates clockwise (adjust sign as needed)
-        yawTargetRef.current -= dx * RAD_PER_PX_X;
-        // Dragging up (negative dy) now decreases elevation (inverted)
-        pitchTargetRef.current = THREE.MathUtils.clamp(
-          pitchTargetRef.current + dy * RAD_PER_PX_Y,
-          -MAX_PITCH_RAD,
-          MAX_PITCH_RAD,
-        );
+        cameraControllerRef.current?.updatePan(dx, dy, width, height);
       })
       .onEnd((e) => {
-        isPanningRef.current = false;
+        cameraControllerRef.current?.endPan(
+          e.velocityX,
+          e.velocityY,
+          width,
+          height,
+        );
         lastPanXRef.current = 0;
         lastPanYRef.current = 0;
-        // Add a bit of inertial spin, convert px/s -> rad/frame and clamp
-        const pxPerFrameX = e.velocityX / INERTIA_FRAMES_PER_SECOND; // approx frames per second
-        const initialYaw = -(pxPerFrameX * RAD_PER_PX_X);
-        yawVelocityRef.current = THREE.MathUtils.clamp(
-          initialYaw,
-          -YAW_VELOCITY_CLAMP,
-          YAW_VELOCITY_CLAMP,
-        );
-
-        const pxPerFrameY = e.velocityY / INERTIA_FRAMES_PER_SECOND;
-        const initialPitch = pxPerFrameY * RAD_PER_PX_Y;
-        pitchVelocityRef.current = THREE.MathUtils.clamp(
-          initialPitch,
-          -PITCH_VELOCITY_CLAMP,
-          PITCH_VELOCITY_CLAMP,
-        );
       })
       .onFinalize(() => {
         lastPanXRef.current = 0;
@@ -575,8 +469,18 @@ export function SolarSystemMap() {
       );
 
       cameraRef.current = camera;
-
-      updateCamera();
+      // Create camera controller and start any pending scripted sequence
+      cameraControllerRef.current = new CameraController(camera);
+      if (pendingScriptedStartRef.current) {
+        const p = pendingScriptedStartRef.current;
+        cameraControllerRef.current.startScriptedCamera(
+          p.nowTs,
+          cameraControllerRef.current.state,
+          p.vantageStart,
+          p.vantageEnd,
+        );
+        pendingScriptedStartRef.current = null;
+      }
 
       // Post-processing composer and base render pass
       const composer = new EffectComposer(renderer);
@@ -708,7 +612,11 @@ export function SolarSystemMap() {
       // Animation loop
       const renderLoop = () => {
         const { showTrails, logFPS } = useStore.getState();
-        console.log({ pitch: pitchRef.current, yaw: yawRef.current });
+        // console.log({
+        //   pitch: pitchRef.current,
+        //   yaw: yawRef.current,
+        //   targetYaw: yawTargetRef.current,
+        // });
 
         // No per-frame spin integration; positions only
         // Compute display user position for this frame
@@ -736,34 +644,7 @@ export function SolarSystemMap() {
           }
         }
 
-        // Camera pre-roll and in-flight vantage update tied to absolute journey progress
-        if (
-          isFocusedRef.current &&
-          scriptedCameraActiveRef.current &&
-          !isPanningRef.current &&
-          vantageStartRef.current &&
-          focusAnimStartRef.current &&
-          scheduleRef.current &&
-          cameraStartRef.current
-        ) {
-          const nowTs = getCurrentTime();
-          const { rocketEnd } = scheduleRef.current;
-          if (nowTs >= rocketEnd) {
-            scriptedCameraActiveRef.current = false;
-          } else {
-            const res = computeScriptedCameraTargets({
-              nowTs,
-              focusAnimStart: focusAnimStartRef.current,
-              cameraStart: cameraStartRef.current,
-              vantageStart: vantageStartRef.current,
-              vantageEnd: vantageEndRef.current ?? vantageStartRef.current,
-            });
-            lastCameraPhaseRef.current = res.phase;
-            yawTargetRef.current = res.yawTarget;
-            // Do not modify pitch via scripted animation; user panning controls pitch exclusively
-            radiusTargetRef.current = res.radiusTarget;
-          }
-        }
+        // Scripted camera progression is handled inside CameraController.tick()
         if (rocketRef.current) {
           const rocket = rocketRef.current;
           rocket.position.copy(displayUserPosRef.current);
@@ -852,49 +733,17 @@ export function SolarSystemMap() {
           });
         }
 
-        // Camera orbit: auto-rotate when idle, apply inertia, and tween toward targets
-        if (
-          !isPanningRef.current &&
-          Math.abs(yawVelocityRef.current) < INERTIA_STOP_EPSILON
-        ) {
-          yawTargetRef.current += AUTO_ROTATE_YAW_SPEED;
-        }
-
-        // Apply inertial spin from pan end
-        if (Math.abs(yawVelocityRef.current) > INERTIA_STOP_EPSILON) {
-          yawTargetRef.current += yawVelocityRef.current;
-          yawVelocityRef.current *= INERTIA_FRICTION; // friction
-          if (Math.abs(yawVelocityRef.current) < INERTIA_STOP_EPSILON) {
-            yawVelocityRef.current = 0;
+        // CameraController: compute center/target and tick
+        {
+          const controller = cameraControllerRef.current;
+          const cam = cameraRef.current;
+          if (controller && cam) {
+            const targetPos = useStore.getState().userPosition.target?.position;
+            const target = toVec3(targetPos ?? earth.getPosition());
+            const center = displayUserPosRef.current.clone();
+            controller.tick(center, target, { nowTs: getCurrentTime() });
           }
         }
-
-        if (Math.abs(pitchVelocityRef.current) > INERTIA_STOP_EPSILON) {
-          pitchTargetRef.current = THREE.MathUtils.clamp(
-            pitchTargetRef.current + pitchVelocityRef.current,
-            -MAX_PITCH_RAD,
-            MAX_PITCH_RAD,
-          );
-
-          pitchVelocityRef.current *= INERTIA_FRICTION;
-          if (Math.abs(pitchVelocityRef.current) < INERTIA_STOP_EPSILON) {
-            pitchVelocityRef.current = 0;
-          }
-        }
-
-        // Smoothly tween current yaw toward target yaw
-        yawRef.current +=
-          (yawTargetRef.current - yawRef.current) * SMOOTHING_YAW;
-
-        // Smoothly tween current pitch toward target pitch
-        pitchRef.current +=
-          (pitchTargetRef.current - pitchRef.current) * SMOOTHING_PITCH;
-
-        // Smoothly tween current radius toward target radius (zoom smoothing)
-        radiusRef.current +=
-          (radiusTargetRef.current - radiusRef.current) * SMOOTHING_RADIUS;
-
-        updateCamera();
 
         // Keep sky centered on the camera to avoid parallax and clipping
         {
@@ -977,7 +826,6 @@ export function SolarSystemMap() {
     },
     [
       showTextures,
-      updateCamera,
       getRelevantPlanetSystems,
       rocketColorFromStore,
       computeDisplayUserPos,
