@@ -165,10 +165,12 @@ export function SolarSystemMap() {
 
       const denom =
         initialDistance && initialDistance > 0 ? initialDistance : 1;
+
       const fromAbs = Math.min(
         1,
         Math.max(0, (previousDistanceTraveled ?? 0) / denom),
       );
+
       const toAbs = Math.min(1, Math.max(0, (distanceTraveled ?? 0) / denom));
 
       const vStart = vantageForProgress(fromAbs);
@@ -211,6 +213,7 @@ export function SolarSystemMap() {
       const { initialDistance } = useStore.getState().userPosition;
       const denom =
         initialDistance && initialDistance > 0 ? initialDistance : 1;
+
       const fromAbs = clamp01((previousDistanceTraveledVal ?? 0) / denom);
       const toAbs = clamp01((distanceTraveledVal ?? 0) / denom);
       const vStart = vantageForProgress(fromAbs);
@@ -339,6 +342,7 @@ export function SolarSystemMap() {
     const targetState = useStore.getState().userPosition.target;
     const targetBody =
       PLANETS.find((b) => b.name === targetState?.name) ?? earth;
+
     const tgtPos = toVec3(targetBody.getVisualPosition());
     const dir = tgtPos.clone().sub(center).normalize();
     const r = getVisualRadius(body.name) * (1 + ROCKET_SURFACE_OFFSET);
@@ -390,6 +394,7 @@ export function SolarSystemMap() {
           width,
           height,
         );
+
         lastPanXRef.current = 0;
         lastPanYRef.current = 0;
       })
@@ -471,6 +476,7 @@ export function SolarSystemMap() {
         p.vantageStart,
         p.vantageEnd,
       );
+
       pendingScriptedStartRef.current = null;
     }
 
@@ -505,6 +511,7 @@ export function SolarSystemMap() {
       console.warn(
         '[SolarSystemMap] Failed to load Rocket.obj, skipping model',
       );
+
       console.warn(e);
     }
 
@@ -652,6 +659,7 @@ export function SolarSystemMap() {
           targetCenter,
           getVisualRadius(targetBody.name),
         );
+
         rocketSpinAngleRef.current = orientAndSpinRocket(
           rocket,
           aimPos,
@@ -719,6 +727,7 @@ export function SolarSystemMap() {
           const { target: targetState } = useStore.getState().userPosition;
           const targetBody =
             PLANETS.find((b) => b.name === targetState?.name) ?? earth;
+
           const targetVisual = toVec3(targetBody.getVisualPosition());
           const center = displayUserPosRef.current.clone();
           controller.tick(center, targetVisual, { nowTs: getCurrentTime() });
