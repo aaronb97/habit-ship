@@ -6,7 +6,7 @@ const tsLint = require('typescript-eslint');
 
 module.exports = defineConfig([
   // Ignore build artifacts
-  { ignores: ['dist/*', 'eslint.config.js'] },
+  { ignores: ['dist/*', 'eslint.config.js', 'eslint.precommit.config.js'] },
 
   // Base configs
   expoConfig,

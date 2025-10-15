@@ -5,6 +5,7 @@
   "scripts": {
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "lint:precommit": "eslint --config eslint.precommit.config.js --fix",
     "tsc:watch": "tsc --watch",
     "start": "concurrently \"tsc --watch\" \"expo start --dev-client\"",
     "web": "expo start --web",
@@ -13,7 +14,8 @@
     "test": "vitest",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",
-    "convert-positions": "node scripts/convertPositions.mjs"
+    "convert-positions": "node scripts/convertPositions.mjs",
+    "prepare": "husky"
   },
   "dependencies": {
     "@expo-google-fonts/poppins": "^0.4.0",
@@ -70,10 +72,17 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-compiler": "^19.1.0-rc.2",
     "globals": "^16.4.0",
+    "husky": "^9.1.7",
     "jsdom": "^26.1.0",
+    "lint-staged": "^16.2.4",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.46.1",
     "vitest": "^3.2.4"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --config eslint.precommit.config.js --fix --quiet"
+    ]
   },
   "private": true
 }

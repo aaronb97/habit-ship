@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+
+# Load Husky's helper (if present)
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run lint-staged to apply ESLint autofixes on staged files using the
+# dedicated pre-commit config (configured in package.json "lint-staged")
+npx lint-staged
