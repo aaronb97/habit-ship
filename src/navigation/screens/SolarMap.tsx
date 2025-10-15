@@ -1,6 +1,4 @@
-import { Alert, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '../../styles/theme';
+import { Alert } from 'react-native';
 import { SolarSystemMap } from '../../components/SolarSystemMap';
 import { useStore } from '../../utils/store';
 import { useIsFocused } from '@react-navigation/native';
@@ -31,23 +29,5 @@ export function SolarMap() {
       shownForLocationRef.current = null;
     }
   }, [justLanded]);
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.mapContainer}>
-        <SolarSystemMap />
-      </View>
-    </SafeAreaView>
-  );
+  return <SolarSystemMap />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  mapContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
