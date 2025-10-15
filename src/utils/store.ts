@@ -268,6 +268,27 @@ export const useStore = create<Store>()(
               completions: [],
               timerLength: 600,
             },
+            {
+              id: '1' as HabitId,
+              title: 'Evening Meditation',
+              description: 'Sample description',
+              completions: [],
+              timerLength: 600,
+            },
+            {
+              id: '2' as HabitId,
+              title: 'Evening Meditation',
+              description: 'Sample description',
+              completions: [],
+              timerLength: 600,
+            },
+            {
+              id: '3' as HabitId,
+              title: 'Evening Meditation',
+              description: 'Sample description',
+              completions: [],
+              timerLength: 600,
+            },
           ],
           userPosition: {
             startingLocation: 'Earth',
