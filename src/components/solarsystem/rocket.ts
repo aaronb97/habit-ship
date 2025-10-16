@@ -61,9 +61,7 @@ type CreateArgs = {
 
 export class Rocket {
   public readonly group: THREE.Group;
-  private readonly hull: THREE.Group;
   private readonly exhaustGroup: THREE.Group;
-  private readonly color: number;
   private outlinePass?: OutlinePass;
   private spinAngle = 0;
 
@@ -73,15 +71,11 @@ export class Rocket {
   private readonly maxSprites = 120;
 
   private constructor(
-    color: number,
     group: THREE.Group,
-    hull: THREE.Group,
     exhaustGroup: THREE.Group,
     outlinePass?: OutlinePass,
   ) {
-    this.color = color;
     this.group = group;
-    this.hull = hull;
     this.exhaustGroup = exhaustGroup;
     this.outlinePass = outlinePass;
   }
@@ -133,7 +127,7 @@ export class Rocket {
     outline.enabled = true;
     composer.addPass(outline);
 
-    return new Rocket(color, root, obj, exhaust, outline);
+    return new Rocket(root, exhaust, outline);
   }
 
   setResolution(v: THREE.Vector2) {
@@ -289,5 +283,30 @@ export class Rocket {
           .clone()
           .multiplyScalar(targetVisualRadius + ROCKET_LANDING_CLEARANCE),
       );
+  }
+
+  static computeSurfaceEndpoints(
+    startCenter: THREE.Vector3,
+    startVisualRadius: number,
+    targetCenter: THREE.Vector3,
+    targetVisualRadius: number,
+  ): { startSurface: THREE.Vector3; targetSurface: THREE.Vector3 } {
+    const dir = targetCenter.clone().sub(startCenter);
+    const dirLen = Math.max(1e-9, dir.length());
+    const dirN = dir.clone().divideScalar(dirLen);
+
+    const startSurface = startCenter
+      .clone()
+      .add(dirN.clone().multiplyScalar(startVisualRadius));
+
+    const targetSurface = targetCenter
+      .clone()
+      .sub(
+        dirN
+          .clone()
+          .multiplyScalar(targetVisualRadius + ROCKET_LANDING_CLEARANCE),
+      );
+
+    return { startSurface, targetSurface };
   }
 }

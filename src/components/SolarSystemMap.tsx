@@ -4,18 +4,11 @@ import { View, useWindowDimensions, StyleSheet } from 'react-native';
 import { GLView, type ExpoWebGLRenderingContext } from 'expo-gl';
 import { Renderer } from 'expo-three';
 import * as THREE from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import { CopyShader } from 'three/examples/jsm/shaders/CopyShader.js';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import type {
-  PinchGestureHandlerEventPayload,
-  PanGestureHandlerEventPayload,
-} from 'react-native-gesture-handler';
+import type { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { GestureDetector } from 'react-native-gesture-handler';
 
 import { colors } from '../styles/theme';
-import { cBodies as PLANETS, Planet, Moon, earth } from '../planets';
+import { cBodies as PLANETS, Moon, earth } from '../planets';
 import { getCurrentTime } from '../utils/time';
 import { useStore } from '../utils/store';
 import { useIsFocused } from '@react-navigation/native';
@@ -26,9 +19,18 @@ import { toVec3 } from './solarsystem/helpers';
 import { type MappedMaterial } from './solarsystem/builders';
 import { loadBodyTextures } from './solarsystem/textures';
 import { createSky } from './solarsystem/sky';
-import { vantageForProgress, CameraController } from './solarsystem/camera';
+import {
+  vantageForProgress,
+  CameraController,
+  clamp01,
+  easeInOutCubic,
+} from './solarsystem/camera';
 import { Rocket } from './solarsystem/rocket';
 import { CelestialBodyNode, BodyNodesRegistry } from './solarsystem/bodies';
+import { getRelevantPlanetSystemsFor } from './solarsystem/relevance';
+import { createComposer } from './solarsystem/postprocessing';
+import { useComposedGesture } from './solarsystem/gestures';
+import { addDefaultLights } from './solarsystem/lights';
 import {
   RENDERER_CLEAR_COLOR,
   RENDERER_CLEAR_ALPHA,
@@ -37,11 +39,6 @@ import {
   CAMERA_FOV,
   CAMERA_NEAR,
   CAMERA_FAR,
-  AMBIENT_LIGHT_INTENSITY,
-  SUNLIGHT_INTENSITY,
-  SUNLIGHT_DISTANCE,
-  SUNLIGHT_DECAY,
-  ROCKET_LANDING_CLEARANCE,
   HABIT_TRAVEL_ANIM_MS,
   CAMERA_MOVE_MS,
   CAMERA_HOLD_MS,
@@ -67,7 +64,6 @@ export function SolarSystemMap() {
   const glRef = useRef<ExpoWebGLRenderingContext | null>(null);
   const composerRef = useRef<EffectComposer | null>(null);
   const bodyRegistryRef = useRef<BodyNodesRegistry>(new BodyNodesRegistry());
-  const copyPassRef = useRef<ShaderPass | null>(null);
 
   const rocketRef = useRef<Rocket | null>(null);
   const displayUserPosRef = useRef<THREE.Vector3>(new THREE.Vector3());
@@ -100,32 +96,17 @@ export function SolarSystemMap() {
 
   // Determine which planet systems are relevant for rendering moons
   const getRelevantPlanetSystems = (): Set<string> => {
-    const systems = new Set<string>();
     const { startingLocation, target } = useStore.getState().userPosition;
-
-    const addSystemForName = (name: string | undefined) => {
-      if (!name) return;
-      const body = PLANETS.find((b) => b.name === name);
-      if (!body) return;
-      if (body instanceof Moon) {
-        systems.add(body.orbits);
-      } else if (body instanceof Planet) {
-        systems.add(body.name);
-      }
-    };
-
-    addSystemForName(startingLocation);
-    addSystemForName(target?.name);
-
-    return systems;
+    return getRelevantPlanetSystemsFor(
+      startingLocation,
+      target?.name,
+      PLANETS,
+    );
   };
 
   // Animation durations imported from constants
 
-  // Helpers
-  const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
-  const easeInOutCubic = (t: number) =>
-    t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  // Helpers (imported from camera module)
 
   // When focused, drive animation timing from focus start or latest distance change
   const focusAnimStartRef = useRef<number | null>(null);
@@ -292,21 +273,12 @@ export function SolarSystemMap() {
       const startCenter = toVec3(startBody.getVisualPosition());
       const targetCenter = toVec3(targetBody.getVisualPosition());
 
-      // Move between surfaces instead of centers for apparent distance
-      const dir = targetCenter.clone().sub(startCenter);
-      const dirLen = Math.max(1e-9, dir.length());
-      const dirN = dir.clone().divideScalar(dirLen);
-      const startR = getVisualRadius(startBody.name);
-
-      const targetR = getVisualRadius(targetBody.name);
-
-      const startSurface = startCenter
-        .clone()
-        .add(dirN.clone().multiplyScalar(startR));
-
-      const targetSurface = targetCenter
-        .clone()
-        .sub(dirN.clone().multiplyScalar(targetR + ROCKET_LANDING_CLEARANCE));
+      const { startSurface, targetSurface } = Rocket.computeSurfaceEndpoints(
+        startCenter,
+        getVisualRadius(startBody.name),
+        targetCenter,
+        getVisualRadius(targetBody.name),
+      );
 
       return startSurface.clone().lerp(targetSurface, t);
     }
@@ -328,78 +300,18 @@ export function SolarSystemMap() {
     return center.clone().add(dir.multiplyScalar(r || 0));
   };
 
-  // Pan delta accumulators (used to compute dx/dy from translation)
-  const lastPanXRef = useRef(0);
-  const lastPanYRef = useRef(0);
-
-  // Removed: updateCamera — CameraController.tick() now applies orbit updates
-
   // Double-tap: smoothly zoom camera to default radius
   const zoomCamera = () => {
     cameraControllerRef.current?.resetZoom();
   };
 
-  // Gestures: pinch to zoom radius; pan to spin camera around the orbit plane
-
-  const pinchGesture = () => {
-    return Gesture.Pinch()
-      .onBegin(() => {
-        cameraControllerRef.current?.beginPinch();
-      })
-      .onUpdate((e: PinchGestureHandlerEventPayload) => {
-        cameraControllerRef.current?.updatePinch(e.scale);
-      })
-      .runOnJS(true);
-  };
-
-  const panGesture = () => {
-    return Gesture.Pan()
-      .onBegin(() => {
-        cameraControllerRef.current?.beginPan();
-        lastPanXRef.current = 0;
-        lastPanYRef.current = 0;
-      })
-      .onUpdate((e: PanGestureHandlerEventPayload) => {
-        const dx = e.translationX - lastPanXRef.current;
-        const dy = e.translationY - lastPanYRef.current;
-        lastPanXRef.current = e.translationX;
-        lastPanYRef.current = e.translationY;
-        cameraControllerRef.current?.updatePan(dx, dy, width, height);
-      })
-      .onEnd((e) => {
-        cameraControllerRef.current?.endPan(
-          e.velocityX,
-          e.velocityY,
-          width,
-          height,
-        );
-
-        lastPanXRef.current = 0;
-        lastPanYRef.current = 0;
-      })
-      .onFinalize(() => {
-        lastPanXRef.current = 0;
-        lastPanYRef.current = 0;
-      })
-      .runOnJS(true);
-  };
-
-  // Double-tap to reset camera
-  const doubleTapGesture = () => {
-    return Gesture.Tap()
-      .numberOfTaps(2)
-      .maxDelay(250)
-      .onEnd((_e, success) => {
-        if (success) {
-          zoomCamera();
-        }
-      })
-      .runOnJS(true);
-  };
-
-  const composedGesture = () => {
-    return Gesture.Race(doubleTapGesture(), pinchGesture(), panGesture());
-  };
+  // Gesture composition via hook (persists pan accumulators internally)
+  const gesture = useComposedGesture({
+    controllerRef: cameraControllerRef,
+    width,
+    height,
+    onDoubleTap: zoomCamera,
+  });
 
   const onContextCreate = async (gl: ExpoWebGLRenderingContext) => {
     glRef.current = gl;
@@ -459,27 +371,17 @@ export function SolarSystemMap() {
       pendingScriptedStartRef.current = null;
     }
 
-    // Post-processing composer and base render pass
-    const composer = new EffectComposer(renderer);
-    composer.setSize(drawingBufferWidth, drawingBufferHeight);
-    const renderPass = new RenderPass(scene, camera);
-    composer.addPass(renderPass);
-    // We will always use a final Copy pass to render to screen to keep output consistent
-    renderPass.renderToScreen = false;
+    // Post-processing composer with base render and final copy pass
+    const composer = createComposer(
+      renderer,
+      scene,
+      camera,
+      new THREE.Vector2(drawingBufferWidth, drawingBufferHeight),
+    );
     composerRef.current = composer;
 
     // Lights
-    const ambient = new THREE.AmbientLight(0xffffff, AMBIENT_LIGHT_INTENSITY);
-    scene.add(ambient);
-    const sunLight = new THREE.PointLight(
-      0xffffff,
-      SUNLIGHT_INTENSITY,
-      SUNLIGHT_DISTANCE,
-      SUNLIGHT_DECAY,
-    );
-
-    sunLight.position.set(0, 0, 0);
-    scene.add(sunLight);
+    addDefaultLights(scene);
 
     // Create Rocket instance (with outline matching rocket color)
     try {
@@ -533,11 +435,7 @@ export function SolarSystemMap() {
       bodyRegistryRef.current.add(node);
     });
 
-    // Add a stable final copy pass that always renders to screen
-    const copyPass = new ShaderPass(CopyShader);
-    copyPass.renderToScreen = true;
-    composer.addPass(copyPass);
-    copyPassRef.current = copyPass;
+    // (Final copy pass is added in createComposer)
 
     // Animation loop
     const renderLoop = () => {
@@ -771,7 +669,7 @@ export function SolarSystemMap() {
   }, []);
 
   return (
-    <GestureDetector gesture={composedGesture()}>
+    <GestureDetector gesture={gesture}>
       <View style={styles.container}>
         <GLView
           style={styles.gl}
