@@ -45,6 +45,7 @@ export function PlanetListItem({
     const traveled = userPosition.distanceTraveled ?? 0;
     remainingDistance = Math.max(0, userPosition.initialDistance - traveled);
   }
+
   const habitsNeeded =
     perHabit > 0 ? Math.ceil(remainingDistance / perHabit) : 0;
 

@@ -40,6 +40,7 @@ function solveKepler(M: number, e: number): number {
     E -= delta;
     iter++;
   }
+
   return E;
 }
 
@@ -251,6 +252,7 @@ export class Planet extends CBody {
       minLevel: options.minLevel,
       axialTiltDeg: options.axialTiltDeg,
     });
+
     this.orbitalPeriodDays = options.orbitalPeriodDays;
     this.kepler = options.kepler;
   }
@@ -282,6 +284,7 @@ export class Moon extends CBody {
       minLevel: options.minLevel,
       axialTiltDeg: options.axialTiltDeg,
     });
+
     this.orbitalPeriodDays = options.orbitalPeriodDays;
     this.orbits = options.orbits;
     this.satellite = options.satellite;
@@ -295,12 +298,14 @@ export class Moon extends CBody {
     if (!parent) {
       throw new Error(`Parent body ${this.orbits} not found for ${this.name}`);
     }
+
     const parentPos: Coordinates = parent.getPosition(d);
     const rel = satelliteRelativePosition(
       this.satellite,
       d,
       parent.axialTiltDeg ?? 0,
     );
+
     return [
       parentPos[0] + rel[0],
       parentPos[1] + rel[1],
@@ -331,6 +336,7 @@ export class Moon extends CBody {
         (b) => b.name === this.orbits && b instanceof Planet,
       ) as Planet | undefined;
     }
+
     return this.cachedParent;
   }
 }
@@ -345,6 +351,7 @@ export class Star extends CBody {
       color: options.color ?? 0xfff700,
       radiusKm: options.radiusKm,
     });
+
     this.position = options.position;
   }
 

@@ -90,6 +90,7 @@ export class CelestialBodyNode {
     // Outline for planets and moons (optional for stars)
     const hasOutline =
       params.hasOutline ?? (body instanceof Planet || body instanceof Moon);
+
     if (hasOutline) {
       const pass = new OutlinePass(
         new THREE.Vector2(resolution.x, resolution.y),
@@ -97,6 +98,7 @@ export class CelestialBodyNode {
         camera,
         [this.mesh],
       );
+
       pass.edgeStrength = 0; // start hidden; we fade in based on screen size
       pass.edgeGlow = OUTLINE_EDGE_GLOW;
       pass.edgeThickness = OUTLINE_EDGE_THICKNESS;
@@ -155,6 +157,7 @@ export class CelestialBodyNode {
         }
       }
     }
+
     if (this.trail) this.trail.visible = enabled && this.mesh.visible;
   }
 
@@ -243,6 +246,7 @@ export class CelestialBodyNode {
       this.outlineIntensity =
         this.outlineIntensity +
         (target - this.outlineIntensity) * OUTLINE_INTENSITY_SMOOTHING;
+
       const strength = OUTLINE_EDGE_STRENGTH * this.outlineIntensity;
       this.outlinePass.edgeStrength = strength;
       this.outlinePass.enabled =

@@ -16,6 +16,7 @@ export function addDefaultLights(scene: THREE.Scene) {
     SUNLIGHT_DISTANCE,
     SUNLIGHT_DECAY,
   );
+
   sunLight.position.set(0, 0, 0);
   scene.add(sunLight);
 

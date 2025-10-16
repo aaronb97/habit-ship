@@ -16,6 +16,7 @@ export function DebugOverlay(props: {
       () => setLastRender((count) => count + 1),
       500,
     );
+
     return () => clearInterval(intervalId);
   }, []);
 
@@ -23,7 +24,7 @@ export function DebugOverlay(props: {
   const entries = Object.entries(values);
 
   return (
-    <Pressable onPress={onToggle} style={styles.debugOverlay}>
+    <Pressable style={styles.debugOverlay} onPress={onToggle}>
       {entries.map(([k, v]) => (
         <View key={k} style={styles.debugRow}>
           <Text style={styles.debugText}>

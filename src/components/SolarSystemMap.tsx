@@ -242,6 +242,7 @@ export function SolarSystemMap() {
       // Only animate rocket when there is a pending distance delta to show
       const shouldAnimateTravel =
         isFocusedRef.current && !animSyncedRef.current;
+
       const effectiveStart =
         (shouldAnimateTravel ? focusAnimStartRef.current : null) ?? now;
 
@@ -378,6 +379,7 @@ export function SolarSystemMap() {
       camera,
       new THREE.Vector2(drawingBufferWidth, drawingBufferHeight),
     );
+
     composerRef.current = composer;
 
     // Lights
@@ -415,6 +417,7 @@ export function SolarSystemMap() {
       drawingBufferWidth,
       drawingBufferHeight,
     );
+
     PLANETS.forEach((p) => {
       const texture = showTextures ? texturesByName[p.name] : undefined;
       const node = new CelestialBodyNode({
@@ -478,6 +481,7 @@ export function SolarSystemMap() {
           // Determine aim target in scene units (prefer surface endpoint when traveling)
           const startBody =
             PLANETS.find((b) => b.name === startingLocation) ?? earth;
+
           const targetBody =
             PLANETS.find((b) => b.name === target.name) ?? earth;
 
@@ -493,6 +497,7 @@ export function SolarSystemMap() {
           // Only spin/move/exhaust when a travel animation is pending
           const shouldAnimateTravel =
             isFocusedRef.current && !animSyncedRef.current;
+
           rocketRef.current.update(
             displayUserPosRef.current,
             aimPos,
@@ -551,6 +556,7 @@ export function SolarSystemMap() {
         } else {
           renderer.render(scene, camera);
         }
+
         const elapsed = performance.now() - frameStart;
         fps = elapsed > 0 ? 1000 / elapsed : 0;
       }
@@ -614,6 +620,7 @@ export function SolarSystemMap() {
       } catch (e) {
         console.warn(e);
       }
+
       const scene = sceneRef.current;
       if (scene) {
         scene.traverse((obj: THREE.Object3D) => {
@@ -681,9 +688,9 @@ export function SolarSystemMap() {
             <DebugOverlay
               values={debugValues}
               expanded={debugExpanded}
-              onToggle={() => setDebugExpanded((e) => !e)}
               history={debugHistory}
               minMax={debugMinMax}
+              onToggle={() => setDebugExpanded((e) => !e)}
             />
           </SafeAreaView>
         ) : null}

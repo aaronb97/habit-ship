@@ -154,6 +154,7 @@ describe('store', () => {
     expect(result.current.userPosition!.distanceTraveled).toBe(
       Math.min(initialDist, move),
     );
+
     expect(traveling.current).toBe(true);
   });
 
@@ -177,6 +178,7 @@ describe('store', () => {
     await act(async () => {
       await result.current.completeHabit(habitId); // Second completion
     });
+
     const secondMove = getHabitDistanceForLevel(level);
     expect(secondMove).toBeCloseTo(firstMove); // same level yields same distance per habit
     expect(result.current.userPosition.distanceTraveled).toBe(
@@ -211,6 +213,7 @@ describe('store', () => {
     act(() => {
       result.current.setDestination('The Moon');
     });
+
     return (async () => {
       await act(async () => {
         await result.current.completeHabit(habitId);

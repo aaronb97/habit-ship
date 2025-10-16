@@ -29,5 +29,6 @@ export function SolarMap() {
       shownForLocationRef.current = null;
     }
   }, [justLanded]);
+
   return <SolarSystemMap />;
 }

@@ -134,6 +134,7 @@ export function updateOrbitCamera(
         Math.abs(n.y) < HELPER_AXIS_THRESHOLD
           ? new THREE.Vector3(0, 1, 0)
           : new THREE.Vector3(1, 0, 0);
+
       U = helper.clone().cross(n);
     }
   }
@@ -176,6 +177,7 @@ export function computeScriptedCameraTargets(params: {
 } {
   const { nowTs, focusAnimStart, cameraStart, vantageStart, vantageEnd } =
     params;
+
   const elapsed = Math.max(0, nowTs - focusAnimStart);
   const preRoll = CAMERA_MOVE_MS + CAMERA_HOLD_MS;
 
@@ -214,7 +216,7 @@ export function computeScriptedCameraTargets(params: {
 // CameraController encapsulates camera orbit state, gesture interactions,
 // scripted camera sequencing, and per-frame updates.
 export class CameraController {
-  private camera: THREE.PerspectiveCamera;
+  public camera: THREE.PerspectiveCamera;
 
   // Current orbit state (spherical around the user/center)
   private yaw = ORBIT_INITIAL_YAW;
@@ -314,6 +316,7 @@ export class CameraController {
   ) {
     const RAD_PER_PX_X =
       PAN_YAW_ROTATION_PER_FULL_DRAG / Math.max(1, viewportWidth);
+
     const RAD_PER_PX_Y =
       PAN_PITCH_ROTATION_PER_FULL_DRAG / Math.max(1, viewportHeight);
 
@@ -334,6 +337,7 @@ export class CameraController {
     this.isPanning = false;
     const RAD_PER_PX_X =
       PAN_YAW_ROTATION_PER_FULL_DRAG / Math.max(1, viewportWidth);
+
     const RAD_PER_PX_Y =
       PAN_PITCH_ROTATION_PER_FULL_DRAG / Math.max(1, viewportHeight);
 
@@ -366,6 +370,7 @@ export class CameraController {
       ZOOM_MIN_RADIUS,
       ZOOM_MAX_RADIUS,
     );
+
     this.radiusTarget = newRadius;
   }
 
@@ -425,6 +430,7 @@ export class CameraController {
           vantageStart: this.vantageStart,
           vantageEnd: this.vantageEnd ?? this.vantageStart,
         });
+
         this._lastPhase = res.phase;
         this.yawTarget = res.yawTarget;
         // Do not modify pitch via scripted animation; user panning controls pitch exclusively
@@ -455,6 +461,7 @@ export class CameraController {
         -MAX_PITCH_RAD,
         MAX_PITCH_RAD,
       );
+
       this.pitchVelocity *= INERTIA_FRICTION;
       if (Math.abs(this.pitchVelocity) < INERTIA_STOP_EPSILON)
         this.pitchVelocity = 0;
