@@ -180,6 +180,10 @@ export function computeScriptedCameraTargets(params: {
 
   const elapsed = Math.max(0, nowTs - focusAnimStart);
   const preRoll = CAMERA_MOVE_MS + CAMERA_HOLD_MS;
+  // Compute the pre-roll ending yaw using the same wrap-aware logic as lerpAngle.
+  // This preserves the multiple-of-π branch chosen during PreRollMove so we don't
+  // snap back to the normalized principal angle during Hold or RocketFollow.
+  const preRollYawEnd = lerpAngle(cameraStart.yaw, vantageStart.yaw, 1);
 
   if (elapsed < CAMERA_MOVE_MS) {
     const u = clamp01(elapsed / CAMERA_MOVE_MS);
@@ -195,7 +199,8 @@ export function computeScriptedCameraTargets(params: {
   if (elapsed < preRoll) {
     return {
       phase: CameraPhase.Hold,
-      yawTarget: vantageStart.yaw,
+      // Ratchet to the same multiple-of-π branch we ended PreRoll on
+      yawTarget: preRollYawEnd,
       // Continue holding the starting pitch value during the hold phase
       pitchTarget: cameraStart.pitch,
       radiusTarget: ORBIT_INITIAL_RADIUS,
@@ -206,7 +211,8 @@ export function computeScriptedCameraTargets(params: {
   const e = easeInOutCubic(alpha);
   return {
     phase: CameraPhase.RocketFollow,
-    yawTarget: lerpAngle(vantageStart.yaw, vantageEnd.yaw, e),
+    // Preserve yaw continuity by starting from the preserved pre-roll yaw branch
+    yawTarget: lerpAngle(preRollYawEnd, vantageEnd.yaw, e),
     // Keep pitch anchored at the starting value during rocket follow as well
     pitchTarget: cameraStart.pitch,
     radiusTarget: ORBIT_INITIAL_RADIUS,
