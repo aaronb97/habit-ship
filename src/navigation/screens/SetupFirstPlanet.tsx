@@ -23,9 +23,9 @@ export function SetupFirstPlanet() {
     useRoute<RouteProp<RootStackParamList, 'SetupFirstPlanet'>>().params;
 
   // Calculate distances and sort planets (exclude Earth from initial selection)
-  const planetsWithDistance = useLandablePlanets().filter(
-    (p) => p.planet.name !== 'Earth', // Don't show Earth on initial screen
-  );
+  const planetsWithDistance = useLandablePlanets()
+    .filter((p) => p.planet.name !== 'Earth') // Don't show Earth on initial screen
+    .filter((p) => p.planet.minLevel && p.planet.minLevel === 1);
 
   // Animation values
   const titleOpacity = useState(new Animated.Value(0))[0];

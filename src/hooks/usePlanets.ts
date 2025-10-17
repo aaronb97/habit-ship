@@ -4,6 +4,7 @@ import {
   useCurrentPosition,
   useIsTraveling,
   useStore,
+  useUserLevel,
 } from '../utils/store';
 
 export interface PlanetWithDistance {
@@ -66,4 +67,34 @@ export function useLandablePlanets(): LandablePlanetWithDistance[] {
       (item.planet instanceof Planet && item.planet.isLandable) ||
       item.planet instanceof Moon,
   ) as LandablePlanetWithDistance[];
+}
+
+// Unlocked landable bodies plus the next locked tier (lowest minLevel > current level)
+export function useVisibleLandablePlanets(): LandablePlanetWithDistance[] {
+  const all = useLandablePlanets();
+  const { level } = useUserLevel();
+
+  const unlocked = all.filter(({ planet }) => {
+    const ml = planet.minLevel ?? 0;
+    return level >= ml;
+  });
+
+  const locked = all.filter(({ planet }) => {
+    const ml = planet.minLevel ?? 0;
+    return level < ml;
+  });
+
+  const nextLockedLevel = locked.reduce<number | undefined>((min, item) => {
+    const ml = item.planet.minLevel ?? Infinity;
+    if (ml === Infinity) return min;
+    if (min === undefined || ml < min) return ml;
+    return min;
+  }, undefined);
+
+  const nextLocked =
+    nextLockedLevel === undefined
+      ? []
+      : locked.filter(({ planet }) => (planet.minLevel ?? 0) === nextLockedLevel);
+
+  return [...unlocked, ...nextLocked];
 }

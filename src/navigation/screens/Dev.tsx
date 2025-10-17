@@ -11,6 +11,7 @@ import { useStore } from '../../utils/store';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { advanceTime, getCurrentDate } from '../../utils/time';
 import { cBodies } from '../../planets';
+import { getXPToNextLevel } from '../../utils/experience';
 
 export function Dev() {
   const store = useStore();
@@ -33,6 +34,14 @@ export function Dev() {
     quickReset();
   };
 
+  const handleLevelUpOnce = () => {
+    const { userLevel, addXP } = useStore.getState();
+    const xpNeeded = getXPToNextLevel(userLevel.totalXP);
+    if (xpNeeded > 0) {
+      addXP(xpNeeded, 'habit_completion');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -47,6 +56,9 @@ export function Dev() {
             <Text style={styles.buttonText}>
               Quick Reset (Home with Default Habit)
             </Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.button} onPress={handleLevelUpOnce}>
+            <Text style={styles.buttonText}>Level +1</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.button, styles.dangerButton]}

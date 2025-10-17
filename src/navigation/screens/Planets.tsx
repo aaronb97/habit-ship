@@ -1,6 +1,6 @@
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLandablePlanets } from '../../hooks/usePlanets';
+import { useVisibleLandablePlanets } from '../../hooks/usePlanets';
 import { colors } from '../../styles/theme';
 import { useIsTraveling, useStore } from '../../utils/store';
 import { PlanetListItem } from '../../components/PlanetListItem';
@@ -9,7 +9,7 @@ export function Planets() {
   const { setDestination } = useStore();
   const isTraveling = useIsTraveling();
   const justLanded = useStore((s) => s.justLanded);
-  const planetsWithDistance = useLandablePlanets();
+  const planetsWithDistance = useVisibleLandablePlanets();
 
   const handleSetDestination = (planetName: string) => {
     if (justLanded) {

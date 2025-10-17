@@ -3,7 +3,9 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useIsSetupFinished, useIsTraveling, useStore } from './store';
-import { getHabitDistanceForLevel, XP_REWARDS } from './experience';
+import { getHabitDistanceForLevel } from './experience';
+import { moon } from '../planets';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 vi.mock('@react-native-async-storage/async-storage', () => {
   let storage: Record<string, string> = {};
@@ -32,7 +34,11 @@ vi.mock('expo-notifications', () => {
 });
 
 describe('store', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Ensure persisted state does not leak between tests
+    await AsyncStorage.clear();
+    // Reset store to initial baseline, then align with previous test assumptions
+    useStore.getState().clearData();
     useStore.setState({
       isSetupFinished: false,
       habits: [],
@@ -263,9 +269,7 @@ describe('store', () => {
     expect(result.current.userPosition.target).toBeUndefined();
     expect(result.current.completedPlanets.includes('The Moon')).toBe(true);
     expect(result.current.xpHistory).toHaveLength(2);
-    expect(result.current.xpHistory[1]!.amount).toBe(
-      XP_REWARDS.PLANET_COMPLETION,
-    );
+    expect(result.current.xpHistory[1]!.amount).toBe(moon.xpReward);
   });
 
   it('should clear all data', () => {

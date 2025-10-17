@@ -1,8 +1,7 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import { useStore, useUserLevel } from '../utils/store';
+import { useUserLevel } from '../utils/store';
 import { Planet, Moon } from '../planets';
-import { getHabitDistanceForLevel } from '../types';
 
 interface PlanetListItemProps {
   planet: Planet | Moon;
@@ -22,7 +21,6 @@ export function PlanetListItem({
   onPress,
 }: PlanetListItemProps) {
   const userLevel = useUserLevel();
-  const { userPosition } = useStore();
   const minLevel = planet.minLevel;
   const isLocked = minLevel !== undefined ? userLevel.level < minLevel : false;
   const isDisabled = !!disabledReason || isLocked;
@@ -34,20 +32,6 @@ export function PlanetListItem({
     if (dist < 1000000) return `${(dist / 1000).toFixed(1)}K km`;
     return `${(dist / 1000000).toFixed(1)}M km`;
   };
-
-  // Compute habit completions needed
-  const perHabit = getHabitDistanceForLevel(userLevel.level);
-  let remainingDistance = distance;
-  if (
-    userPosition.target?.name === planet.name &&
-    typeof userPosition.initialDistance === 'number'
-  ) {
-    const traveled = userPosition.distanceTraveled ?? 0;
-    remainingDistance = Math.max(0, userPosition.initialDistance - traveled);
-  }
-
-  const habitsNeeded =
-    perHabit > 0 ? Math.ceil(remainingDistance / perHabit) : 0;
 
   return (
     <TouchableOpacity
@@ -73,8 +57,8 @@ export function PlanetListItem({
       </Text>
 
       <Text style={[styles.planetInfo, isDisabled && styles.lockedText]}>
-        <Text style={styles.planetInfoLabel}>Habit completions to reach:</Text>{' '}
-        {habitsNeeded}
+        <Text style={styles.planetInfoLabel}>Landing reward:</Text>{' '}
+        {planet.xpReward ?? 0} XP
       </Text>
 
       {isDisabled ? null : (

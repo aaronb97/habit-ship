@@ -178,6 +178,7 @@ export abstract class CBody {
   public color: number;
   public radiusKm: number;
   public minLevel?: number;
+  public xpReward?: number;
   // Visual/physical attributes for rendering
   public axialTiltDeg?: number; // degrees (positive tilts toward +Z around local Z)
 
@@ -187,6 +188,7 @@ export abstract class CBody {
     color: number;
     radiusKm: number;
     minLevel?: number;
+    xpReward?: number;
     axialTiltDeg?: number;
   }) {
     this.name = opts.name;
@@ -194,6 +196,7 @@ export abstract class CBody {
     this.color = opts.color;
     this.radiusKm = opts.radiusKm;
     this.minLevel = opts.minLevel;
+    this.xpReward = opts.xpReward;
     this.axialTiltDeg = opts.axialTiltDeg;
   }
 
@@ -221,6 +224,7 @@ interface PlanetOptions extends BaseCBodyOptions {
   orbitalPeriodDays: number;
   kepler: KeplerianElements; // heliocentric elements (required for planets)
   minLevel?: number; // if present, planet is landable
+  xpReward?: number;
   axialTiltDeg?: number;
 }
 
@@ -231,6 +235,7 @@ interface MoonOptions extends BaseCBodyOptions {
   satellite: SatelliteOrbit; // required for moons
   orbitOffsetMultiplier?: number;
   minLevel: number; // moons are always landable
+  xpReward?: number;
   axialTiltDeg?: number;
 }
 
@@ -250,6 +255,7 @@ export class Planet extends CBody {
       color: options.color,
       radiusKm: options.radiusKm,
       minLevel: options.minLevel,
+      xpReward: options.xpReward,
       axialTiltDeg: options.axialTiltDeg,
     });
 
@@ -282,6 +288,7 @@ export class Moon extends CBody {
       color: options.color,
       radiusKm: options.radiusKm,
       minLevel: options.minLevel,
+      xpReward: options.xpReward,
       axialTiltDeg: options.axialTiltDeg,
     });
 
@@ -484,6 +491,7 @@ export const moon = new Moon({
     meanMotionDegPerDay: 360 / 27.321661,
   },
   minLevel: 1,
+  xpReward: 100,
   axialTiltDeg: 6.68,
 });
 export const mercury = new Planet({
@@ -494,6 +502,7 @@ export const mercury = new Planet({
   orbitalPeriodDays: 87.969,
   kepler: HELIO.Mercury,
   minLevel: 1,
+  xpReward: 500,
   axialTiltDeg: 0.03,
 });
 export const venus = new Planet({
@@ -504,6 +513,7 @@ export const venus = new Planet({
   orbitalPeriodDays: 224.701,
   kepler: HELIO.Venus,
   minLevel: 1,
+  xpReward: 750,
   axialTiltDeg: 177.36,
 });
 export const mars = new Planet({
@@ -513,7 +523,8 @@ export const mars = new Planet({
   radiusKm: 3389.5,
   orbitalPeriodDays: 686.98,
   kepler: HELIO.Mars,
-  minLevel: 1,
+  minLevel: 5,
+  xpReward: 1000,
   axialTiltDeg: 25.19,
 });
 export const jupiter = new Planet({
@@ -559,7 +570,8 @@ export const pluto = new Planet({
   radiusKm: 1188.3,
   orbitalPeriodDays: 90560,
   kepler: HELIO.Pluto,
-  minLevel: 5,
+  minLevel: 20,
+  xpReward: 1000,
   axialTiltDeg: 119.6,
 });
 export const charon = new Moon({
@@ -568,7 +580,8 @@ export const charon = new Moon({
   color: 0xc0c0c0,
   radiusKm: 606,
   orbitalPeriodDays: 6.38723,
-  minLevel: 5,
+  minLevel: 20,
+  xpReward: 1000,
   orbits: 'Pluto',
   orbitOffsetMultiplier: 125,
   satellite: {
@@ -598,7 +611,8 @@ export const phobos = new Moon({
     meanAnomalyAtEpoch: 0,
     meanMotionDegPerDay: 360 / 0.31891,
   },
-  minLevel: 1,
+  minLevel: 5,
+  xpReward: 100,
   axialTiltDeg: 0,
 });
 export const deimos = new Moon({
@@ -618,7 +632,8 @@ export const deimos = new Moon({
     meanAnomalyAtEpoch: 0,
     meanMotionDegPerDay: 360 / 1.26244,
   },
-  minLevel: 1,
+  minLevel: 5,
+  xpReward: 100,
   axialTiltDeg: 0,
 });
 
@@ -629,7 +644,8 @@ export const io = new Moon({
   color: 0xc0c0c0,
   radiusKm: 1821.6,
   orbitalPeriodDays: 1.769,
-  minLevel: 2,
+  minLevel: 8,
+  xpReward: 500,
   orbits: 'Jupiter',
   satellite: {
     semiMajorAxisKm: 421700,
@@ -648,7 +664,8 @@ export const europa = new Moon({
   color: 0xc0c0c0,
   radiusKm: 1560.8,
   orbitalPeriodDays: 3.551,
-  minLevel: 1,
+  minLevel: 8,
+  xpReward: 500,
   orbits: 'Jupiter',
   satellite: {
     semiMajorAxisKm: 671100,
@@ -667,7 +684,8 @@ export const ganymede = new Moon({
   color: 0xc0c0c0,
   radiusKm: 2634.1,
   orbitalPeriodDays: 7.155,
-  minLevel: 3,
+  minLevel: 8,
+  xpReward: 500,
   orbits: 'Jupiter',
   satellite: {
     semiMajorAxisKm: 1070400,
@@ -686,7 +704,8 @@ export const callisto = new Moon({
   color: 0xc0c0c0,
   radiusKm: 2410.3,
   orbitalPeriodDays: 16.689,
-  minLevel: 3,
+  minLevel: 8,
+  xpReward: 500,
   orbits: 'Jupiter',
   satellite: {
     semiMajorAxisKm: 1882700,
@@ -705,7 +724,8 @@ export const titan = new Moon({
   color: 0xc0c0c0,
   radiusKm: 2574.7,
   orbitalPeriodDays: 15.945,
-  minLevel: 1,
+  minLevel: 11,
+  xpReward: 600,
   orbits: 'Saturn',
   satellite: {
     semiMajorAxisKm: 1221870,
@@ -724,7 +744,8 @@ export const iapetus = new Moon({
   color: 0xc0c0c0,
   radiusKm: 734.5,
   orbitalPeriodDays: 79.3215,
-  minLevel: 4,
+  minLevel: 11,
+  xpReward: 600,
   orbits: 'Saturn',
   satellite: {
     semiMajorAxisKm: 3560820,
@@ -744,7 +765,8 @@ export const mimas = new Moon({
   color: 0xc0c0c0,
   radiusKm: 198.2,
   orbitalPeriodDays: 0.942422,
-  minLevel: 1,
+  minLevel: 11,
+  xpReward: 600,
   orbits: 'Saturn',
   satellite: {
     semiMajorAxisKm: 185539,
@@ -763,7 +785,8 @@ export const enceladus = new Moon({
   color: 0xc0c0c0,
   radiusKm: 252.1,
   orbitalPeriodDays: 1.370218,
-  minLevel: 1,
+  minLevel: 11,
+  xpReward: 600,
   orbits: 'Saturn',
   satellite: {
     semiMajorAxisKm: 237948,
@@ -782,7 +805,8 @@ export const tethys = new Moon({
   color: 0xc0c0c0,
   radiusKm: 531.1,
   orbitalPeriodDays: 1.887802,
-  minLevel: 1,
+  minLevel: 11,
+  xpReward: 600,
   orbits: 'Saturn',
   satellite: {
     semiMajorAxisKm: 294619,
@@ -801,7 +825,8 @@ export const dione = new Moon({
   color: 0xc0c0c0,
   radiusKm: 561.4,
   orbitalPeriodDays: 2.736915,
-  minLevel: 1,
+  minLevel: 11,
+  xpReward: 600,
   orbits: 'Saturn',
   satellite: {
     semiMajorAxisKm: 377396,
@@ -820,7 +845,8 @@ export const rhea = new Moon({
   color: 0xc0c0c0,
   radiusKm: 763.5,
   orbitalPeriodDays: 4.518212,
-  minLevel: 1,
+  minLevel: 11,
+  xpReward: 600,
   orbits: 'Saturn',
   satellite: {
     semiMajorAxisKm: 527108,
@@ -839,7 +865,8 @@ export const triton = new Moon({
   color: 0xc0c0c0,
   radiusKm: 1353.4,
   orbitalPeriodDays: 5.8769,
-  minLevel: 1,
+  minLevel: 17,
+  xpReward: 1000,
   axialTiltDeg: 157,
   orbits: 'Neptune',
   satellite: {
@@ -859,7 +886,8 @@ export const miranda = new Moon({
   color: 0xc0c0c0,
   radiusKm: 235.8,
   orbitalPeriodDays: 1.4135,
-  minLevel: 1,
+  minLevel: 15,
+  xpReward: 750,
   orbits: 'Uranus',
   satellite: {
     semiMajorAxisKm: 129_900,
@@ -878,7 +906,8 @@ export const ariel = new Moon({
   color: 0xc0c0c0,
   radiusKm: 578.9,
   orbitalPeriodDays: 2.52,
-  minLevel: 1,
+  minLevel: 15,
+  xpReward: 750,
   orbits: 'Uranus',
   satellite: {
     semiMajorAxisKm: 190_900,
@@ -897,7 +926,8 @@ export const umbriel = new Moon({
   color: 0xc0c0c0,
   radiusKm: 584.7,
   orbitalPeriodDays: 4.144,
-  minLevel: 1,
+  minLevel: 15,
+  xpReward: 750,
   orbits: 'Uranus',
   satellite: {
     semiMajorAxisKm: 266_000,
@@ -916,7 +946,8 @@ export const titania = new Moon({
   color: 0xc0c0c0,
   radiusKm: 788.4,
   orbitalPeriodDays: 8.706,
-  minLevel: 1,
+  minLevel: 15,
+  xpReward: 750,
   orbits: 'Uranus',
   satellite: {
     semiMajorAxisKm: 436_300,
@@ -935,7 +966,8 @@ export const oberon = new Moon({
   color: 0xc0c0c0,
   radiusKm: 761.4,
   orbitalPeriodDays: 13.463,
-  minLevel: 1,
+  minLevel: 15,
+  xpReward: 750,
   orbits: 'Uranus',
   satellite: {
     semiMajorAxisKm: 583_500,

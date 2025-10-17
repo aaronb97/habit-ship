@@ -1,7 +1,7 @@
 import { Alert, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useLandablePlanets } from '../hooks/usePlanets';
-import { colors, fonts, fontSizes } from '../styles/theme';
+import { useVisibleLandablePlanets } from '../hooks/usePlanets';
 import { useIsTraveling, useStore } from '../utils/store';
+import { colors, fonts, fontSizes } from '../styles/theme';
 import { PlanetListItem } from './PlanetListItem';
 
 interface PlanetSelectionModalProps {
@@ -15,7 +15,7 @@ export function PlanetSelectionModal({
 }: PlanetSelectionModalProps) {
   const { setDestination } = useStore();
   const isTraveling = useIsTraveling();
-  const planetsWithDistance = useLandablePlanets();
+  const visiblePlanets = useVisibleLandablePlanets();
 
   const handleSetDestination = (planetName: string) => {
     if (isTraveling) {
@@ -69,7 +69,7 @@ export function PlanetSelectionModal({
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
         >
-          {planetsWithDistance.map(
+          {visiblePlanets.map(
             ({ planet, distance, disabledReason, isVisited }) => (
               <PlanetListItem
                 key={planet.name}

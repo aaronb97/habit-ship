@@ -457,8 +457,12 @@ export const useStore = create<Store>()(
         const isNewPlanet = !state.completedPlanets.includes(destinationName);
 
         if (isNewPlanet) {
-          // Award XP for planet completion
-          state.addXP(XP_REWARDS.PLANET_COMPLETION, 'planet_completion');
+          // Award XP for planet completion using per-body configured reward
+          const body = cBodies.find((b) => b.name === destinationName);
+          const reward = body?.xpReward ?? 0;
+          if (reward > 0) {
+            state.addXP(reward, 'planet_completion');
+          }
         }
 
         set((nextState) => {
