@@ -1,8 +1,11 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import { getLevelProgress, xpCurrentThresholdForLevel } from '../types';
 import { useUserLevel } from '../utils/store';
 import { ProgressBar } from './ProgressBar';
+import {
+  getLevelProgress,
+  xpCurrentThresholdForLevel,
+} from '../utils/experience';
 
 export function LevelProgressBar() {
   const userLevel = useUserLevel();

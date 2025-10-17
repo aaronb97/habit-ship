@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useUserLevel } from '../utils/store';
 import { cBodies } from '../planets';
-import { getHabitDistanceForLevel } from '../types';
 import { LevelUpModal } from './LevelUpModal';
 import { useIsFocused } from '@react-navigation/native';
+import { getHabitDistanceForLevel } from '../utils/experience';
 
 function formatNumber(n: number): string {
   const s = Math.round(n).toString();

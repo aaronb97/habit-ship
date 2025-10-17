@@ -3,7 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useIsSetupFinished, useIsTraveling, useStore } from './store';
-import { getHabitDistanceForLevel, XP_REWARDS } from '../types';
+import { getHabitDistanceForLevel, XP_REWARDS } from './experience';
 
 vi.mock('@react-native-async-storage/async-storage', () => {
   let storage: Record<string, string> = {};

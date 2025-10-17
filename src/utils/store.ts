@@ -7,16 +7,9 @@ import { immer } from 'zustand/middleware/immer';
 import { earth, moon, cBodies } from '../planets';
 import { schedulePushNotification } from './schedulePushNotification';
 import { getCurrentTime, getCurrentDate } from './time';
-import {
-  Coordinates,
-  UserLevel,
-  UserPosition,
-  XPGain,
-  XP_REWARDS,
-  calculateLevel,
-  getCurrentLevelXP,
-} from '../types';
+import { Coordinates, UserLevel, UserPosition, XPGain } from '../types';
 import { useShallow } from 'zustand/shallow';
+import { XP_REWARDS, calculateLevel, getCurrentLevelXP } from './experience';
 
 // =================================================================
 // TYPES
