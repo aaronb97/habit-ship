@@ -133,7 +133,7 @@ export const DEFAULT_ROCKET_FORWARD = new THREE.Vector3(0, 1, 0); // assumed mod
 // Additional fixed clearance applied at destination to avoid intersecting surface (scene units)
 export const ROCKET_LANDING_CLEARANCE = 0.005;
 
-export const TRAIL_LENGTH_MULTIPLIER = 0.75;
+export const TRAIL_LENGTH_MULTIPLIER = 0.5;
 
 // Overall scale for rocket exhaust visuals: affects sprite size and travel distance
 export const ROCKET_EXHAUST_SCALE = 0.5;
