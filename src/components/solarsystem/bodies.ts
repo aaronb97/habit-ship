@@ -26,6 +26,7 @@ export type BodyNodeUpdateOpts = {
   glHeight: number;
   relevantSystems: Set<string>;
   showTrails: boolean;
+  unlockedBodies: Set<string>;
 };
 
 export class CelestialBodyNode {
@@ -177,8 +178,9 @@ export class CelestialBodyNode {
       this.mesh.visible = allowed;
       this.setTrailsEnabled(opts.showTrails && allowed);
     } else if (this.body instanceof Planet) {
-      this.mesh.visible = true;
-      this.setTrailsEnabled(opts.showTrails);
+      const allowed = opts.unlockedBodies.has(this.body.name);
+      this.mesh.visible = allowed;
+      this.setTrailsEnabled(opts.showTrails && allowed);
     } else {
       // e.g., Sun — no trails
       this.mesh.visible = true;

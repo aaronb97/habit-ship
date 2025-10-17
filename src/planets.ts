@@ -179,6 +179,7 @@ export abstract class CBody {
   public radiusKm: number;
   public minLevel?: number;
   public xpReward?: number;
+  public isLandable: boolean;
   // Visual/physical attributes for rendering
   public axialTiltDeg?: number; // degrees (positive tilts toward +Z around local Z)
 
@@ -189,6 +190,7 @@ export abstract class CBody {
     radiusKm: number;
     minLevel?: number;
     xpReward?: number;
+    isLandable?: boolean;
     axialTiltDeg?: number;
   }) {
     this.name = opts.name;
@@ -197,6 +199,7 @@ export abstract class CBody {
     this.radiusKm = opts.radiusKm;
     this.minLevel = opts.minLevel;
     this.xpReward = opts.xpReward;
+    this.isLandable = opts.isLandable ?? false;
     this.axialTiltDeg = opts.axialTiltDeg;
   }
 
@@ -206,10 +209,6 @@ export abstract class CBody {
   // Default implementation returns the true physical position; subclasses may override.
   getVisualPosition(): Coordinates {
     return this.getPosition();
-  }
-
-  get isLandable(): boolean {
-    return this.minLevel !== undefined;
   }
 }
 
@@ -225,6 +224,7 @@ interface PlanetOptions extends BaseCBodyOptions {
   kepler: KeplerianElements; // heliocentric elements (required for planets)
   minLevel?: number; // if present, planet is landable
   xpReward?: number;
+  isLandable?: boolean;
   axialTiltDeg?: number;
 }
 
@@ -256,6 +256,7 @@ export class Planet extends CBody {
       radiusKm: options.radiusKm,
       minLevel: options.minLevel,
       xpReward: options.xpReward,
+      isLandable: options.isLandable ?? options.minLevel !== undefined,
       axialTiltDeg: options.axialTiltDeg,
     });
 
@@ -289,6 +290,7 @@ export class Moon extends CBody {
       radiusKm: options.radiusKm,
       minLevel: options.minLevel,
       xpReward: options.xpReward,
+      isLandable: true,
       axialTiltDeg: options.axialTiltDeg,
     });
 
@@ -534,6 +536,8 @@ export const jupiter = new Planet({
   radiusKm: 69911,
   orbitalPeriodDays: 4332.589,
   kepler: HELIO.Jupiter,
+  minLevel: 8,
+  isLandable: false,
   axialTiltDeg: 3.13,
 });
 export const saturn = new Planet({
@@ -543,6 +547,8 @@ export const saturn = new Planet({
   radiusKm: 58232,
   orbitalPeriodDays: 10759.22,
   kepler: HELIO.Saturn,
+  minLevel: 11,
+  isLandable: false,
   axialTiltDeg: 26.73,
 });
 export const uranus = new Planet({
@@ -552,6 +558,8 @@ export const uranus = new Planet({
   radiusKm: 25362,
   orbitalPeriodDays: 30685.4,
   kepler: HELIO.Uranus,
+  minLevel: 15,
+  isLandable: false,
   axialTiltDeg: 97.77, // severe tilt
 });
 export const neptune = new Planet({
@@ -561,6 +569,8 @@ export const neptune = new Planet({
   radiusKm: 24622,
   orbitalPeriodDays: 60190,
   kepler: HELIO.Neptune,
+  minLevel: 17,
+  isLandable: false,
   axialTiltDeg: 28.32,
 });
 export const pluto = new Planet({

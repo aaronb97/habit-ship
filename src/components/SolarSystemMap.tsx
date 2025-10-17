@@ -8,9 +8,10 @@ import type { EffectComposer } from 'three/examples/jsm/postprocessing/EffectCom
 import { GestureDetector } from 'react-native-gesture-handler';
 
 import { colors } from '../styles/theme';
-import { cBodies as PLANETS, Moon, earth } from '../planets';
+import { cBodies as PLANETS, Moon, Planet, earth } from '../planets';
 import { getCurrentTime } from '../utils/time';
 import { useStore } from '../utils/store';
+import { calculateLevel } from '../utils/experience';
 import { useIsFocused } from '@react-navigation/native';
 import { useDebugValues } from '../hooks/useDebugValues';
 
@@ -102,6 +103,19 @@ export function SolarSystemMap() {
       target?.name,
       PLANETS,
     );
+  };
+
+  // Determine which planets are unlocked (visible) at current level
+  const getUnlockedBodies = (): Set<string> => {
+    const level = calculateLevel(useStore.getState().totalXP);
+    const set = new Set<string>();
+    PLANETS.forEach((b) => {
+      if (b instanceof Planet) {
+        const ml = b.minLevel ?? 0;
+        if (level >= ml) set.add(b.name);
+      }
+    });
+    return set;
   };
 
   // Animation durations imported from constants
@@ -411,6 +425,7 @@ export function SolarSystemMap() {
     }
 
     const relevantSystems = getRelevantPlanetSystems();
+    const unlockedBodies = getUnlockedBodies();
 
     // Create body nodes with encapsulated mesh/trail/outline behavior
     const resolution = new THREE.Vector2(
@@ -430,9 +445,11 @@ export function SolarSystemMap() {
         initialTrailsEnabled: useStore.getState().showTrails,
       });
 
-      // Set initial visibility for moons based on relevant systems to reduce flicker
+      // Set initial visibility to reduce flicker before first update()
       if (p instanceof Moon) {
         node.setVisible(relevantSystems.has(p.orbits));
+      } else if (p instanceof Planet) {
+        node.setVisible(unlockedBodies.has(p.name));
       }
 
       bodyRegistryRef.current.add(node);
@@ -512,11 +529,13 @@ export function SolarSystemMap() {
         const relevantSystemsNow = getRelevantPlanetSystems();
         const glCtx = glRef.current;
         if (glCtx) {
+          const unlockedBodiesNow = getUnlockedBodies();
           bodyRegistryRef.current.forEach((node) =>
             node.update({
               glHeight: glCtx.drawingBufferHeight,
               relevantSystems: relevantSystemsNow,
               showTrails,
+              unlockedBodies: unlockedBodiesNow,
             }),
           );
         }
