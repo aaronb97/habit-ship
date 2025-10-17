@@ -272,34 +272,6 @@ export class CameraController {
     return this._lastPhase;
   }
 
-  setOrbit(yaw?: number, pitch?: number, radius?: number) {
-    if (typeof yaw === 'number') this.yaw = yaw;
-    if (typeof pitch === 'number')
-      this.pitch = THREE.MathUtils.clamp(pitch, -MAX_PITCH_RAD, MAX_PITCH_RAD);
-    if (typeof radius === 'number') this.radius = radius;
-
-    // Keep targets in sync when directly setting state
-    if (typeof yaw === 'number') this.yawTarget = yaw;
-    if (typeof pitch === 'number') this.pitchTarget = this.pitch;
-    if (typeof radius === 'number') this.radiusTarget = radius;
-  }
-
-  setTargets(yaw?: number, pitch?: number, radius?: number) {
-    if (typeof yaw === 'number') this.yawTarget = yaw;
-    if (typeof pitch === 'number')
-      this.pitchTarget = THREE.MathUtils.clamp(
-        pitch,
-        -MAX_PITCH_RAD,
-        MAX_PITCH_RAD,
-      );
-    if (typeof radius === 'number')
-      this.radiusTarget = THREE.MathUtils.clamp(
-        radius,
-        ZOOM_MIN_RADIUS,
-        ZOOM_MAX_RADIUS,
-      );
-  }
-
   resetZoom() {
     this.radiusTarget = ORBIT_INITIAL_RADIUS;
     // Make the reset feel snappy by stopping inertial motion
