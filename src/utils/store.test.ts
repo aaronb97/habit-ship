@@ -3,7 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useIsSetupFinished, useIsTraveling, useStore } from './store';
-import { getHabitDistanceForLevel } from '../types';
+import { getHabitDistanceForLevel, XP_REWARDS } from '../types';
 
 vi.mock('@react-native-async-storage/async-storage', () => {
   let storage: Record<string, string> = {};
@@ -262,6 +262,10 @@ describe('store', () => {
     expect(result.current.userPosition.startingLocation).toBe('The Moon');
     expect(result.current.userPosition.target).toBeUndefined();
     expect(result.current.completedPlanets.includes('The Moon')).toBe(true);
+    expect(result.current.xpHistory).toHaveLength(2);
+    expect(result.current.xpHistory[1]!.amount).toBe(
+      XP_REWARDS.PLANET_COMPLETION,
+    );
   });
 
   it('should clear all data', () => {

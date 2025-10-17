@@ -452,36 +452,37 @@ export const useStore = create<Store>()(
       },
 
       finalizeLandingAfterAnimation: () => {
-        set((state) => {
-          const target = state.userPosition.target;
-          const initialDistance = state.userPosition.initialDistance ?? 0;
-          const traveled = state.userPosition.distanceTraveled ?? 0;
-          if (!target) return;
-          // Only finalize if marked pending or if traveled >= initialDistance
-          if (!state.pendingLanding && traveled < initialDistance) return;
+        const state = get();
+        const target = state.userPosition.target;
+        const initialDistance = state.userPosition.initialDistance ?? 0;
+        const traveled = state.userPosition.distanceTraveled ?? 0;
+        if (!target) return;
+        // Only finalize if marked pending or if traveled >= initialDistance
+        if (!state.pendingLanding && traveled < initialDistance) return;
 
-          const destinationName = target.name;
-          const isNewPlanet = !state.completedPlanets.includes(destinationName);
+        const destinationName = target.name;
+        const isNewPlanet = !state.completedPlanets.includes(destinationName);
 
-          state.userPosition.startingLocation = destinationName;
-          state.userPosition.target = undefined;
-          state.userPosition.launchTime = undefined;
-          state.userPosition.initialDistance = undefined;
-          state.userPosition.distanceTraveled = undefined;
-          state.userPosition.previousDistanceTraveled = undefined;
-          state.lastUpdateTime = undefined;
+        if (isNewPlanet) {
+          // Award XP for planet completion
+          state.addXP(XP_REWARDS.PLANET_COMPLETION, 'planet_completion');
+        }
+
+        set((nextState) => {
+          nextState.userPosition.startingLocation = destinationName;
+          nextState.userPosition.target = undefined;
+          nextState.userPosition.launchTime = undefined;
+          nextState.userPosition.initialDistance = undefined;
+          nextState.userPosition.distanceTraveled = undefined;
+          nextState.userPosition.previousDistanceTraveled = undefined;
+          nextState.lastUpdateTime = undefined;
 
           if (isNewPlanet) {
-            state.completedPlanets.push(destinationName);
+            nextState.completedPlanets.push(destinationName);
           }
 
-          if (isNewPlanet) {
-            // Award XP for planet completion
-            get().addXP(XP_REWARDS.PLANET_COMPLETION, 'planet_completion');
-          }
-
-          state.pendingLanding = false;
-          state.justLanded = true;
+          nextState.pendingLanding = false;
+          nextState.justLanded = true;
         });
       },
 

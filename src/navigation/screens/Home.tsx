@@ -17,6 +17,7 @@ import { colors, fonts, fontSizes } from '../../styles/theme';
 import { Habit, HabitId, useStore } from '../../utils/store';
 
 import { useIsFocused } from '@react-navigation/native';
+import { LevelUpListener } from '../../components/LevelUpListener';
 
 export function Home() {
   const isFocused = useIsFocused();
@@ -61,65 +62,68 @@ export function Home() {
   }, [isFocused, justLanded, acknowledgeLandingOnHome]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <LevelProgressBar />
-      </View>
-      <TouchableOpacity
-        style={styles.backgroundTouchable}
-        activeOpacity={1}
-        onPress={resetAllSwipes}
-      >
-        <FlatList
-          data={habits}
-          renderItem={({ item }) => (
-            <HabitItem
-              habit={item}
-              onComplete={() =>
-                completeHabit(item.id).catch((e) => {
-                  console.error(e);
-                })
-              }
-              onEdit={() => setEditingHabit(item)}
-              onStartTimer={() => startTimer(item.id)}
-            />
-          )}
-          keyExtractor={(item) => item.id}
-          ListHeaderComponent={
-            <>
-              <JourneyDisplay />
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Daily Habits</Text>
-                {habits.length < 5 ? (
-                  <TouchableOpacity onPress={() => setShowCreateModal(true)}>
-                    <Text style={styles.newHabitButtonText}>+ New Habit</Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            </>
-          }
-          contentContainerStyle={styles.listContentContainer}
-          showsVerticalScrollIndicator={false}
+    <>
+      <LevelUpListener />
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <LevelProgressBar />
+        </View>
+        <TouchableOpacity
+          style={styles.backgroundTouchable}
+          activeOpacity={1}
+          onPress={resetAllSwipes}
+        >
+          <FlatList
+            data={habits}
+            renderItem={({ item }) => (
+              <HabitItem
+                habit={item}
+                onComplete={() =>
+                  completeHabit(item.id).catch((e) => {
+                    console.error(e);
+                  })
+                }
+                onEdit={() => setEditingHabit(item)}
+                onStartTimer={() => startTimer(item.id)}
+              />
+            )}
+            keyExtractor={(item) => item.id}
+            ListHeaderComponent={
+              <>
+                <JourneyDisplay />
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Daily Habits</Text>
+                  {habits.length < 5 ? (
+                    <TouchableOpacity onPress={() => setShowCreateModal(true)}>
+                      <Text style={styles.newHabitButtonText}>+ New Habit</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </>
+            }
+            contentContainerStyle={styles.listContentContainer}
+            showsVerticalScrollIndicator={false}
+          />
+        </TouchableOpacity>
+
+        <EditHabitModal
+          habit={editingHabit}
+          onSave={handleEditSave}
+          onClose={() => setEditingHabit(null)}
         />
-      </TouchableOpacity>
 
-      <EditHabitModal
-        habit={editingHabit}
-        onSave={handleEditSave}
-        onClose={() => setEditingHabit(null)}
-      />
+        <CreateHabitModal
+          visible={showCreateModal}
+          onCreate={handleCreate}
+          onClose={() => setShowCreateModal(false)}
+        />
 
-      <CreateHabitModal
-        visible={showCreateModal}
-        onCreate={handleCreate}
-        onClose={() => setShowCreateModal(false)}
-      />
-
-      <PlanetSelectionModal
-        visible={!userPosition.target}
-        onClose={() => undefined}
-      />
-    </SafeAreaView>
+        <PlanetSelectionModal
+          visible={!userPosition.target}
+          onClose={() => undefined}
+        />
+      </SafeAreaView>
+    </>
   );
 }
 
