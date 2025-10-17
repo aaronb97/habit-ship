@@ -72,7 +72,7 @@ export function useLandablePlanets(): LandablePlanetWithDistance[] {
 // Unlocked landable bodies plus the next locked tier (lowest minLevel > current level)
 export function useVisibleLandablePlanets(): LandablePlanetWithDistance[] {
   const all = useLandablePlanets();
-  const { level } = useUserLevel();
+  const level = useUserLevel();
 
   const unlocked = all.filter(({ planet }) => {
     const ml = planet.minLevel ?? 0;
@@ -94,7 +94,9 @@ export function useVisibleLandablePlanets(): LandablePlanetWithDistance[] {
   const nextLocked =
     nextLockedLevel === undefined
       ? []
-      : locked.filter(({ planet }) => (planet.minLevel ?? 0) === nextLockedLevel);
+      : locked.filter(
+          ({ planet }) => (planet.minLevel ?? 0) === nextLockedLevel,
+        );
 
   return [...unlocked, ...nextLocked];
 }

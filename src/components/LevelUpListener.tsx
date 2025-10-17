@@ -16,8 +16,8 @@ function formatKm(n: number): string {
 }
 
 export function LevelUpListener() {
-  const userLevel = useUserLevel();
-  const prevLevelRef = useRef<number>(userLevel.level);
+  const currentLevel = useUserLevel();
+  const prevLevelRef = useRef<number>(currentLevel);
 
   const [visible, setVisible] = useState(false);
   const [lines, setLines] = useState<(string | ReactNode)[]>([]);
@@ -26,7 +26,7 @@ export function LevelUpListener() {
 
   useEffect(() => {
     const prev = prevLevelRef.current;
-    const curr = userLevel.level;
+    const curr = currentLevel;
     if (curr > prev && isFocused) {
       // Update ref immediately to avoid repeated triggers while modal is open
       prevLevelRef.current = curr;
@@ -53,10 +53,10 @@ export function LevelUpListener() {
     } else if (curr < prev) {
       prevLevelRef.current = curr;
     }
-  }, [userLevel.level, isFocused]);
+  }, [currentLevel, isFocused]);
 
   const close = () => {
-    prevLevelRef.current = userLevel.level;
+    prevLevelRef.current = currentLevel;
     setVisible(false);
   };
 

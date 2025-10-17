@@ -1,21 +1,24 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import { useUserLevel } from '../utils/store';
+import { useStore, useUserLevel } from '../utils/store';
 import { ProgressBar } from './ProgressBar';
 import {
   getLevelProgress,
   xpCurrentThresholdForLevel,
+  getCurrentLevelXP,
 } from '../utils/experience';
 
 export function LevelProgressBar() {
-  const userLevel = useUserLevel();
-  const progress = getLevelProgress(userLevel.totalXP);
-  const nextLevelXP = xpCurrentThresholdForLevel(userLevel.level);
+  const level = useUserLevel();
+  const { totalXP } = useStore();
+  const progress = getLevelProgress(totalXP);
+  const threshold = xpCurrentThresholdForLevel(level);
+  const currentXP = getCurrentLevelXP(totalXP);
 
   return (
     <View style={styles.container}>
       <View style={styles.levelContainer}>
-        <Text style={styles.levelText}>Level {userLevel.level}</Text>
+        <Text style={styles.levelText}>Level {level}</Text>
       </View>
       <View style={styles.progressContainer}>
         <ProgressBar
@@ -25,7 +28,7 @@ export function LevelProgressBar() {
           height={8}
         />
         <Text style={styles.xpText}>
-          {userLevel.currentXP} / {nextLevelXP} XP
+          {currentXP} / {threshold} XP
         </Text>
       </View>
     </View>

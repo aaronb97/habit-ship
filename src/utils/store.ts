@@ -7,9 +7,9 @@ import { immer } from 'zustand/middleware/immer';
 import { earth, moon, cBodies } from '../planets';
 import { schedulePushNotification } from './schedulePushNotification';
 import { getCurrentTime, getCurrentDate } from './time';
-import { Coordinates, UserLevel, UserPosition, XPGain } from '../types';
+import { Coordinates, UserPosition, XPGain } from '../types';
 import { useShallow } from 'zustand/shallow';
-import { XP_REWARDS, calculateLevel, getCurrentLevelXP } from './experience';
+import { XP_REWARDS, calculateLevel } from './experience';
 
 // =================================================================
 // TYPES
@@ -67,7 +67,7 @@ type Store = {
   habits: Habit[];
   userPosition: UserPosition;
   completedPlanets: string[];
-  userLevel: UserLevel;
+  totalXP: number;
   xpHistory: XPGain[];
   idCount: number;
   activeTimer?: {
@@ -142,11 +142,7 @@ const initialData = {
     startingLocation: 'Earth',
   },
   completedPlanets: ['Earth'],
-  userLevel: {
-    level: 1,
-    currentXP: 0,
-    totalXP: 0,
-  },
+  totalXP: 0,
   xpHistory: [],
   idCount: 0,
   swipedHabitId: undefined,
@@ -334,7 +330,7 @@ export const useStore = create<Store>()(
               state.userPosition.launchTime = getCurrentDate().toISOString();
             }
 
-            const level = state.userLevel.level;
+            const level = calculateLevel(state.totalXP);
             const moveKm = getHabitDistancePerCompletion(level);
             const prev = state.userPosition.distanceTraveled ?? 0;
             const next = Math.min(
@@ -500,23 +496,30 @@ export const useStore = create<Store>()(
             timestamp: getCurrentDate().toISOString(),
           });
 
-          state.userLevel.totalXP += amount;
-          state.userLevel.level = calculateLevel(state.userLevel.totalXP);
-          state.userLevel.currentXP = getCurrentLevelXP(
-            state.userLevel.totalXP,
-          );
+          state.totalXP += amount;
         });
       },
     })),
     {
       name: 'space-explorer-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 4,
+      version: 5,
       migrate: (persistedState, _version) => {
-        const s = (persistedState || {}) as Partial<Store>;
+        const s = (persistedState || {}) as Partial<Store> & {
+          // For backwards compatibility with older persisted shapes
+          userLevel?: { level?: number; currentXP?: number; totalXP?: number };
+        };
         if (s.rocketColor === undefined) {
           s.rocketColor = randomColorInt();
         }
+
+        // Migrate userLevel -> totalXP (preserve existing totalXP if present)
+        if (s.totalXP === undefined) {
+          const prevTotal = s.userLevel?.totalXP;
+          s.totalXP = typeof prevTotal === 'number' ? prevTotal : 0;
+        }
+        // Remove legacy key if present
+        (s as Partial<Store> & { userLevel?: unknown }).userLevel = undefined;
 
         // Defaults for newly added flags
         if (s.pendingTravelAnimation === undefined)
@@ -569,7 +572,8 @@ export function useCurrentPosition() {
 export const useIsSetupFinished = () =>
   useStore((state) => state.isSetupFinished);
 
-export const useUserLevel = () => useStore((state) => state.userLevel);
+export const useUserLevel = () =>
+  useStore((state) => calculateLevel(state.totalXP));
 
 export function isTraveling(store: Store) {
   return (

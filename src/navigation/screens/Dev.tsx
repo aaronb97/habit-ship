@@ -35,8 +35,8 @@ export function Dev() {
   };
 
   const handleLevelUpOnce = () => {
-    const { userLevel, addXP } = useStore.getState();
-    const xpNeeded = getXPToNextLevel(userLevel.totalXP);
+    const { totalXP, addXP } = useStore.getState();
+    const xpNeeded = getXPToNextLevel(totalXP);
     if (xpNeeded > 0) {
       addXP(xpNeeded, 'habit_completion');
     }

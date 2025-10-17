@@ -1,31 +1,69 @@
-// XP thresholds (total XP required) are computed via math:
-// - First level-up requires 100 XP (Level 1 -> 2)
-// - Then increase the per-level requirement by 50 for each subsequent level until
-//   the total XP threshold reaches 1000 (which occurs at Level 6)
-// - After that, the total XP threshold increases by a flat 100 per level
-//
-// Let T(L) be total XP required to reach level L (T(1) = 0):
-//   For L <= 6: T(L) = sum_{i=1}^{L-1} [100 + (i-1)*50] = n/2 * (2*100 + (n-1)*50), where n = L-1
-//   For L >= 7: T(L) = 1000 + 100*(L - 6)
-const FIRST_LEVEL_DELTA = 100; // XP needed from level 1 -> 2
-const PRE_STEP_INCREMENT = 50; // Increase in XP needed per level before reaching 1000 total
-const PRE_MAX_STEPS = 5; // Number of steps from L1 to L6 (since T(6) = 1000)
-const PRE_THRESHOLD_TOTAL = 1000; // T(6)
-const POST_STEP_DELTA = 100; // Flat increase in total threshold per level after T >= 1000
-
+/**
+ * Returns the total XP threshold for the given level.
+ */
 function xpTotalThresholdForLevel(level: number): number {
-  if (level <= 1) return 0;
-  const n = level - 1; // number of level-up steps completed
-  if (n <= PRE_MAX_STEPS) {
-    // Arithmetic series sum: n/2 * [2a + (n-1)d]
-    return (n * (2 * FIRST_LEVEL_DELTA + (n - 1) * PRE_STEP_INCREMENT)) / 2;
-  }
-  // After reaching 1000 total XP at level 6, add 100 total XP per additional level
-  return PRE_THRESHOLD_TOTAL + POST_STEP_DELTA * (n - PRE_MAX_STEPS);
+  // Sum per-level requirements up to the given level (1-indexed)
+  if (!Number.isFinite(level) || level <= 0) return 0;
+  const L = Math.floor(level);
+  let total = 0;
+  for (let i = 1; i <= L; i++) total += xpCurrentThresholdForLevel(i);
+  return total;
 }
 
+// Tweakable config for XP requirements
+export const XP_CONFIG = {
+  // Per-level (1-indexed) requirement for level 1
+  baseRequirement: 100,
+  // Increment added for each next level up to and including switchIncrementLevel
+  firstIncrement: 50,
+  // Levels up to this level use firstIncrement; from the next level onward use secondIncrement
+  switchIncrementLevel: 19,
+  // Increment added per level after switchIncrementLevel
+  secondIncrement: 100,
+} as const;
+
+/**
+ * Returns the XP requirement for the given level (per-level threshold, not cumulative).
+ */
 export function xpCurrentThresholdForLevel(level: number): number {
-  return xpTotalThresholdForLevel(level + 1) - xpTotalThresholdForLevel(level);
+  const {
+    baseRequirement,
+    firstIncrement,
+    switchIncrementLevel,
+    secondIncrement,
+  } = XP_CONFIG;
+
+  const L = Math.max(1, Math.floor(level));
+  if (L === 1) return baseRequirement;
+
+  if (L <= switchIncrementLevel) {
+    // Linear growth with first increment
+    return baseRequirement + firstIncrement * (L - 1);
+  }
+
+  // After the switch, continue growth using second increment
+  const atSwitch = baseRequirement + firstIncrement * (switchIncrementLevel - 1);
+  return atSwitch + secondIncrement * (L - switchIncrementLevel);
+}
+
+// Compute current level and boundaries using a simple linear scan.
+// Level is defined as the smallest L such that cumulative(L) > totalXP.
+function getLevelBounds(totalXP: number): {
+  level: number;
+  startXP: number; // cumulative XP at the start of current level
+  endXP: number; // cumulative XP needed to reach the next level
+} {
+  const t = Math.max(0, totalXP);
+  let level = 1;
+  let startXP = 0;
+  let need = xpCurrentThresholdForLevel(level);
+  // Advance while we've met or exceeded the end of the current level
+  while (t >= startXP + need) {
+    startXP += need;
+    level += 1;
+    need = xpCurrentThresholdForLevel(level);
+  }
+  return { level, startXP, endXP: startXP + need };
 }
 
 // XP rewards
@@ -36,12 +74,7 @@ export const XP_REWARDS = {
 
 // Helper functions for level calculations
 export function calculateLevel(totalXP: number): number {
-  let level = 1;
-  // Increase level until totalXP is less than the next level's threshold
-  while (totalXP >= xpTotalThresholdForLevel(level + 1)) {
-    level++;
-  }
-  return level;
+  return getLevelBounds(totalXP).level;
 }
 
 export function getXPForNextLevel(currentLevel: number): number {
@@ -49,24 +82,26 @@ export function getXPForNextLevel(currentLevel: number): number {
 }
 
 export function getCurrentLevelXP(totalXP: number): number {
-  const level = calculateLevel(totalXP);
-  return totalXP - xpTotalThresholdForLevel(level);
+  const { startXP } = getLevelBounds(totalXP);
+  return Math.max(0, totalXP - startXP);
 }
 
 export function getXPToNextLevel(totalXP: number): number {
-  const level = calculateLevel(totalXP);
-  const nextLevelXP = getXPForNextLevel(level);
-  return nextLevelXP - totalXP;
+  const { endXP } = getLevelBounds(totalXP);
+  return Math.max(0, endXP - totalXP);
 }
 
+/**
+ * Returns the progress of the current level as a percentage.
+ * Should return 0 when the totalXP is right on the threshold for the current level. (empty level progress bar)
+ */
 export function getLevelProgress(totalXP: number): number {
-  const level = calculateLevel(totalXP);
-  const currentLevelXP = xpTotalThresholdForLevel(level);
-  const nextLevelXP = getXPForNextLevel(level);
-  const progressXP = totalXP - currentLevelXP;
-  const totalNeeded = nextLevelXP - currentLevelXP;
-
-  return Math.min(progressXP / totalNeeded, 1);
+  const { startXP, endXP } = getLevelBounds(totalXP);
+  const denom = endXP - startXP;
+  if (denom <= 0) return 0;
+  const ratio = (totalXP - startXP) / denom;
+  // Clamp to [0, 1]; exact threshold will map to 0 when level increments
+  return Math.max(0, Math.min(1, ratio));
 }
 
 // Distance gained per habit completion for a given level

@@ -1,7 +1,7 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import { useUserLevel } from '../utils/store';
 import { Planet, Moon } from '../planets';
+import { useUserLevel } from '../utils/store';
 
 interface PlanetListItemProps {
   planet: Planet | Moon;
@@ -22,7 +22,7 @@ export function PlanetListItem({
 }: PlanetListItemProps) {
   const userLevel = useUserLevel();
   const minLevel = planet.minLevel;
-  const isLocked = minLevel !== undefined ? userLevel.level < minLevel : false;
+  const isLocked = minLevel !== undefined ? userLevel < minLevel : false;
   const isDisabled = !!disabledReason || isLocked;
 
   // Format distance for display

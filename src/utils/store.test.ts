@@ -3,7 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useIsSetupFinished, useIsTraveling, useStore } from './store';
-import { getHabitDistanceForLevel } from './experience';
+import { calculateLevel, getHabitDistanceForLevel } from './experience';
 import { moon } from '../planets';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -154,7 +154,9 @@ describe('store', () => {
     });
 
     expect(result.current.habits[0]!.completions).toHaveLength(1);
-    const move = getHabitDistanceForLevel(result.current.userLevel.level);
+    const move = getHabitDistanceForLevel(
+      calculateLevel(result.current.totalXP),
+    );
     expect(result.current.userPosition.distanceTraveled).toBeDefined();
     const initialDist = result.current.userPosition.initialDistance!;
     expect(result.current.userPosition!.distanceTraveled).toBe(
@@ -178,7 +180,7 @@ describe('store', () => {
       await result.current.completeHabit(habitId); // First completion
     });
 
-    const level = result.current.userLevel.level;
+    const level = calculateLevel(result.current.totalXP);
     const firstMove = getHabitDistanceForLevel(level);
 
     await act(async () => {
@@ -249,7 +251,9 @@ describe('store', () => {
 
     // Complete habits until arrival
     const initialDist = result.current.userPosition.initialDistance!;
-    const perHabit = getHabitDistanceForLevel(result.current.userLevel.level);
+    const perHabit = getHabitDistanceForLevel(
+      calculateLevel(result.current.totalXP),
+    );
     const needed = Math.ceil(initialDist / perHabit);
     for (let i = 1; i < needed; i++) {
       // i already completed once
