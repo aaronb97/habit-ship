@@ -25,14 +25,6 @@ vi.mock('@react-native-async-storage/async-storage', () => {
   };
 });
 
-vi.mock('expo-notifications', () => {
-  return {
-    scheduleNotificationAsync: vi.fn(async () => 'mock-notification-id'),
-    cancelScheduledNotificationAsync: vi.fn(async () => undefined),
-    SchedulableTriggerInputTypes: { TIME_INTERVAL: 'timeInterval' },
-  };
-});
-
 describe('store', () => {
   beforeEach(async () => {
     // Ensure persisted state does not leak between tests
