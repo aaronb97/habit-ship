@@ -49,6 +49,7 @@ declare module 'three/examples/jsm/postprocessing/ShaderPass.js' {
   export class ShaderPass {
     constructor(shader: unknown, textureID?: string);
     renderToScreen: boolean;
+    enabled: boolean;
   }
 }
 

@@ -111,6 +111,91 @@ export function Dev() {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Tilt-Shift (Miniature)</Text>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Enabled</Text>
+            <Switch
+              value={!!store.tiltShiftEnabled}
+              onValueChange={(v) => store.setTiltShiftEnabled(v)}
+            />
+          </View>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>
+              Focus: {store.tiltShiftFocus.toFixed(2)}
+            </Text>
+            <View style={styles.stepperRow}>
+              <TouchableOpacity
+                style={styles.stepperButton}
+                onPress={() => store.setTiltShiftFocus(store.tiltShiftFocus - 0.02)}
+              >
+                <Text style={styles.stepperText}>-</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.stepperButton}
+                onPress={() => store.setTiltShiftFocus(store.tiltShiftFocus + 0.02)}
+              >
+                <Text style={styles.stepperText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>
+              Range: {store.tiltShiftRange.toFixed(2)}
+            </Text>
+            <View style={styles.stepperRow}>
+              <TouchableOpacity
+                style={styles.stepperButton}
+                onPress={() => store.setTiltShiftRange(store.tiltShiftRange - 0.02)}
+              >
+                <Text style={styles.stepperText}>-</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.stepperButton}
+                onPress={() => store.setTiltShiftRange(store.tiltShiftRange + 0.02)}
+              >
+                <Text style={styles.stepperText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>
+              Feather: {store.tiltShiftFeather.toFixed(2)}
+            </Text>
+            <View style={styles.stepperRow}>
+              <TouchableOpacity
+                style={styles.stepperButton}
+                onPress={() => store.setTiltShiftFeather(store.tiltShiftFeather - 0.02)}
+              >
+                <Text style={styles.stepperText}>-</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.stepperButton}
+                onPress={() => store.setTiltShiftFeather(store.tiltShiftFeather + 0.02)}
+              >
+                <Text style={styles.stepperText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Blur: {store.tiltShiftBlur}</Text>
+            <View style={styles.stepperRow}>
+              <TouchableOpacity
+                style={styles.stepperButton}
+                onPress={() => store.setTiltShiftBlur(store.tiltShiftBlur - 1)}
+              >
+                <Text style={styles.stepperText}>-</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.stepperButton}
+                onPress={() => store.setTiltShiftBlur(store.tiltShiftBlur + 1)}
+              >
+                <Text style={styles.stepperText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Time Advancement</Text>
           <View style={styles.timeDisplay}>
             <Text style={styles.timeLabel}>Real System Time:</Text>
@@ -247,6 +332,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: fonts.semiBold,
     color: colors.white,
+  },
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  stepperButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperText: {
+    color: colors.white,
+    fontFamily: fonts.semiBold,
+    fontSize: 16,
+    lineHeight: 16,
   },
   warpButton: {
     backgroundColor: colors.primary,

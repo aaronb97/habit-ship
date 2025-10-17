@@ -83,6 +83,17 @@ type Store = {
   showTextures: boolean;
   showDebugOverlay: boolean;
 
+  // Tilt-shift (miniature) post-processing controls
+  tiltShiftEnabled: boolean;
+  // normalized [0..1] focus band center (vertical UV)
+  tiltShiftFocus: number;
+  // normalized [0..1] sharp half-width
+  tiltShiftRange: number;
+  // normalized [0..1] soft falloff beyond range
+  tiltShiftFeather: number;
+  // blur radius in pixels at maximum blur
+  tiltShiftBlur: number;
+
   // Rocket appearance
   rocketColor: number;
 
@@ -124,6 +135,13 @@ type Store = {
   setShowTextures: (value: boolean) => void;
   setShowDebugOverlay: (value: boolean) => void;
 
+  // Tilt-shift setters
+  setTiltShiftEnabled: (value: boolean) => void;
+  setTiltShiftFocus: (value: number) => void;
+  setTiltShiftRange: (value: number) => void;
+  setTiltShiftFeather: (value: number) => void;
+  setTiltShiftBlur: (value: number) => void;
+
   completeHabit: (habitId: HabitId) => Promise<void>;
   startTimer: (habitId: HabitId) => Promise<boolean>; // Returns true on success, false on failure
   cancelTimer: () => Promise<void>;
@@ -152,6 +170,11 @@ const initialData = {
   showTrails: true,
   showTextures: true,
   showDebugOverlay: false,
+  tiltShiftEnabled: true,
+  tiltShiftFocus: 0.55,
+  tiltShiftRange: 0,
+  tiltShiftFeather: 0.4,
+  tiltShiftBlur: 1.5,
   rocketColor: randomColorInt(),
   pendingTravelAnimation: false,
   pendingLanding: false,
@@ -245,14 +268,39 @@ export const useStore = create<Store>()(
       setShowTrails: (value) => set({ showTrails: value }),
       setShowTextures: (value) => set({ showTextures: value }),
       setShowDebugOverlay: (value) => set({ showDebugOverlay: value }),
+
+      // --- Tilt-shift setters ---
+      setTiltShiftEnabled: (value) => set({ tiltShiftEnabled: value }),
+      setTiltShiftFocus: (value) =>
+        set({ tiltShiftFocus: Math.min(1, Math.max(0, value)) }),
+      setTiltShiftRange: (value) =>
+        set({ tiltShiftRange: Math.min(1, Math.max(0, value)) }),
+      setTiltShiftFeather: (value) =>
+        set({ tiltShiftFeather: Math.min(1, Math.max(0, value)) }),
+      setTiltShiftBlur: (value) =>
+        set({ tiltShiftBlur: Math.max(0, Math.min(64, value)) }),
       quickReset: () => {
         //preserve debug values
-        const { showDebugOverlay, showTextures, showTrails } = get();
+        const {
+          showDebugOverlay,
+          showTextures,
+          showTrails,
+          tiltShiftEnabled,
+          tiltShiftFocus,
+          tiltShiftRange,
+          tiltShiftFeather,
+          tiltShiftBlur,
+        } = get();
         set({
           ...initialData,
           showDebugOverlay,
           showTextures,
           showTrails,
+          tiltShiftEnabled,
+          tiltShiftFocus,
+          tiltShiftRange,
+          tiltShiftFeather,
+          tiltShiftBlur,
           isSetupFinished: true,
           habits: [
             {
@@ -527,6 +575,13 @@ export const useStore = create<Store>()(
         if (s.pendingLanding === undefined) s.pendingLanding = false;
         if (s.justLanded === undefined) s.justLanded = false;
         if (s.showDebugOverlay === undefined) s.showDebugOverlay = false;
+
+        // Defaults for tilt-shift controls
+        if (s.tiltShiftEnabled === undefined) s.tiltShiftEnabled = true;
+        if (s.tiltShiftFocus === undefined) s.tiltShiftFocus = 0.55;
+        if (s.tiltShiftRange === undefined) s.tiltShiftRange = 0.18;
+        if (s.tiltShiftFeather === undefined) s.tiltShiftFeather = 0.22;
+        if (s.tiltShiftBlur === undefined) s.tiltShiftBlur = 8;
         return s as Store;
       },
     },
