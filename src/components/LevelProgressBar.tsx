@@ -1,13 +1,13 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import { getLevelProgress, getXPForNextLevel } from '../types';
+import { getLevelProgress, xpCurrentThresholdForLevel } from '../types';
 import { useUserLevel } from '../utils/store';
 import { ProgressBar } from './ProgressBar';
 
 export function LevelProgressBar() {
   const userLevel = useUserLevel();
   const progress = getLevelProgress(userLevel.totalXP);
-  const nextLevelXP = getXPForNextLevel(userLevel.level);
+  const nextLevelXP = xpCurrentThresholdForLevel(userLevel.level);
 
   return (
     <View style={styles.container}>
