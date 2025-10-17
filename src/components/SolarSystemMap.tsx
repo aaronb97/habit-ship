@@ -43,6 +43,7 @@ import {
   HABIT_TRAVEL_ANIM_MS,
   CAMERA_MOVE_MS,
   CAMERA_HOLD_MS,
+  YAW_SIDE_ON_DISTANCE_CUTOFF,
 } from './solarsystem/constants';
 import { DebugOverlay } from './DebugOverlay';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -98,11 +99,7 @@ export function SolarSystemMap() {
   // Determine which planet systems are relevant for rendering moons
   const getRelevantPlanetSystems = (): Set<string> => {
     const { startingLocation, target } = useStore.getState().userPosition;
-    return getRelevantPlanetSystemsFor(
-      startingLocation,
-      target?.name,
-      PLANETS,
-    );
+    return getRelevantPlanetSystemsFor(startingLocation, target?.name, PLANETS);
   };
 
   // Determine which planets are unlocked (visible) at current level
@@ -129,8 +126,13 @@ export function SolarSystemMap() {
       const start = getCurrentTime();
       focusAnimStartRef.current = start;
 
-      const { initialDistance, previousDistanceTraveled, distanceTraveled } =
-        useStore.getState().userPosition;
+      const {
+        initialDistance,
+        previousDistanceTraveled,
+        distanceTraveled,
+        startingLocation,
+        target,
+      } = useStore.getState().userPosition;
 
       const pending =
         useStore.getState().pendingTravelAnimation ||
@@ -149,18 +151,36 @@ export function SolarSystemMap() {
 
       const vStart = vantageForProgress(fromAbs);
       const vEnd = vantageForProgress(toAbs);
-      vantageStartRef.current = vStart;
-      vantageEndRef.current = vEnd;
+
+      // If start/target centers are very close in scene units, lock yaw side-on for the
+      // entire scripted camera sequence to avoid ending up behind the parent body.
+      const startBody =
+        PLANETS.find((b) => b.name === startingLocation) ?? earth;
+      const targetBody = PLANETS.find((b) => b.name === target?.name) ?? earth;
+      const startCenter = toVec3(startBody.getVisualPosition());
+      const targetCenter = toVec3(targetBody.getVisualPosition());
+      const separation = startCenter.distanceTo(targetCenter);
+      const lockSideOn = separation < YAW_SIDE_ON_DISTANCE_CUTOFF;
+      const SIDE_YAW = Math.PI / 2;
+      const vStartAdj = lockSideOn ? { ...vStart, yaw: SIDE_YAW } : vStart;
+      const vEndAdj = lockSideOn ? { ...vEnd, yaw: SIDE_YAW } : vEnd;
+      vantageStartRef.current = vStartAdj;
+      vantageEndRef.current = vEndAdj;
 
       if (pending) {
         const controller = cameraControllerRef.current;
         if (controller) {
-          controller.startScriptedCamera(start, controller.state, vStart, vEnd);
+          controller.startScriptedCamera(
+            start,
+            controller.state,
+            vStartAdj,
+            vEndAdj,
+          );
         } else {
           pendingScriptedStartRef.current = {
             nowTs: start,
-            vantageStart: vStart,
-            vantageEnd: vEnd,
+            vantageStart: vStartAdj,
+            vantageEnd: vEndAdj,
           };
         }
       } else {
@@ -192,17 +212,35 @@ export function SolarSystemMap() {
       const toAbs = clamp01((distanceTraveledVal ?? 0) / denom);
       const vStart = vantageForProgress(fromAbs);
       const vEnd = vantageForProgress(toAbs);
-      vantageStartRef.current = vStart;
-      vantageEndRef.current = vEnd;
+
+      // Check separation again on distance change; if small, lock yaw side-on.
+      const { startingLocation, target } = useStore.getState().userPosition;
+      const startBody =
+        PLANETS.find((b) => b.name === startingLocation) ?? earth;
+      const targetBody = PLANETS.find((b) => b.name === target?.name) ?? earth;
+      const startCenter = toVec3(startBody.getVisualPosition());
+      const targetCenter = toVec3(targetBody.getVisualPosition());
+      const separation = startCenter.distanceTo(targetCenter);
+      const lockSideOn = separation < YAW_SIDE_ON_DISTANCE_CUTOFF;
+      const SIDE_YAW = Math.PI / 2;
+      const vStartAdj = lockSideOn ? { ...vStart, yaw: SIDE_YAW } : vStart;
+      const vEndAdj = lockSideOn ? { ...vEnd, yaw: SIDE_YAW } : vEnd;
+      vantageStartRef.current = vStartAdj;
+      vantageEndRef.current = vEndAdj;
 
       const controller = cameraControllerRef.current;
       if (controller) {
-        controller.startScriptedCamera(start, controller.state, vStart, vEnd);
+        controller.startScriptedCamera(
+          start,
+          controller.state,
+          vStartAdj,
+          vEndAdj,
+        );
       } else {
         pendingScriptedStartRef.current = {
           nowTs: start,
-          vantageStart: vStart,
-          vantageEnd: vEnd,
+          vantageStart: vStartAdj,
+          vantageEnd: vEndAdj,
         };
       }
     }
@@ -546,13 +584,30 @@ export function SolarSystemMap() {
         const controller = cameraControllerRef.current;
         const cam = cameraRef.current;
         if (controller && cam) {
-          const { target: targetState } = useStore.getState().userPosition;
+          const { target: targetState, startingLocation } =
+            useStore.getState().userPosition;
           const targetBody =
             PLANETS.find((b) => b.name === targetState?.name) ?? earth;
+          const startBody =
+            PLANETS.find((b) => b.name === startingLocation) ?? earth;
 
           const targetVisual = toVec3(targetBody.getVisualPosition());
           const center = displayUserPosRef.current.clone();
-          controller.tick(center, targetVisual, { nowTs: getCurrentTime() });
+
+          // Disable auto-rotate during short-hop animations so yaw stays locked.
+          let autoRotate = true;
+          if (targetState) {
+            const startCenter = toVec3(startBody.getVisualPosition());
+            const separation = startCenter.distanceTo(targetVisual);
+            const lockSideOn = separation < YAW_SIDE_ON_DISTANCE_CUTOFF;
+            const animActive = isFocusedRef.current && !animSyncedRef.current;
+            if (lockSideOn && animActive) autoRotate = false;
+          }
+
+          controller.tick(center, targetVisual, {
+            nowTs: getCurrentTime(),
+            autoRotate,
+          });
         }
       }
 

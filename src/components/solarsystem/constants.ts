@@ -41,6 +41,10 @@ export const SMOOTHING_YAW = 0.15;
 export const SMOOTHING_PITCH = 0.18;
 export const SMOOTHING_RADIUS = 0.2;
 
+// For very short travels (e.g., Mars -> Phobos), lock camera yaw to side-on during the
+// travel animation to avoid ending up behind the parent body. Units are scene units.
+export const YAW_SIDE_ON_DISTANCE_CUTOFF = 0.3;
+
 // Gesture settings
 // Min/max zoom radius for pinch gesture.
 export const ZOOM_MIN_RADIUS = 0.1;
