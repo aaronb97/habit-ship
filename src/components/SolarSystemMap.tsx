@@ -336,21 +336,14 @@ export function SolarSystemMap() {
       return startSurface.clone().lerp(targetSurface, t);
     }
 
-    // Not traveling: snap to the current body's displayed position
+    // Not traveling: snap to the current body's displayed center
     const body =
       PLANETS.find(
         (b) => b.name === useStore.getState().userPosition.startingLocation,
       ) ?? earth;
 
     const center = toVec3(body.getVisualPosition());
-    const targetState = useStore.getState().userPosition.target;
-    const targetBody =
-      PLANETS.find((b) => b.name === targetState?.name) ?? earth;
-
-    const tgtPos = toVec3(targetBody.getVisualPosition());
-    const dir = tgtPos.clone().sub(center).normalize();
-    const r = getVisualRadius(body.name);
-    return center.clone().add(dir.multiplyScalar(r || 0));
+    return center;
   };
 
   // Double-tap: smoothly zoom camera to default radius
@@ -591,8 +584,10 @@ export function SolarSystemMap() {
           const startBody =
             PLANETS.find((b) => b.name === startingLocation) ?? earth;
 
-          const targetVisual = toVec3(targetBody.getVisualPosition());
           const center = displayUserPosRef.current.clone();
+          const targetVisual = targetState
+            ? toVec3(targetBody.getVisualPosition())
+            : center.clone();
 
           // Disable auto-rotate during short-hop animations so yaw stays locked.
           let autoRotate = true;
