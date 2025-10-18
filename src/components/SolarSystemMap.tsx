@@ -44,9 +44,6 @@ import {
   CAMERA_MOVE_MS,
   CAMERA_HOLD_MS,
   YAW_SIDE_ON_DISTANCE_CUTOFF,
-  ORBIT_INITIAL_RADIUS,
-  ZOOM_MIN_RADIUS,
-  MAX_PITCH_RAD,
 } from './solarsystem/constants';
 import { DebugOverlay } from './DebugOverlay';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -349,40 +346,11 @@ export function SolarSystemMap() {
     return center;
   };
 
-  // Double-tap: smoothly zoom camera to default radius
+  // Double-tap: delegate to controller's configurable cycle
   const zoomCamera = () => {
     const controller = cameraControllerRef.current;
     if (!controller) return;
-
-    controller.stopScriptedCamera();
-    controller.cancelTween();
-
-    const r = controller.radius;
-    const approxEq = (a: number, b: number, eps: number) =>
-      Math.abs(a - b) <= eps;
-    const isAtDefault = approxEq(
-      r,
-      ORBIT_INITIAL_RADIUS,
-      Math.max(0.01, ORBIT_INITIAL_RADIUS * 0.05),
-    );
-    const isAtMin = approxEq(
-      r,
-      ZOOM_MIN_RADIUS,
-      Math.max(0.01, ZOOM_MIN_RADIUS * 0.1),
-    );
-    const OVERHEAD_RADIUS = 60;
-
-    if (isAtDefault) {
-      controller.setRadiusTarget(ZOOM_MIN_RADIUS);
-      return;
-    }
-
-    if (isAtMin) {
-      controller.animateToRadiusAndPitch(OVERHEAD_RADIUS, MAX_PITCH_RAD, 2000);
-      return;
-    }
-
-    controller.resetZoom();
+    controller.cycleDoubleTap();
   };
 
   // Gesture composition via hook (persists pan accumulators internally)

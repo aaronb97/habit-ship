@@ -45,6 +45,17 @@ export enum CameraPhase {
   Complete = 'Complete',
 }
 
+export type StageRadiusTarget = 'initial' | 'min' | number;
+export type StagePitchTarget = 'max' | 'keep' | number;
+export type DoubleTapStage = {
+  matchRadius: StageRadiusTarget;
+  epsilon?: number;
+  action: 'reset' | 'set' | 'animate';
+  radius?: StageRadiusTarget;
+  pitch?: StagePitchTarget;
+  durationMs?: number;
+};
+
 export function clamp01(x: number) {
   return Math.min(1, Math.max(0, x));
 }
@@ -260,6 +271,29 @@ export class CameraController {
   private schedule?: ScriptSchedule;
   private _lastPhase: CameraPhase = CameraPhase.Idle;
 
+  private doubleTapStages: DoubleTapStage[] = [
+    {
+      matchRadius: 'initial',
+      epsilon: Math.max(0.01, ORBIT_INITIAL_RADIUS * 0.05),
+      action: 'reset',
+    },
+    {
+      matchRadius: 'min',
+      epsilon: Math.max(0.01, ZOOM_MIN_RADIUS * 0.1),
+      action: 'set',
+      radius: 'min',
+      pitch: 'keep',
+    },
+    {
+      matchRadius: 60,
+      epsilon: 1,
+      action: 'animate',
+      radius: 40,
+      pitch: 0.5,
+      durationMs: 1500,
+    },
+  ];
+
   constructor(camera: THREE.PerspectiveCamera) {
     this.camera = camera;
   }
@@ -289,7 +323,11 @@ export class CameraController {
   }
 
   setRadiusTarget(r: number) {
-    this.radiusTarget = THREE.MathUtils.clamp(r, ZOOM_MIN_RADIUS, ZOOM_MAX_RADIUS);
+    this.radiusTarget = THREE.MathUtils.clamp(
+      r,
+      ZOOM_MIN_RADIUS,
+      ZOOM_MAX_RADIUS,
+    );
     this.yawVelocity = 0;
     this.pitchVelocity = 0;
   }
@@ -317,6 +355,78 @@ export class CameraController {
     this.tweenEndRadius = r;
     this.tweenEndPitch = p;
     this.tweenActive = true;
+  }
+
+  configureDoubleTapStages(stages: DoubleTapStage[]) {
+    this.doubleTapStages = stages.slice();
+  }
+
+  private resolveRadiusTarget(t: StageRadiusTarget): number {
+    if (t === 'initial') return ORBIT_INITIAL_RADIUS;
+    if (t === 'min') return ZOOM_MIN_RADIUS;
+    return t;
+  }
+
+  private resolvePitchTarget(t: StagePitchTarget): number {
+    if (t === 'max') return MAX_PITCH_RAD;
+    if (t === 'keep') return this.pitch;
+    return t;
+  }
+
+  private epsFor(target: StageRadiusTarget, provided?: number): number {
+    if (typeof provided === 'number') return provided;
+    if (target === 'initial')
+      return Math.max(0.01, ORBIT_INITIAL_RADIUS * 0.05);
+    if (target === 'min') return Math.max(0.01, ZOOM_MIN_RADIUS * 0.1);
+    return 1.0;
+  }
+
+  private approxEq(a: number, b: number, eps: number) {
+    return Math.abs(a - b) <= eps;
+  }
+
+  cycleDoubleTap() {
+    this.stopScriptedCamera();
+    this.cancelTween();
+
+    const r = this.radius;
+    let currentIndex = -1;
+    for (let i = 0; i < this.doubleTapStages.length; i++) {
+      const s = this.doubleTapStages[i];
+      if (!s) continue;
+      const matchR = this.resolveRadiusTarget(s.matchRadius);
+      const eps = this.epsFor(s.matchRadius, s.epsilon);
+      if (this.approxEq(r, matchR, eps)) {
+        currentIndex = i;
+        break;
+      }
+    }
+
+    const nextIndex =
+      currentIndex >= 0 ? (currentIndex + 1) % this.doubleTapStages.length : 0;
+    const next = this.doubleTapStages[nextIndex];
+    if (!next) return;
+
+    if (next.action === 'reset') {
+      this.resetZoom();
+      return;
+    }
+
+    if (next.action === 'set') {
+      const rr = this.resolveRadiusTarget(next.radius ?? 'initial');
+      this.setRadiusTarget(rr);
+      if (next.pitch !== undefined) {
+        const pp = this.resolvePitchTarget(next.pitch);
+        this.setPitchTarget(pp);
+      }
+      return;
+    } else {
+      const rr = this.resolveRadiusTarget(next.radius ?? 'initial');
+      const pp = this.resolvePitchTarget(next.pitch ?? 'keep');
+      const dur = Math.max(1, next.durationMs ?? 1);
+      this.animateToRadiusAndPitch(rr, pp, dur);
+      return;
+    }
   }
 
   // ----- Gesture handling -----
