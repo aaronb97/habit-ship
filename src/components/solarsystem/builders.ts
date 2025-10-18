@@ -4,6 +4,7 @@ import {
   PLANET_MESH_X_ROTATION,
   TRAIL_MAX_ALPHA,
   TRAIL_EASE_EXPONENT,
+  TRAIL_NEAR_BODY_FADE_EXPONENT,
 } from './constants';
 
 export type MappedMaterial =
@@ -50,6 +51,7 @@ export function createPlanetMesh(
 export function createTrailLine(
   points: THREE.Vector3[],
   color: number,
+  nearFadeDistance: number,
 ): THREE.Line | undefined {
   if (points.length < 2) return undefined;
   const geom = new THREE.BufferGeometry().setFromPoints(points);
@@ -58,10 +60,20 @@ export function createTrailLine(
   // to ~TRAIL_MAX_ALPHA (newest, closest to the body) to simulate motion.
   const n = points.length;
   const alphas = new Float32Array(n);
+  const last = points[n - 1]!;
   for (let i = 0; i < n; i++) {
     const t = n > 1 ? i / (n - 1) : 1; // 0 .. 1 from oldest to newest
     const eased = Math.pow(t, TRAIL_EASE_EXPONENT); // ease-in for smoother tail
-    alphas[i] = TRAIL_MAX_ALPHA * eased; // 0 -> max alpha
+    const base = TRAIL_MAX_ALPHA * eased; // 0 -> max alpha
+    let nearFactor = 1.0;
+    if (nearFadeDistance > 0) {
+      const p = points[i]!;
+      const dist = p.distanceTo(last);
+      const k = THREE.MathUtils.clamp(dist / nearFadeDistance, 0.0, 1.0);
+      nearFactor = Math.pow(k, TRAIL_NEAR_BODY_FADE_EXPONENT);
+    }
+
+    alphas[i] = base * nearFactor;
   }
 
   geom.setAttribute('alpha', new THREE.Float32BufferAttribute(alphas, 1));

@@ -12,6 +12,8 @@ export const KM_TO_SCENE = 1 / 1e7;
 export const TRAIL_MAX_ALPHA = 0.85;
 // Exponent for ease-in alpha ramp along trail (2 = quadratic ease-in).
 export const TRAIL_EASE_EXPONENT = 3;
+export const TRAIL_NEAR_BODY_DIAMETERS = 2;
+export const TRAIL_NEAR_BODY_FADE_EXPONENT = 3;
 
 // Apparent size scaling (for visual clarity vs physical accuracy)
 // Base scaling factor for all celestial body radii on screen.

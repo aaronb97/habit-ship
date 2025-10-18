@@ -18,6 +18,7 @@ import {
   OUTLINE_MIN_ENABLED_FACTOR,
   OUTLINE_MIN_PIXELS_FADE_OUT,
   OUTLINE_MIN_PIXELS_FADE_IN,
+  TRAIL_NEAR_BODY_DIAMETERS,
 } from './constants';
 import { toVec3, apparentScaleRatio, getTrailForBody } from './helpers';
 import { CBody, Planet, Moon, earth } from '../../planets';
@@ -117,7 +118,8 @@ export class CelestialBodyNode {
       (body instanceof Planet || body instanceof Moon)
     ) {
       const pts = getTrailForBody(body);
-      const line = createTrailLine(pts, body.color);
+      const nearFade = 2 * this.getVisualRadius() * TRAIL_NEAR_BODY_DIAMETERS;
+      const line = createTrailLine(pts, body.color, nearFade);
       if (line) {
         scene.add(line);
         this.trail = line;
@@ -149,7 +151,8 @@ export class CelestialBodyNode {
     if (enabled) {
       if (!this.trail) {
         const pts = getTrailForBody(this.body);
-        const line = createTrailLine(pts, this.body.color);
+        const nearFade = 2 * this.getVisualRadius() * TRAIL_NEAR_BODY_DIAMETERS;
+        const line = createTrailLine(pts, this.body.color, nearFade);
         if (line) {
           this.scene.add(line);
           this.trail = line;
@@ -209,7 +212,8 @@ export class CelestialBodyNode {
 
           // Rebuild
           const pts = getTrailForBody(this.body);
-          const line = createTrailLine(pts, this.body.color);
+          const nearFade = 2 * this.getVisualRadius() * TRAIL_NEAR_BODY_DIAMETERS;
+          const line = createTrailLine(pts, this.body.color, nearFade);
           if (line) {
             this.scene.add(line);
             this.trail = line;
