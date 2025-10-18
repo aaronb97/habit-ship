@@ -14,6 +14,7 @@ import {
   OUTLINE_EDGE_STRENGTH,
   ROCKET_EXHAUST_SCALE,
 } from './constants';
+import { useStore } from '../../utils/store';
 
 // Apply per-part materials/colors to the loaded rocket model
 function applyRocketMaterials(obj: THREE.Group, baseColor: number) {
@@ -21,7 +22,7 @@ function applyRocketMaterials(obj: THREE.Group, baseColor: number) {
   const hsl = { h: 0, s: 0, l: 0 };
   base.getHSL(hsl);
   // Darker variant for non-body, non-window parts
-  const altL = Math.max(0, Math.min(1, hsl.l - 0.5));
+  const altL = Math.max(0, Math.min(1, hsl.l - 0.2));
 
   const hours = new Date().getHours();
   const isDaytime = hours >= 8 && hours <= 20;
@@ -64,6 +65,8 @@ export class Rocket {
   private readonly exhaustGroup: THREE.Group;
   private outlinePass?: OutlinePass;
   private spinAngle = 0;
+  private outlineGlobalEnabled = true;
+  private unsubOutlines?: () => void;
 
   // exhaust sprites
   private sprites: THREE.Sprite[] = [];
@@ -78,6 +81,23 @@ export class Rocket {
     this.group = group;
     this.exhaustGroup = exhaustGroup;
     this.outlinePass = outlinePass;
+    this.outlineGlobalEnabled = Boolean(useStore.getState().outlinesEnabled);
+    if (this.outlinePass) {
+      this.outlinePass.enabled =
+        this.outlineGlobalEnabled && this.group.visible;
+    }
+
+    {
+      type RootState = ReturnType<typeof useStore.getState>;
+      const unsub = useStore.subscribe((s: RootState, _prev: RootState) => {
+        this.outlineGlobalEnabled = Boolean(s.outlinesEnabled);
+        if (this.outlinePass) {
+          this.outlinePass.enabled =
+            this.outlineGlobalEnabled && this.group.visible;
+        }
+      });
+      this.unsubOutlines = unsub;
+    }
   }
 
   static async create({
@@ -124,7 +144,7 @@ export class Rocket {
     outline.pulsePeriod = OUTLINE_PULSE_PERIOD;
     outline.visibleEdgeColor.set(color);
     outline.hiddenEdgeColor.set(color);
-    outline.enabled = true;
+    outline.enabled = Boolean(useStore.getState().outlinesEnabled);
     composer.addPass(outline);
 
     return new Rocket(root, exhaust, outline);
@@ -136,7 +156,8 @@ export class Rocket {
 
   setVisible(visible: boolean) {
     this.group.visible = visible;
-    if (this.outlinePass) this.outlinePass.enabled = visible;
+    if (this.outlinePass)
+      this.outlinePass.enabled = this.outlineGlobalEnabled && visible;
   }
 
   update(
@@ -266,6 +287,13 @@ export class Rocket {
 
       this.outlinePass.enabled = false;
       this.outlinePass = undefined;
+    }
+
+    if (this.unsubOutlines) {
+      try {
+        this.unsubOutlines();
+      } catch {}
+      this.unsubOutlines = undefined;
     }
   }
 
