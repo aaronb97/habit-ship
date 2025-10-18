@@ -28,7 +28,7 @@ export function LevelUpListener() {
   useEffect(() => {
     const prev = prevLevelRef.current;
     const curr = currentLevel;
-    if (curr > prev && isFocused) {
+    if (curr > prev) {
       // Update ref immediately to avoid repeated triggers while modal is open
       prevLevelRef.current = curr;
       // Compute distance per habit change
@@ -55,7 +55,7 @@ export function LevelUpListener() {
     } else if (curr < prev) {
       prevLevelRef.current = curr;
     }
-  }, [currentLevel, isFocused, setLevelUpModalVisible]);
+  }, [currentLevel, setLevelUpModalVisible]);
 
   const close = () => {
     prevLevelRef.current = currentLevel;
@@ -63,5 +63,11 @@ export function LevelUpListener() {
     setLevelUpModalVisible(false);
   };
 
-  return <LevelUpModal visible={visible} onClose={close} lines={lines} />;
+  return (
+    <LevelUpModal
+      visible={visible && isFocused}
+      onClose={close}
+      lines={lines}
+    />
+  );
 }
