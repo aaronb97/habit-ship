@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { getCurrentTime } from '../../utils/time';
 import {
   MAX_PITCH_RAD,
   PLANE_NORMAL_EPS,
@@ -227,7 +228,7 @@ export class CameraController {
   // Current orbit state (spherical around the user/center)
   private yaw = ORBIT_INITIAL_YAW;
   private pitch = 0;
-  private radius = ORBIT_INITIAL_RADIUS;
+  public radius = ORBIT_INITIAL_RADIUS;
 
   // Targets we tween toward each frame
   private yawTarget = this.yaw;
@@ -241,6 +242,14 @@ export class CameraController {
   // Interaction flags/state
   private isPanning = false;
   private pinchStartRadius = 0;
+
+  private tweenActive = false;
+  private tweenStartTs = 0;
+  private tweenDurationMs = 0;
+  private tweenStartRadius = 0;
+  private tweenStartPitch = 0;
+  private tweenEndRadius = 0;
+  private tweenEndPitch = 0;
 
   // Scripted camera sequence (pre-roll -> hold -> rocket follow)
   private scriptedActive = false;
@@ -279,11 +288,43 @@ export class CameraController {
     this.pitchVelocity = 0;
   }
 
+  setRadiusTarget(r: number) {
+    this.radiusTarget = THREE.MathUtils.clamp(r, ZOOM_MIN_RADIUS, ZOOM_MAX_RADIUS);
+    this.yawVelocity = 0;
+    this.pitchVelocity = 0;
+  }
+
+  setPitchTarget(p: number) {
+    this.pitchTarget = THREE.MathUtils.clamp(p, -MAX_PITCH_RAD, MAX_PITCH_RAD);
+    this.yawVelocity = 0;
+    this.pitchVelocity = 0;
+  }
+
+  cancelTween() {
+    this.tweenActive = false;
+  }
+
+  animateToRadiusAndPitch(radius: number, pitch: number, durationMs: number) {
+    const r = THREE.MathUtils.clamp(radius, ZOOM_MIN_RADIUS, ZOOM_MAX_RADIUS);
+    const p = THREE.MathUtils.clamp(pitch, -MAX_PITCH_RAD, MAX_PITCH_RAD);
+    this.scriptedActive = false;
+    this.yawVelocity = 0;
+    this.pitchVelocity = 0;
+    this.tweenStartTs = getCurrentTime();
+    this.tweenDurationMs = Math.max(1, durationMs);
+    this.tweenStartRadius = this.radius;
+    this.tweenStartPitch = this.pitch;
+    this.tweenEndRadius = r;
+    this.tweenEndPitch = p;
+    this.tweenActive = true;
+  }
+
   // ----- Gesture handling -----
   beginPan() {
     this.isPanning = true;
     // Any user interaction cancels scripted camera for this sequence
     this.scriptedActive = false;
+    this.tweenActive = false;
   }
 
   updatePan(
@@ -340,6 +381,7 @@ export class CameraController {
     this.pinchStartRadius = this.radiusTarget;
     // Any user interaction cancels scripted camera for this sequence
     this.scriptedActive = false;
+    this.tweenActive = false;
   }
 
   updatePinch(scale: number) {
@@ -387,7 +429,7 @@ export class CameraController {
     opts?: { autoRotate?: boolean; nowTs?: number },
   ) {
     const autoRotate = opts?.autoRotate ?? true;
-    const nowTs = opts?.nowTs ?? Date.now();
+    const nowTs = opts?.nowTs ?? getCurrentTime();
 
     // Update scripted camera targets if active
     if (
@@ -445,10 +487,21 @@ export class CameraController {
         this.pitchVelocity = 0;
     }
 
-    // Smoothly tween current state toward targets
-    this.yaw += (this.yawTarget - this.yaw) * SMOOTHING_YAW;
-    this.pitch += (this.pitchTarget - this.pitch) * SMOOTHING_PITCH;
-    this.radius += (this.radiusTarget - this.radius) * SMOOTHING_RADIUS;
+    if (this.tweenActive) {
+      const t = clamp01((nowTs - this.tweenStartTs) / this.tweenDurationMs);
+      const e = easeInOutCubic(t);
+      this.radius = lerp(this.tweenStartRadius, this.tweenEndRadius, e);
+      this.pitch = lerp(this.tweenStartPitch, this.tweenEndPitch, e);
+      this.radiusTarget = this.radius;
+      this.pitchTarget = this.pitch;
+      if (t >= 1) {
+        this.tweenActive = false;
+      }
+    } else {
+      this.yaw += (this.yawTarget - this.yaw) * SMOOTHING_YAW;
+      this.pitch += (this.pitchTarget - this.pitch) * SMOOTHING_PITCH;
+      this.radius += (this.radiusTarget - this.radius) * SMOOTHING_RADIUS;
+    }
 
     // Apply transform to the camera
     updateOrbitCamera(
