@@ -1,3 +1,4 @@
+import { GlassView } from 'expo-glass-effect';
 import { useState, useEffect } from 'react';
 import { Pressable, View, Text, StyleSheet } from 'react-native';
 
@@ -24,36 +25,38 @@ export function DebugOverlay(props: {
   const entries = Object.entries(values);
 
   return (
-    <Pressable style={styles.debugOverlay} onPress={onToggle}>
-      {entries.map(([k, v]) => (
-        <View key={k} style={styles.debugRow}>
-          <Text style={styles.debugText}>
-            {k}: {Number.isFinite(v) ? v.toFixed(3) : '—'}
-          </Text>
-        </View>
-      ))}
-      {expanded ? (
-        <View style={styles.debugGraphs}>
-          {entries.map(([k]) => {
-            const stats = minMax[k];
-            const min = stats?.min ?? 0;
-            const max = stats?.max ?? 1;
-            return (
-              <View key={`g-${k}`} style={styles.debugGraphBlock}>
-                <Text style={styles.debugGraphLabel}>{k}</Text>
-                <MiniBarGraph
-                  data={history[k] ?? []}
-                  height={20}
-                  width={220}
-                  min={min}
-                  max={max}
-                />
-              </View>
-            );
-          })}
-        </View>
-      ) : null}
-    </Pressable>
+    <GlassView style={styles.glassView} glassEffectStyle="clear">
+      <Pressable style={styles.debugOverlay} onPress={onToggle}>
+        {entries.map(([k, v]) => (
+          <View key={k} style={styles.debugRow}>
+            <Text style={styles.debugText}>
+              {k}: {Number.isFinite(v) ? v.toFixed(3) : '—'}
+            </Text>
+          </View>
+        ))}
+        {expanded ? (
+          <View style={styles.debugGraphs}>
+            {entries.map(([k]) => {
+              const stats = minMax[k];
+              const min = stats?.min ?? 0;
+              const max = stats?.max ?? 1;
+              return (
+                <View key={`g-${k}`} style={styles.debugGraphBlock}>
+                  <Text style={styles.debugGraphLabel}>{k}</Text>
+                  <MiniBarGraph
+                    data={history[k] ?? []}
+                    height={20}
+                    width={220}
+                    min={min}
+                    max={max}
+                  />
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
+      </Pressable>
+    </GlassView>
   );
 }
 
@@ -100,13 +103,13 @@ function MiniBarGraph(props: {
 }
 
 const styles = StyleSheet.create({
+  glassView: {
+    borderRadius: 8,
+  },
   debugOverlay: {
     position: 'relative',
-    top: 8,
-    left: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    backgroundColor: 'rgba(0,0,0,0.6)',
     borderRadius: 8,
     zIndex: 10,
     maxWidth: 260,
