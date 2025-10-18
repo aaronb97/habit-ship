@@ -268,7 +268,6 @@ export function UnifiedGlassPanel({
                 ) : null}
 
                 <CompleteButton
-                  habit={h}
                   onPress={() => completeHabit(h.id)}
                   isCompleted={completed}
                 />
@@ -500,16 +499,15 @@ function TimerButton({
 }
 
 function CompleteButton({
-  habit,
   onPress,
   isCompleted,
 }: {
-  habit: Habit;
   onPress: () => void;
   isCompleted: boolean;
 }) {
   return (
     <TouchableOpacity
+      disabled={isCompleted}
       style={[
         styles.actionButton,
         { backgroundColor: isCompleted ? colors.darkGray : colors.primary },
