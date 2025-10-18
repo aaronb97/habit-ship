@@ -6,8 +6,9 @@ import { Dev } from './screens/Dev';
 import { colors } from '../styles/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../utils/store';
+import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation';
 
-const Tab = createBottomTabNavigator<TabParamList>();
+const Tab = createNativeBottomTabNavigator<TabParamList>();
 
 export function TabNavigator() {
   const isDevelopment = __DEV__;
@@ -20,13 +21,13 @@ export function TabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{
-        headerShown: false,
+        // headerShown: false,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.text,
-        tabBarStyle: {
-          backgroundColor: colors.background,
-          borderTopColor: colors.border || '#333',
-        },
+        // tabBarInactiveTintColor: colors.text,
+        // tabBarStyle: {
+        //   backgroundColor: colors.background,
+        //   borderTopColor: colors.border || '#333',
+        // },
       }}
     >
       <Tab.Screen
@@ -35,17 +36,17 @@ export function TabNavigator() {
         options={{
           title: 'Home',
           tabBarBadge: homeNeedsSelection ? '' : undefined,
-          tabBarBadgeStyle: {
-            backgroundColor: colors.accent,
-            maxWidth: 10,
-            maxHeight: 10,
-            fontSize: 8,
-            lineHeight: 9,
-            alignSelf: undefined,
-          },
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
-          ),
+          // tabBarBadgeStyle: {
+          //   backgroundColor: colors.accent,
+          //   maxWidth: 10,
+          //   maxHeight: 10,
+          //   fontSize: 8,
+          //   lineHeight: 9,
+          //   alignSelf: undefined,
+          // },
+          // tabBarIcon: ({ color, size }) => (
+          //   <Ionicons name="home" size={size} color={color} />
+          // ),
         }}
       />
       <Tab.Screen
@@ -53,9 +54,9 @@ export function TabNavigator() {
         component={Planets}
         options={{
           title: 'Planets',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="list" size={size} color={color} />
-          ),
+          // tabBarIcon: ({ color, size }) => (
+          //   <Ionicons name="list" size={size} color={color} />
+          // ),
         }}
       />
       <Tab.Screen
@@ -64,17 +65,17 @@ export function TabNavigator() {
         options={{
           title: 'Map',
           tabBarBadge: pendingMapAnim ? '' : undefined,
-          tabBarBadgeStyle: {
-            backgroundColor: colors.accent,
-            maxWidth: 10,
-            maxHeight: 10,
-            fontSize: 8,
-            lineHeight: 9,
-            alignSelf: undefined,
-          },
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="planet" size={size} color={color} />
-          ),
+          // tabBarBadgeStyle: {
+          //   backgroundColor: colors.accent,
+          //   maxWidth: 10,
+          //   maxHeight: 10,
+          //   fontSize: 8,
+          //   lineHeight: 9,
+          //   alignSelf: undefined,
+          // },
+          // tabBarIcon: ({ color, size }) => (
+          //   <Ionicons name="planet" size={size} color={color} />
+          // ),
         }}
       />
       {isDevelopment && (
@@ -83,9 +84,9 @@ export function TabNavigator() {
           component={Dev}
           options={{
             title: 'Dev',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="code-slash" size={size} color={color} />
-            ),
+            // tabBarIcon: ({ color, size }) => (
+            //   <Ionicons name="code-slash" size={size} color={color} />
+            // ),
           }}
         />
       )}

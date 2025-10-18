@@ -3,16 +3,16 @@ import {
   Theme,
   LinkingOptions,
 } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { colors, fonts } from '../styles/theme';
+// import { colors, fonts } from '../styles/theme';
 import { TabNavigator } from './TabNavigator';
 import { NotFound } from './screens/NotFound';
 import { SetupFirstHabit } from './screens/SetupFirstHabit';
 import { SetupFirstPlanet } from './screens/SetupFirstPlanet';
 import { WelcomeTransition } from './screens/WelcomeTransition';
 import { useIsSetupFinished } from '../utils/store';
+import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation';
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+const Stack = createNativeBottomTabNavigator<RootStackParamList>();
 
 type NavigationProps = {
   theme?: Theme;
@@ -26,50 +26,52 @@ export function Navigation({ theme, linking, onReady }: NavigationProps) {
   return (
     <NavigationContainer theme={theme} linking={linking} onReady={onReady}>
       <Stack.Navigator
-        screenOptions={{
-          headerTintColor: colors.primaryText,
-          headerBackTitle: 'Back',
-          headerBackTitleStyle: {
-            fontFamily: fonts.regular,
-          },
-        }}
+        screenOptions={
+          {
+            // headerTintColor: colors.primaryText,
+            // headerBackTitle: 'Back',
+            // headerBackTitleStyle: {
+            //   fontFamily: fonts.regular,
+            // },
+          }
+        }
       >
         {!isSetupFinished ? (
           <>
             <Stack.Screen
               name="SetupFirstHabit"
               component={SetupFirstHabit}
-              options={{
-                title: '',
-                headerTransparent: true,
-                headerShadowVisible: false,
-              }}
+              // options={{
+              //   title: '',
+              //   headerTransparent: true,
+              //   headerShadowVisible: false,
+              // }}
             />
             <Stack.Screen
               name="SetupFirstPlanet"
               component={SetupFirstPlanet}
-              options={{
-                title: '',
-                headerTransparent: true,
-                headerShadowVisible: false,
-              }}
+              // options={{
+              //   title: '',
+              //   headerTransparent: true,
+              //   headerShadowVisible: false,
+              // }}
             />
           </>
         ) : (
           <Stack.Screen
             name="Home"
             component={TabNavigator}
-            options={{
-              headerShown: false,
-            }}
+            // options={{
+            //   headerShown: false,
+            // }}
           />
         )}
         <Stack.Screen
           name="WelcomeTransition"
           component={WelcomeTransition}
-          options={{
-            headerShown: false,
-          }}
+          // options={{
+          //   headerShown: false,
+          // }}
         />
         <Stack.Screen
           name="NotFound"
