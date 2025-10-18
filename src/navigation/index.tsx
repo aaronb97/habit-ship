@@ -22,6 +22,7 @@ type NavigationProps = {
 
 export function Navigation({ theme, linking, onReady }: NavigationProps) {
   const isSetupFinished = useIsSetupFinished();
+  
 
   return (
     <NavigationContainer theme={theme} linking={linking} onReady={onReady}>

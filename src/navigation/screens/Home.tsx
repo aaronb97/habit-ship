@@ -35,6 +35,7 @@ export function Home() {
 
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showPlanetModal, setShowPlanetModal] = useState(false);
   const justLanded = useStore((s) => s.justLanded);
   const isLevelUpModalVisible = useStore((s) => s.isLevelUpModalVisible);
 
@@ -91,7 +92,7 @@ export function Home() {
             keyExtractor={(item) => item.id}
             ListHeaderComponent={
               <>
-                <JourneyDisplay />
+                <JourneyDisplay onPressTitle={() => setShowPlanetModal(true)} />
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>Daily Habits</Text>
                   {habits.length < 5 ? (
@@ -120,8 +121,10 @@ export function Home() {
         />
 
         <PlanetSelectionModal
-          visible={!userPosition.target && !isLevelUpModalVisible}
-          onClose={() => undefined}
+          visible={
+            showPlanetModal || (!userPosition.target && !isLevelUpModalVisible)
+          }
+          onClose={() => setShowPlanetModal(false)}
         />
       </SafeAreaView>
     </>
@@ -131,7 +134,7 @@ export function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   header: {
     paddingHorizontal: 20,

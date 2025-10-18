@@ -1,10 +1,14 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { cBodies } from '../planets';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { useIsTraveling, useStore } from '../utils/store';
 import { ProgressBar } from './ProgressBar';
 
-export function JourneyDisplay() {
+export function JourneyDisplay({
+  onPressTitle,
+}: {
+  onPressTitle?: () => void;
+}) {
   const { userPosition, clearData } = useStore();
 
   const isTraveling = useIsTraveling();
@@ -41,7 +45,13 @@ export function JourneyDisplay() {
       <View style={styles.planetInfoContainer}>
         {!isTraveling && <Text style={styles.statusText}>Welcome to </Text>}
         {isTraveling && <Text style={styles.statusText}>En route to </Text>}
-        <Text style={styles.planetTitle}>{planet.name}</Text>
+        {onPressTitle ? (
+          <TouchableOpacity onPress={onPressTitle} activeOpacity={0.7}>
+            <Text style={styles.planetTitle}>{planet.name}</Text>
+          </TouchableOpacity>
+        ) : (
+          <Text style={styles.planetTitle}>{planet.name}</Text>
+        )}
       </View>
 
       <View style={styles.progressContainer}>

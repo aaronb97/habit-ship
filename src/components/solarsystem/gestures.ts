@@ -12,12 +12,14 @@ export function useComposedGesture(params: {
   width: number;
   height: number;
   onDoubleTap?: () => void;
+  enabled?: boolean;
 }) {
-  const { controllerRef, width, height, onDoubleTap } = params;
+  const { controllerRef, width, height, onDoubleTap, enabled = true } = params;
   const lastPanXRef = useRef(0);
   const lastPanYRef = useRef(0);
 
   const pinch = Gesture.Pinch()
+    .enabled(enabled)
     .onBegin(() => {
       controllerRef.current?.beginPinch();
     })
@@ -27,6 +29,7 @@ export function useComposedGesture(params: {
     .runOnJS(true);
 
   const pan = Gesture.Pan()
+    .enabled(enabled)
     .onBegin(() => {
       controllerRef.current?.beginPan();
       lastPanXRef.current = 0;
@@ -53,6 +56,7 @@ export function useComposedGesture(params: {
     .runOnJS(true);
 
   const doubleTap = Gesture.Tap()
+    .enabled(enabled)
     .numberOfTaps(2)
     .maxDelay(250)
     .onEnd((_e, success) => {

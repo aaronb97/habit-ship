@@ -17,6 +17,8 @@ import { XP_REWARDS, calculateLevel } from './experience';
 
 export type HabitId = string & { __habitId: true };
 
+export type TabName = 'HomeTab' | 'MapTab' | 'DevTab';
+
 export type Habit = {
   id: HabitId;
   title: string;
@@ -107,6 +109,9 @@ type Store = {
   // True while the Level Up modal is visible; used to sequence other modals
   isLevelUpModalVisible: boolean;
 
+  // Navigation state
+  activeTab: TabName;
+
   // Actions
   setIsSetupFinished: (value: boolean) => void;
   setDestination: (planetName: string) => void;
@@ -137,6 +142,7 @@ type Store = {
   setShowTextures: (value: boolean) => void;
   setShowDebugOverlay: (value: boolean) => void;
   setLevelUpModalVisible: (value: boolean) => void;
+  setActiveTab: (tab: TabName) => void;
 
   // Tilt-shift setters
   setTiltShiftEnabled: (value: boolean) => void;
@@ -191,6 +197,7 @@ const initialData = {
   pendingLanding: false,
   justLanded: false,
   isLevelUpModalVisible: false,
+  activeTab: 'HomeTab' as TabName,
 } satisfies Partial<Store>;
 
 export const useStore = create<Store>()(
@@ -281,6 +288,7 @@ export const useStore = create<Store>()(
       setShowTextures: (value) => set({ showTextures: value }),
       setShowDebugOverlay: (value) => set({ showDebugOverlay: value }),
       setLevelUpModalVisible: (value) => set({ isLevelUpModalVisible: value }),
+      setActiveTab: (tab) => set({ activeTab: tab }),
 
       // --- Tilt-shift setters ---
       setTiltShiftEnabled: (value) => set({ tiltShiftEnabled: value }),
@@ -590,6 +598,8 @@ export const useStore = create<Store>()(
         if (s.showDebugOverlay === undefined) s.showDebugOverlay = false;
         if (s.isLevelUpModalVisible === undefined)
           s.isLevelUpModalVisible = false;
+        if ((s as Partial<Store>).activeTab === undefined)
+          (s as Partial<Store>).activeTab = 'HomeTab';
 
         // Defaults for tilt-shift controls
         if (s.tiltShiftEnabled === undefined) s.tiltShiftEnabled = true;

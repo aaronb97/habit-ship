@@ -12,7 +12,7 @@ import { cBodies as PLANETS, Moon, Planet, earth } from '../planets';
 import { getCurrentTime } from '../utils/time';
 import { useStore } from '../utils/store';
 import { calculateLevel } from '../utils/experience';
-import { useIsFocused } from '@react-navigation/native';
+// import { useIsFocused } from '@react-navigation/native';
 import { useDebugValues } from '../hooks/useDebugValues';
 
 // Modularized helpers/builders
@@ -32,6 +32,7 @@ import { getRelevantPlanetSystemsFor } from './solarsystem/relevance';
 import { createComposer } from './solarsystem/postprocessing';
 import { useComposedGesture } from './solarsystem/gestures';
 import { addDefaultLights } from './solarsystem/lights';
+import { registerController } from './solarsystem/controllerRegistry';
 import {
   RENDERER_CLEAR_COLOR,
   RENDERER_CLEAR_ALPHA,
@@ -54,7 +55,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [moved] Mesh builders moved to './solarsystem/builders'.
 
-export function SolarSystemMap() {
+export function SolarSystemMap({ interactive }: { interactive?: boolean } = {}) {
   const { width, height } = useWindowDimensions();
 
   // Refs for scene graph
@@ -77,16 +78,18 @@ export function SolarSystemMap() {
   const userPosState = useStore((s) => s.userPosition);
 
   const rocketColorFromStore = useStore((s) => s.rocketColor);
+  const activeTabName = useStore((s) => s.activeTab);
+  const interactiveEffective = (interactive ?? (activeTabName === 'MapTab'));
   const syncTravelVisuals = useStore((s) => s.syncTravelVisuals);
   const finalizeLandingAfterAnimation = useStore(
     (s) => s.finalizeLandingAfterAnimation,
   );
 
-  const isFocusedValue = useIsFocused();
-  const isFocusedRef = useRef<boolean>(isFocusedValue);
+  // Focus replaced by explicit interactive flag from parent (Map tab focus)
+  const isInteractiveRef = useRef<boolean>(interactiveEffective);
   useEffect(() => {
-    isFocusedRef.current = isFocusedValue;
-  }, [isFocusedValue]);
+    isInteractiveRef.current = interactiveEffective;
+  }, [interactiveEffective]);
 
   useEffect(() => {
     return () => {
@@ -122,7 +125,7 @@ export function SolarSystemMap() {
   // When focused, drive animation timing from focus start or latest distance change
   const focusAnimStartRef = useRef<number | null>(null);
   useEffect(() => {
-    if (isFocusedValue) {
+    if (interactiveEffective) {
       const start = getCurrentTime();
       focusAnimStartRef.current = start;
 
@@ -189,7 +192,7 @@ export function SolarSystemMap() {
     } else {
       focusAnimStartRef.current = null;
     }
-  }, [isFocusedValue]);
+  }, [interactiveEffective]);
 
   // Reset animation start when distance updates while focused
   const prevDistanceRef = useRef<{ prev?: number; curr?: number }>({});
@@ -200,7 +203,7 @@ export function SolarSystemMap() {
       distanceTraveledVal !== prevDistanceRef.current.curr ||
       previousDistanceTraveledVal !== prevDistanceRef.current.prev;
 
-    if (changed && isFocusedRef.current) {
+    if (changed && isInteractiveRef.current) {
       const start = getCurrentTime();
       focusAnimStartRef.current = start;
 
@@ -293,7 +296,7 @@ export function SolarSystemMap() {
       const now = getCurrentTime();
       // Only animate rocket when there is a pending distance delta to show
       const shouldAnimateTravel =
-        isFocusedRef.current && !animSyncedRef.current;
+        isInteractiveRef.current && !animSyncedRef.current;
 
       const effectiveStart =
         (shouldAnimateTravel ? focusAnimStartRef.current : null) ?? now;
@@ -359,6 +362,7 @@ export function SolarSystemMap() {
     width,
     height,
     onDoubleTap: zoomCamera,
+    enabled: interactiveEffective,
   });
 
   const onContextCreate = async (gl: ExpoWebGLRenderingContext) => {
@@ -407,6 +411,8 @@ export function SolarSystemMap() {
     cameraRef.current = camera;
     // Create camera controller and start any pending scripted sequence
     cameraControllerRef.current = new CameraController(camera);
+    // Expose controller to screens for gesture forwarding when overlay is behind
+    registerController(cameraControllerRef.current);
     if (pendingScriptedStartRef.current) {
       const p = pendingScriptedStartRef.current;
       cameraControllerRef.current.startScriptedCamera(
@@ -499,7 +505,7 @@ export function SolarSystemMap() {
       displayUserPosRef.current = computeDisplayUserPos();
 
       // If focused and an animation batch is pending, mark it as seen once complete
-      if (isFocusedRef.current && !animSyncedRef.current) {
+      if (!animSyncedRef.current) {
         const { distanceTraveled, previousDistanceTraveled } =
           useStore.getState().userPosition;
 
@@ -509,13 +515,18 @@ export function SolarSystemMap() {
 
         if (complete) {
           try {
-            syncTravelVisuals();
-            // If a landing was reached by the last completion, finalize it now
-            if (useStore.getState().pendingLanding) {
-              finalizeLandingAfterAnimation();
+            if (isInteractiveRef.current) {
+              syncTravelVisuals();
+              // If a landing was reached by the last completion, finalize it now
+              if (useStore.getState().pendingLanding) {
+                finalizeLandingAfterAnimation();
+              }
             }
           } finally {
-            animSyncedRef.current = true;
+            // Keep animSyncedRef gated to interactive so animation can still play when user opens Map
+            if (isInteractiveRef.current) {
+              animSyncedRef.current = true;
+            }
           }
         }
       }
@@ -546,7 +557,7 @@ export function SolarSystemMap() {
 
           // Only spin/move/exhaust when a travel animation is pending
           const shouldAnimateTravel =
-            isFocusedRef.current && !animSyncedRef.current;
+            isInteractiveRef.current && !animSyncedRef.current;
 
           rocketRef.current.update(
             displayUserPosRef.current,
@@ -597,7 +608,7 @@ export function SolarSystemMap() {
             const startCenter = toVec3(startBody.getVisualPosition());
             const separation = startCenter.distanceTo(targetVisual);
             const lockSideOn = separation < YAW_SIDE_ON_DISTANCE_CUTOFF;
-            const animActive = isFocusedRef.current && !animSyncedRef.current;
+            const animActive = interactive && !animSyncedRef.current;
             if (lockSideOn && animActive) autoRotate = false;
           }
 
@@ -617,20 +628,16 @@ export function SolarSystemMap() {
         }
       }
 
-      // (Outline fade handled within CelestialBodyNode.update)
-
       let fps = 0;
       const frameStart = performance.now();
-      if (isFocusedRef.current) {
-        if (composerRef.current) {
-          composerRef.current.render();
-        } else {
-          renderer.render(scene, camera);
-        }
-
-        const elapsed = performance.now() - frameStart;
-        fps = elapsed > 0 ? 1000 / elapsed : 0;
+      if (composerRef.current) {
+        composerRef.current.render();
+      } else {
+        renderer.render(scene, camera);
       }
+
+      const elapsed = performance.now() - frameStart;
+      fps = elapsed > 0 ? 1000 / elapsed : 0;
 
       // Collect debug metrics and publish via single function
       {
@@ -652,6 +659,7 @@ export function SolarSystemMap() {
       frameRef.current = requestAnimationFrame(renderLoop);
     };
 
+    // Start the render loop
     frameRef.current = requestAnimationFrame(renderLoop);
   };
 
@@ -690,6 +698,8 @@ export function SolarSystemMap() {
     console.log('[SolarSystemMap] mounted');
     const registryAtMount = bodyRegistryRef.current;
     return () => {
+      // Unregister controller on unmount
+      registerController(null);
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
       // Dispose body nodes first to remove their meshes and trails
       try {
@@ -754,7 +764,7 @@ export function SolarSystemMap() {
 
   return (
     <GestureDetector gesture={gesture}>
-      <View style={styles.container}>
+      <View style={styles.container} pointerEvents={interactiveEffective ? 'auto' : 'none'}>
         <GLView
           style={styles.gl}
           msaaSamples={GL_MSAA_SAMPLES}

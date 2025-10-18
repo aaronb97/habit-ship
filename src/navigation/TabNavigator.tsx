@@ -1,12 +1,11 @@
-// import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { View, StyleSheet } from 'react-native';
 import { Home } from './screens/Home';
-import { Planets } from './screens/Planets';
 import { SolarMap } from './screens/SolarMap';
 import { Dev } from './screens/Dev';
 import { colors } from '../styles/theme';
-// import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../utils/store';
 import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation';
+import { SolarSystemMap } from '../components/SolarSystemMap';
 
 const Tab = createNativeBottomTabNavigator<TabParamList>();
 
@@ -17,81 +16,74 @@ export function TabNavigator() {
   );
 
   const homeNeedsSelection = useStore((s) => s.justLanded);
+  const activeTab = useStore((s) => s.activeTab);
+  const setActiveTab = useStore((s) => s.setActiveTab);
+  const isMapFocused = activeTab === 'MapTab';
 
   return (
-    <Tab.Navigator
-      screenOptions={{
-        // headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        // tabBarInactiveTintColor: colors.text,
-        // tabBarStyle: {
-        //   backgroundColor: colors.background,
-        //   borderTopColor: colors.border || '#333',
-        // },
-      }}
-    >
-      <Tab.Screen
-        name="HomeTab"
-        component={Home}
-        options={{
-          title: 'Home',
-          tabBarBadge: homeNeedsSelection ? '' : undefined,
-          // tabBarBadgeStyle: {
-          //   backgroundColor: colors.accent,
-          //   maxWidth: 10,
-          //   maxHeight: 10,
-          //   fontSize: 8,
-          //   lineHeight: 9,
-          //   alignSelf: undefined,
-          // },
-          tabBarIcon: () => ({ sfSymbol: 'house' }),
+    <View style={styles.container}>
+      <View style={styles.mapOverlay} pointerEvents={'none'}>
+        <SolarSystemMap interactive={isMapFocused} />
+      </View>
+      <Tab.Navigator
+        screenOptions={{
+          // headerShown: false,
+          tabBarActiveTintColor: colors.primary,
         }}
-      />
-      <Tab.Screen
-        name="PlanetsTab"
-        component={Planets}
-        options={{
-          title: 'Planets',
-          tabBarIcon: ({ focused }) => ({ sfSymbol: 'list.bullet' }),
-          // tabBarIcon: ({ color, size }) => (
-          //   <Ionicons name="list" size={size} color={color} />
-          // ),
-        }}
-      />
-      <Tab.Screen
-        name="MapTab"
-        component={SolarMap}
-        options={{
-          title: 'Map',
-          tabBarBadge: pendingMapAnim ? '' : undefined,
-          // tabBarBadgeStyle: {
-          //   backgroundColor: colors.accent,
-          //   maxWidth: 10,
-          //   maxHeight: 10,
-          //   fontSize: 8,
-          //   lineHeight: 9,
-          //   alignSelf: undefined,
-          // },
-          tabBarIcon: ({ focused }) => ({ sfSymbol: 'map' }),
-        }}
-      />
-      {isDevelopment && (
+      >
         <Tab.Screen
-          name="DevTab"
-          component={Dev}
+          name="HomeTab"
+          component={Home}
           options={{
-            title: 'Dev',
-            tabBarIcon: ({ focused }) => ({ sfSymbol: 'gear' }),
+            title: 'Home',
+            tabBarBadge: homeNeedsSelection ? '' : undefined,
+            tabBarIcon: () => ({ sfSymbol: 'house' }),
+          }}
+          listeners={{
+            focus: () => setActiveTab('HomeTab'),
           }}
         />
-      )}
-    </Tab.Navigator>
+        <Tab.Screen
+          name="MapTab"
+          component={SolarMap}
+          options={{
+            title: 'Map',
+            tabBarBadge: pendingMapAnim ? '' : undefined,
+            tabBarIcon: () => ({ sfSymbol: 'map' }),
+          }}
+          listeners={{
+            focus: () => setActiveTab('MapTab'),
+          }}
+        />
+        {isDevelopment && (
+          <Tab.Screen
+            name="DevTab"
+            component={Dev}
+            options={{
+              title: 'Dev',
+              tabBarIcon: () => ({ sfSymbol: 'gear' }),
+            }}
+            listeners={{
+              focus: () => setActiveTab('DevTab'),
+            }}
+          />
+        )}
+      </Tab.Navigator>
+    </View>
   );
 }
 
 export type TabParamList = {
   HomeTab: undefined;
-  PlanetsTab: undefined;
   MapTab: undefined;
   DevTab: undefined;
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  mapOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+});
