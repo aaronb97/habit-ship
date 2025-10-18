@@ -1,10 +1,10 @@
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+// import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Home } from './screens/Home';
 import { Planets } from './screens/Planets';
 import { SolarMap } from './screens/SolarMap';
 import { Dev } from './screens/Dev';
 import { colors } from '../styles/theme';
-import { Ionicons } from '@expo/vector-icons';
+// import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../utils/store';
 import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation';
 
@@ -44,9 +44,7 @@ export function TabNavigator() {
           //   lineHeight: 9,
           //   alignSelf: undefined,
           // },
-          // tabBarIcon: ({ color, size }) => (
-          //   <Ionicons name="home" size={size} color={color} />
-          // ),
+          tabBarIcon: () => ({ sfSymbol: 'house' }),
         }}
       />
       <Tab.Screen
@@ -54,6 +52,7 @@ export function TabNavigator() {
         component={Planets}
         options={{
           title: 'Planets',
+          tabBarIcon: ({ focused }) => ({ sfSymbol: 'list.bullet' }),
           // tabBarIcon: ({ color, size }) => (
           //   <Ionicons name="list" size={size} color={color} />
           // ),
@@ -73,9 +72,7 @@ export function TabNavigator() {
           //   lineHeight: 9,
           //   alignSelf: undefined,
           // },
-          // tabBarIcon: ({ color, size }) => (
-          //   <Ionicons name="planet" size={size} color={color} />
-          // ),
+          tabBarIcon: ({ focused }) => ({ sfSymbol: 'map' }),
         }}
       />
       {isDevelopment && (
@@ -84,9 +81,7 @@ export function TabNavigator() {
           component={Dev}
           options={{
             title: 'Dev',
-            // tabBarIcon: ({ color, size }) => (
-            //   <Ionicons name="code-slash" size={size} color={color} />
-            // ),
+            tabBarIcon: ({ focused }) => ({ sfSymbol: 'gear' }),
           }}
         />
       )}
