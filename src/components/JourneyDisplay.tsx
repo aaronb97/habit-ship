@@ -3,6 +3,7 @@ import { cBodies } from '../planets';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { useIsTraveling, useStore } from '../utils/store';
 import { ProgressBar } from './ProgressBar';
+import { GlassView } from 'expo-glass-effect';
 
 export function JourneyDisplay({
   onPressTitle,
@@ -41,7 +42,7 @@ export function JourneyDisplay({
   }
 
   return (
-    <View style={styles.journeyDisplayContainer}>
+    <GlassView style={styles.journeyDisplayContainer} glassEffectStyle="clear">
       <View style={styles.planetInfoContainer}>
         {!isTraveling && <Text style={styles.statusText}>Welcome to </Text>}
         {isTraveling && <Text style={styles.statusText}>En route to </Text>}
@@ -83,7 +84,7 @@ export function JourneyDisplay({
             : 'Select a destination to begin your journey'}
         </Text>
       )}
-    </View>
+    </GlassView>
   );
 }
 
@@ -103,17 +104,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   journeyDisplayContainer: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
     padding: 20,
     marginBottom: 24,
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: 8,
   },
   planetInfoContainer: {
     marginBottom: 16,
