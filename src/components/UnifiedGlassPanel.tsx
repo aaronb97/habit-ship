@@ -57,14 +57,14 @@ export function UnifiedGlassPanel({
     }
   }, [planet, clearData]);
 
-  let distanceRemaining = 0;
+  // let distanceRemaining = 0;
   let distancePercentage = 0;
 
   if (userPosition.target) {
     const { initialDistance, distanceTraveled } = userPosition;
     if (typeof initialDistance === 'number' && initialDistance > 0) {
       const traveled = distanceTraveled ?? 0;
-      distanceRemaining = Math.max(0, initialDistance - traveled);
+      // distanceRemaining = Math.max(0, initialDistance - traveled);
       distancePercentage = Math.min(1, Math.max(0, traveled / initialDistance));
     }
   }
