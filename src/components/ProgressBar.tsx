@@ -17,7 +17,7 @@ interface ProgressBarProps {
 export function ProgressBar({
   progress,
   color = colors.primary,
-  backgroundColor = colors.lightGrey,
+  backgroundColor = colors.darkGray,
   height = 12,
 }: ProgressBarProps) {
   const animatedWidth = useSharedValue(0);

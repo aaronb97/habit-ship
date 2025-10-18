@@ -9,7 +9,7 @@ export const colors = {
   white: '#FFFFFF',
   black: '#000000',
   grey: '#8B92B0',
-  lightGrey: '#2A2F4A',
+  darkGray: '#2A2F4A',
   border: '#2D3250', // Subtle border for dark theme
   danger: '#FF6B9D',
   starfield: '#4A5578', // For locked items

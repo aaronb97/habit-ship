@@ -18,6 +18,7 @@ import {
 } from '../utils/experience';
 import { useTimer } from 'react-timer-hook';
 import { getCurrentDate } from '../utils/time';
+import { MaterialIcons } from '@expo/vector-icons';
 
 type UnifiedGlassPanelProps = {
   onPressPlanetTitle?: () => void;
@@ -46,6 +47,9 @@ export function UnifiedGlassPanel({
     ? userPosition.target?.name
     : userPosition.startingLocation;
   const planet = cBodies.find((p) => p.name === displayLocation);
+  const bodyHex = planet
+    ? `#${planet.color.toString(16).padStart(6, '0')}`
+    : colors.white;
 
   useEffect(() => {
     if (!planet) {
@@ -128,53 +132,57 @@ export function UnifiedGlassPanel({
     );
   }
 
+  const renderProgressItem = (
+    left: string,
+    right: string,
+    progress: number,
+    barColor: string,
+  ) => (
+    <View style={styles.progressContainer}>
+      <View style={styles.progressRow}>
+        <Text style={styles.progressLabel}>{left}</Text>
+        <Text style={styles.progressValue}>{right}</Text>
+      </View>
+      <ProgressBar
+        progress={progress}
+        color={barColor}
+        backgroundColor={'rgba(255,255,255,0.2)'}
+      />
+    </View>
+  );
+
   return (
     <GlassView style={styles.container} {...glassViewProps}>
-      <View style={styles.levelSection}>
-        <Text style={styles.levelText}>Level {level}</Text>
-        <ProgressBar
-          progress={levelProgress}
-          color={colors.white}
-          backgroundColor={'rgba(255,255,255,0.2)'}
-          height={8}
-        />
-        <Text style={styles.levelSubText}>
-          {currentXP} / {levelThreshold} XP
-        </Text>
-      </View>
-
       {!!planet && (
         <View style={styles.journeySection}>
           <View style={styles.planetInfoContainer}>
-            {!isTraveling && <Text style={styles.statusText}>Welcome to</Text>}
-            {isTraveling && <Text style={styles.statusText}>En route to</Text>}
+            {!isTraveling && (
+              <Text style={[styles.statusText, { color: bodyHex }]}>
+                Welcome to
+              </Text>
+            )}
+            {isTraveling && (
+              <Text style={[styles.statusText, { color: bodyHex }]}>
+                En route to
+              </Text>
+            )}
             {onPressPlanetTitle ? (
               <TouchableOpacity
                 onPress={onPressPlanetTitle}
                 activeOpacity={0.7}
               >
-                <Text style={styles.planetTitle}>{planet.name}</Text>
+                <Text style={[styles.planetTitle, { color: bodyHex }]}>
+                  {planet.name}
+                </Text>
               </TouchableOpacity>
             ) : (
-              <Text style={styles.planetTitle}>{planet.name}</Text>
+              <Text style={[styles.planetTitle, { color: bodyHex }]}>
+                {planet.name}
+              </Text>
             )}
           </View>
 
-          <View style={styles.progressContainer}>
-            <View style={styles.progressRow}>
-              <Text style={styles.progressLabel}>Journey Progress</Text>
-              <Text style={styles.progressValue}>
-                {(distancePercentage * 100).toFixed(1)}%
-              </Text>
-            </View>
-            <ProgressBar
-              progress={distancePercentage}
-              color={colors.white}
-              backgroundColor={'rgba(255,255,255,0.2)'}
-            />
-          </View>
-
-          <View style={styles.progressContainer}>
+          {/* <View style={styles.progressContainer}>
             <View style={styles.progressRow}>
               <Text style={styles.progressLabel}>Distance Remaining</Text>
               <Text style={styles.progressValue}>
@@ -184,12 +192,27 @@ export function UnifiedGlassPanel({
                 km
               </Text>
             </View>
-          </View>
+          </View> */}
+
+          {renderProgressItem(
+            'Journey Progress',
+            `${(distancePercentage * 100).toFixed(1)}%`,
+            distancePercentage,
+            colors.primary,
+          )}
         </View>
       )}
 
+      <View style={styles.levelSection}>
+        {renderProgressItem(
+          `Level ${level}`,
+          `${currentXP} / ${levelThreshold} XP`,
+          levelProgress,
+          colors.accent,
+        )}
+      </View>
+
       <View style={styles.habitsHeaderRow}>
-        <Text style={styles.sectionTitle}>Daily Habits</Text>
         {onPressNewHabit ? (
           <TouchableOpacity onPress={onPressNewHabit}>
             <Text style={styles.newHabitText}>+ New Habit</Text>
@@ -220,41 +243,35 @@ export function UnifiedGlassPanel({
               ]}
             >
               <View style={styles.habitRowInfo}>
-                <Text style={styles.habitTitle}>{h.title}</Text>
+                <Text
+                  style={[
+                    styles.habitTitle,
+                    completed ? styles.completedHabitTitle : null,
+                  ]}
+                >
+                  {h.title}
+                </Text>
                 {h.description ? (
-                  <Text style={styles.habitDescription}>{h.description}</Text>
+                  <Text
+                    style={[
+                      styles.habitDescription,
+                      completed ? styles.completedHabitTitle : null,
+                    ]}
+                  >
+                    {h.description}
+                  </Text>
                 ) : null}
               </View>
               <View style={styles.actionsRow}>
                 {h.timerLength ? (
-                  <TouchableOpacity
-                    style={styles.rowButton}
-                    onPress={() => startTimer(h.id)}
-                  >
-                    <Text style={styles.rowButtonText}>Start</Text>
-                  </TouchableOpacity>
+                  <TimerButton habit={h} onPress={() => startTimer(h.id)} />
                 ) : null}
-                <TouchableOpacity
-                  style={[
-                    styles.rowButton,
-                    h.timerLength ? styles.rowButtonSpacing : null,
-                  ]}
-                  onPress={() =>
-                    completeHabit(h.id).catch((e) => {
-                      console.error(e);
-                    })
-                  }
-                  disabled={completed}
-                >
-                  <Text
-                    style={[
-                      styles.rowButtonText,
-                      completed ? { opacity: 0.5 } : null,
-                    ]}
-                  >
-                    Done
-                  </Text>
-                </TouchableOpacity>
+
+                <CompleteButton
+                  habit={h}
+                  onPress={() => completeHabit(h.id)}
+                  isCompleted={completed}
+                />
               </View>
             </View>
           );
@@ -294,7 +311,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   journeySection: {
-    marginBottom: 18,
+    marginBottom: 12,
   },
   planetInfoContainer: {
     marginBottom: 12,
@@ -314,7 +331,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   progressContainer: {
-    marginVertical: 6,
+    // marginVertical: 6,
   },
   progressRow: {
     flexDirection: 'row',
@@ -335,10 +352,9 @@ const styles = StyleSheet.create({
   },
   habitsHeaderRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 6,
-    marginBottom: 8,
+    width: '100%',
+    justifyContent: 'flex-end',
+    marginTop: 8,
   },
   sectionTitle: {
     fontFamily: fonts.bold,
@@ -348,7 +364,7 @@ const styles = StyleSheet.create({
   newHabitText: {
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.medium,
-    color: colors.white,
+    color: colors.primary,
   },
   habitsList: {
     maxHeight: 320,
@@ -373,11 +389,16 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
+    height: '100%',
   },
   habitTitle: {
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.large,
     color: colors.white,
+  },
+  completedHabitTitle: {
+    color: colors.primary,
   },
   habitDescription: {
     fontFamily: fonts.regular,
@@ -391,6 +412,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.2)',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   rowButtonSpacing: {
     marginLeft: 8,
@@ -399,6 +422,9 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.small,
     color: colors.white,
+  },
+  rowButtonLabel: {
+    marginLeft: 6,
   },
   timerTitle: {
     fontFamily: fonts.bold,
@@ -436,6 +462,64 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.medium,
     color: colors.white,
   },
+  actionButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 40,
+  },
+  actionButtonText: {
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.xsmall,
+    color: colors.white,
+  },
 });
+
+function TimerButton({
+  habit,
+  onPress,
+}: {
+  habit: Habit;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      style={[styles.actionButton, { backgroundColor: colors.accent }]}
+      onPress={onPress}
+    >
+      <MaterialIcons name="timer" size={20} color={colors.white} />
+      <Text style={styles.actionButtonText}>{`${
+        habit.timerLength! / 60
+      } min`}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function CompleteButton({
+  habit,
+  onPress,
+  isCompleted,
+}: {
+  habit: Habit;
+  onPress: () => void;
+  isCompleted: boolean;
+}) {
+  return (
+    <TouchableOpacity
+      style={[
+        styles.actionButton,
+        { backgroundColor: isCompleted ? colors.darkGray : colors.primary },
+      ]}
+      onPress={onPress}
+    >
+      <MaterialIcons name="check" size={20} color={colors.white} />
+      {isCompleted ? <Text style={styles.actionButtonText}>Done</Text> : null}
+    </TouchableOpacity>
+  );
+}
 
 export default UnifiedGlassPanel;

@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.lightGrey,
+    borderBottomColor: colors.darkGray,
   },
   modalTitle: {
     fontFamily: fonts.semiBold,
