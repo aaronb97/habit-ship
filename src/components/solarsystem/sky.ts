@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { TextureLoader } from 'expo-three';
 import { Asset } from 'expo-asset';
-import { SKY_SEGMENTS, SKY_SPHERE_RADIUS } from './constants';
+import { SKY_SEGMENTS, SKY_SPHERE_RADIUS, SKY_BRIGHTNESS } from './constants';
 
 export async function createSky(): Promise<THREE.Mesh> {
   const spaceAsset = Asset.fromModule(
@@ -26,6 +26,7 @@ export async function createSky(): Promise<THREE.Mesh> {
 
   const skyMaterial = new THREE.MeshBasicMaterial({
     map: spaceTexture,
+    color: new THREE.Color(SKY_BRIGHTNESS, SKY_BRIGHTNESS, SKY_BRIGHTNESS),
     side: THREE.BackSide,
     depthWrite: false,
   });

@@ -499,7 +499,7 @@ export const moon = new Moon({
 export const mercury = new Planet({
   name: 'Mercury',
   description: 'Closest planet to the Sun',
-  color: 0x8c7853,
+  color: 0xc0c0c0,
   radiusKm: 2439.7,
   orbitalPeriodDays: 87.969,
   kepler: HELIO.Mercury,
