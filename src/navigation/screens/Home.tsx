@@ -36,6 +36,7 @@ export function Home() {
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const justLanded = useStore((s) => s.justLanded);
+  const isLevelUpModalVisible = useStore((s) => s.isLevelUpModalVisible);
 
   const handleCreate = (habit: {
     title: string;
@@ -119,7 +120,7 @@ export function Home() {
         />
 
         <PlanetSelectionModal
-          visible={!userPosition.target}
+          visible={!userPosition.target && !isLevelUpModalVisible}
           onClose={() => undefined}
         />
       </SafeAreaView>

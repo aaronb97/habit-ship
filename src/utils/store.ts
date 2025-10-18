@@ -104,6 +104,8 @@ type Store = {
   pendingLanding: boolean;
   // True after landing has been finalized and Home should prompt/select next destination
   justLanded: boolean;
+  // True while the Level Up modal is visible; used to sequence other modals
+  isLevelUpModalVisible: boolean;
 
   // Actions
   setIsSetupFinished: (value: boolean) => void;
@@ -134,6 +136,7 @@ type Store = {
   setShowTrails: (value: boolean) => void;
   setShowTextures: (value: boolean) => void;
   setShowDebugOverlay: (value: boolean) => void;
+  setLevelUpModalVisible: (value: boolean) => void;
 
   // Tilt-shift setters
   setTiltShiftEnabled: (value: boolean) => void;
@@ -183,6 +186,7 @@ const initialData = {
   pendingTravelAnimation: false,
   pendingLanding: false,
   justLanded: false,
+  isLevelUpModalVisible: false,
 } satisfies Partial<Store>;
 
 export const useStore = create<Store>()(
@@ -272,6 +276,7 @@ export const useStore = create<Store>()(
       setShowTrails: (value) => set({ showTrails: value }),
       setShowTextures: (value) => set({ showTextures: value }),
       setShowDebugOverlay: (value) => set({ showDebugOverlay: value }),
+      setLevelUpModalVisible: (value) => set({ isLevelUpModalVisible: value }),
 
       // --- Tilt-shift setters ---
       setTiltShiftEnabled: (value) => set({ tiltShiftEnabled: value }),
@@ -555,7 +560,7 @@ export const useStore = create<Store>()(
     {
       name: 'space-explorer-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 5,
+      version: 6,
       migrate: (persistedState, _version) => {
         const s = (persistedState || {}) as Partial<Store> & {
           // For backwards compatibility with older persisted shapes
@@ -579,6 +584,8 @@ export const useStore = create<Store>()(
         if (s.pendingLanding === undefined) s.pendingLanding = false;
         if (s.justLanded === undefined) s.justLanded = false;
         if (s.showDebugOverlay === undefined) s.showDebugOverlay = false;
+        if (s.isLevelUpModalVisible === undefined)
+          s.isLevelUpModalVisible = false;
 
         // Defaults for tilt-shift controls
         if (s.tiltShiftEnabled === undefined) s.tiltShiftEnabled = true;

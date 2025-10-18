@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useUserLevel } from '../utils/store';
+import { useStore, useUserLevel } from '../utils/store';
 import { cBodies } from '../planets';
 import { LevelUpModal } from './LevelUpModal';
 import { useIsFocused } from '@react-navigation/native';
@@ -23,6 +23,7 @@ export function LevelUpListener() {
   const [lines, setLines] = useState<(string | ReactNode)[]>([]);
 
   const isFocused = useIsFocused();
+  const { setLevelUpModalVisible } = useStore();
 
   useEffect(() => {
     const prev = prevLevelRef.current;
@@ -50,14 +51,16 @@ export function LevelUpListener() {
 
       setLines(computedLines);
       setVisible(true);
+      setLevelUpModalVisible(true);
     } else if (curr < prev) {
       prevLevelRef.current = curr;
     }
-  }, [currentLevel, isFocused]);
+  }, [currentLevel, isFocused, setLevelUpModalVisible]);
 
   const close = () => {
     prevLevelRef.current = currentLevel;
     setVisible(false);
+    setLevelUpModalVisible(false);
   };
 
   return <LevelUpModal visible={visible} onClose={close} lines={lines} />;
