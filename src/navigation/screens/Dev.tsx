@@ -102,6 +102,20 @@ export function Dev() {
             />
           </View>
           <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Planet/Body Outlines</Text>
+            <Switch
+              value={!!store.outlinesBodiesEnabled}
+              onValueChange={(v) => store.setOutlinesBodiesEnabled(v)}
+            />
+          </View>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Rocket Outline</Text>
+            <Switch
+              value={!!store.outlinesRocketEnabled}
+              onValueChange={(v) => store.setOutlinesRocketEnabled(v)}
+            />
+          </View>
+          <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Debug Overlay</Text>
             <Switch
               value={!!store.showDebugOverlay}

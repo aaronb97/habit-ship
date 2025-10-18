@@ -55,7 +55,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 // [moved] Mesh builders moved to './solarsystem/builders'.
 
-export function SolarSystemMap({ interactive }: { interactive?: boolean } = {}) {
+export function SolarSystemMap({
+  interactive,
+}: { interactive?: boolean } = {}) {
   const { width, height } = useWindowDimensions();
 
   // Refs for scene graph
@@ -79,7 +81,7 @@ export function SolarSystemMap({ interactive }: { interactive?: boolean } = {}) 
 
   const rocketColorFromStore = useStore((s) => s.rocketColor);
   const activeTabName = useStore((s) => s.activeTab);
-  const interactiveEffective = (interactive ?? (activeTabName === 'MapTab'));
+  const interactiveEffective = interactive ?? activeTabName === 'MapTab';
   const syncTravelVisuals = useStore((s) => s.syncTravelVisuals);
   const finalizeLandingAfterAnimation = useStore(
     (s) => s.finalizeLandingAfterAnimation,
@@ -764,7 +766,10 @@ export function SolarSystemMap({ interactive }: { interactive?: boolean } = {}) 
 
   return (
     <GestureDetector gesture={gesture}>
-      <View style={styles.container} pointerEvents={interactiveEffective ? 'auto' : 'none'}>
+      <View
+        style={styles.container}
+        pointerEvents={interactiveEffective ? 'auto' : 'none'}
+      >
         <GLView
           style={styles.gl}
           msaaSamples={GL_MSAA_SAMPLES}

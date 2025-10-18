@@ -81,7 +81,9 @@ export class Rocket {
     this.group = group;
     this.exhaustGroup = exhaustGroup;
     this.outlinePass = outlinePass;
-    this.outlineGlobalEnabled = Boolean(useStore.getState().outlinesEnabled);
+    this.outlineGlobalEnabled = Boolean(
+      useStore.getState().outlinesRocketEnabled,
+    );
     if (this.outlinePass) {
       this.outlinePass.enabled =
         this.outlineGlobalEnabled && this.group.visible;
@@ -90,7 +92,7 @@ export class Rocket {
     {
       type RootState = ReturnType<typeof useStore.getState>;
       const unsub = useStore.subscribe((s: RootState, _prev: RootState) => {
-        this.outlineGlobalEnabled = Boolean(s.outlinesEnabled);
+        this.outlineGlobalEnabled = Boolean(s.outlinesRocketEnabled);
         if (this.outlinePass) {
           this.outlinePass.enabled =
             this.outlineGlobalEnabled && this.group.visible;
@@ -144,7 +146,7 @@ export class Rocket {
     outline.pulsePeriod = OUTLINE_PULSE_PERIOD;
     outline.visibleEdgeColor.set(color);
     outline.hiddenEdgeColor.set(color);
-    outline.enabled = Boolean(useStore.getState().outlinesEnabled);
+    outline.enabled = Boolean(useStore.getState().outlinesRocketEnabled);
     composer.addPass(outline);
 
     return new Rocket(root, exhaust, outline);

@@ -352,7 +352,6 @@ const styles = StyleSheet.create({
   habitsHeaderRow: {
     flexDirection: 'row',
     width: '100%',
-    justifyContent: 'flex-end',
     marginTop: 8,
   },
   sectionTitle: {

@@ -84,6 +84,8 @@ type Store = {
   showTrails: boolean;
   showTextures: boolean;
   showDebugOverlay: boolean;
+  outlinesBodiesEnabled: boolean;
+  outlinesRocketEnabled: boolean;
 
   // Tilt-shift (miniature) post-processing controls
   tiltShiftEnabled: boolean;
@@ -141,6 +143,8 @@ type Store = {
   setShowTrails: (value: boolean) => void;
   setShowTextures: (value: boolean) => void;
   setShowDebugOverlay: (value: boolean) => void;
+  setOutlinesBodiesEnabled: (value: boolean) => void;
+  setOutlinesRocketEnabled: (value: boolean) => void;
   setLevelUpModalVisible: (value: boolean) => void;
   setActiveTab: (tab: TabName) => void;
 
@@ -179,6 +183,8 @@ const initialData = {
   showTrails: true,
   showTextures: true,
   showDebugOverlay: false,
+  outlinesBodiesEnabled: true,
+  outlinesRocketEnabled: true,
   tiltShiftEnabled: true,
   // tiltShiftFocus: 0.55,
   // tiltShiftRange: 0,
@@ -287,6 +293,8 @@ export const useStore = create<Store>()(
       setShowTrails: (value) => set({ showTrails: value }),
       setShowTextures: (value) => set({ showTextures: value }),
       setShowDebugOverlay: (value) => set({ showDebugOverlay: value }),
+      setOutlinesBodiesEnabled: (value) => set({ outlinesBodiesEnabled: value }),
+      setOutlinesRocketEnabled: (value) => set({ outlinesRocketEnabled: value }),
       setLevelUpModalVisible: (value) => set({ isLevelUpModalVisible: value }),
       setActiveTab: (tab) => set({ activeTab: tab }),
 
@@ -306,6 +314,8 @@ export const useStore = create<Store>()(
           showDebugOverlay,
           showTextures,
           showTrails,
+          outlinesBodiesEnabled,
+          outlinesRocketEnabled,
           tiltShiftEnabled,
           tiltShiftFocus,
           tiltShiftRange,
@@ -317,6 +327,8 @@ export const useStore = create<Store>()(
           showDebugOverlay,
           showTextures,
           showTrails,
+          outlinesBodiesEnabled,
+          outlinesRocketEnabled,
           tiltShiftEnabled,
           tiltShiftFocus,
           tiltShiftRange,
@@ -572,11 +584,12 @@ export const useStore = create<Store>()(
     {
       name: 'space-explorer-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 6,
+      version: 8,
       migrate: (persistedState, _version) => {
         const s = (persistedState || {}) as Partial<Store> & {
           // For backwards compatibility with older persisted shapes
           userLevel?: { level?: number; currentXP?: number; totalXP?: number };
+          outlinesEnabled?: boolean;
         };
         if (s.rocketColor === undefined) {
           s.rocketColor = randomColorInt();
@@ -607,6 +620,15 @@ export const useStore = create<Store>()(
         if (s.tiltShiftRange === undefined) s.tiltShiftRange = 0.18;
         if (s.tiltShiftFeather === undefined) s.tiltShiftFeather = 0.22;
         if (s.tiltShiftBlur === undefined) s.tiltShiftBlur = 8;
+        const legacy = s.outlinesEnabled;
+        if ((s as Partial<Store>).outlinesBodiesEnabled === undefined) {
+          (s as Partial<Store>).outlinesBodiesEnabled =
+            legacy !== undefined ? Boolean(legacy) : true;
+        }
+        if ((s as Partial<Store>).outlinesRocketEnabled === undefined) {
+          (s as Partial<Store>).outlinesRocketEnabled =
+            legacy !== undefined ? Boolean(legacy) : true;
+        }
         return s as Store;
       },
     },

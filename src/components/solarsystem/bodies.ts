@@ -22,6 +22,7 @@ import {
 } from './constants';
 import { toVec3, apparentScaleRatio, getTrailForBody } from './helpers';
 import { CBody, Planet, Moon, earth } from '../../planets';
+import { useStore } from '../../utils/store';
 
 export type BodyNodeUpdateOpts = {
   glHeight: number;
@@ -40,6 +41,8 @@ export class CelestialBodyNode {
   private trail?: THREE.Line;
   private trailComputedAtPos?: THREE.Vector3;
   private disposed = false;
+  private outlineGlobalEnabled = true;
+  private unsubOutlines?: () => void;
 
   // Cache visual radius on creation (in scene units before mesh scaling)
   private readonly visualRadiusBase: number;
@@ -58,6 +61,9 @@ export class CelestialBodyNode {
     this.body = body;
     this.scene = scene;
     this.camera = camera;
+    this.outlineGlobalEnabled = Boolean(
+      useStore.getState().outlinesBodiesEnabled,
+    );
 
     // Compute apparent visual radius
     const radiusKm = Math.max(100, body.radiusKm);
@@ -112,6 +118,24 @@ export class CelestialBodyNode {
       this.outlinePass = pass;
     }
 
+    {
+      type RootState = ReturnType<typeof useStore.getState>;
+      const unsub = useStore.subscribe((s: RootState, _prev: RootState) => {
+        this.outlineGlobalEnabled = Boolean(s.outlinesBodiesEnabled);
+        if (this.outlinePass) {
+          if (!this.mesh.visible) {
+            this.outlinePass.enabled = false;
+          } else {
+            const enabled =
+              this.outlineGlobalEnabled &&
+              this.outlineIntensity > OUTLINE_MIN_ENABLED_FACTOR;
+            this.outlinePass.enabled = enabled;
+          }
+        }
+      });
+      this.unsubOutlines = unsub;
+    }
+
     // Trails optionally created for Planets and Moons
     if (
       params.initialTrailsEnabled &&
@@ -141,6 +165,11 @@ export class CelestialBodyNode {
         this.outlineIntensity = 0;
         this.outlinePass.edgeStrength = 0;
         this.outlinePass.enabled = false;
+      } else {
+        const enabled =
+          this.outlineGlobalEnabled &&
+          this.outlineIntensity > OUTLINE_MIN_ENABLED_FACTOR;
+        this.outlinePass.enabled = enabled;
       }
     }
   }
@@ -256,6 +285,7 @@ export class CelestialBodyNode {
       const strength = OUTLINE_EDGE_STRENGTH * this.outlineIntensity;
       this.outlinePass.edgeStrength = strength;
       this.outlinePass.enabled =
+        this.outlineGlobalEnabled &&
         this.outlineIntensity > OUTLINE_MIN_ENABLED_FACTOR;
     } else if (this.outlinePass) {
       // Invisible mesh => disable outline
@@ -299,6 +329,13 @@ export class CelestialBodyNode {
       this.outlinePass.enabled = false;
       // No removePass API on EffectComposer; rely on composer.dispose() later.
       this.outlinePass = undefined;
+    }
+
+    if (this.unsubOutlines) {
+      try {
+        this.unsubOutlines();
+      } catch {}
+      this.unsubOutlines = undefined;
     }
 
     this.trailComputedAtPos = undefined;
