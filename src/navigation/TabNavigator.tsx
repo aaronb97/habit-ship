@@ -36,7 +36,7 @@ export function TabNavigator() {
           component={Home}
           options={{
             title: 'Home',
-            tabBarBadge: homeNeedsSelection ? '' : undefined,
+            tabBarBadge: homeNeedsSelection ? ' ' : undefined,
             tabBarIcon: () => ({ sfSymbol: 'house' }),
           }}
           listeners={{
@@ -48,7 +48,7 @@ export function TabNavigator() {
           component={SolarMap}
           options={{
             title: 'Map',
-            tabBarBadge: pendingMapAnim ? '' : undefined,
+            tabBarBadge: pendingMapAnim ? ' ' : undefined,
             tabBarIcon: () => ({ sfSymbol: 'map' }),
           }}
           listeners={{
