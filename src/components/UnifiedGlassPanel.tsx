@@ -284,16 +284,57 @@ export function UnifiedGlassPanel({
                 >
                   {h.title}
                 </Text>
-                {h.description ? (
-                  <Text
-                    style={[
-                      styles.habitDescription,
-                      completed ? styles.completedHabitTitle : null,
-                    ]}
-                  >
-                    {h.description}
-                  </Text>
-                ) : null}
+                {(() => {
+                  const count = h.completions.length;
+                  if (count === 0) return null;
+                  const last = new Date(h.completions[count - 1]!);
+                  const today = getCurrentDate();
+                  const todayStart = new Date(
+                    today.getFullYear(),
+                    today.getMonth(),
+                    today.getDate(),
+                  );
+                  const lastStart = new Date(
+                    last.getFullYear(),
+                    last.getMonth(),
+                    last.getDate(),
+                  );
+                  const diffDays = Math.round(
+                    (todayStart.getTime() - lastStart.getTime()) / 86400000,
+                  );
+                  const timeStr = last.toLocaleTimeString(undefined, {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  });
+                  const line1 =
+                    diffDays === 0
+                      ? `completed today at ${timeStr}`
+                      : diffDays === 1
+                      ? 'completed yesterday'
+                      : `completed ${diffDays} days ago`;
+                  return (
+                    <>
+                      <Text
+                        style={[
+                          styles.habitDescription,
+                          completed ? styles.completedHabitTitle : null,
+                        ]}
+                      >
+                        {line1}
+                      </Text>
+                      {count > 1 ? (
+                        <Text
+                          style={[
+                            styles.habitDescription,
+                            completed ? styles.completedHabitTitle : null,
+                          ]}
+                        >
+                          {`${count} completions`}
+                        </Text>
+                      ) : null}
+                    </>
+                  );
+                })()}
               </View>
               <View style={styles.actionsRow}>
                 {h.timerLength ? (
