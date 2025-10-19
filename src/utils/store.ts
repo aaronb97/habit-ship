@@ -188,7 +188,7 @@ const initialData = {
   showTrails: true,
   showTextures: true,
   showDebugOverlay: false,
-  outlinesBodiesEnabled: true,
+  outlinesBodiesEnabled: false,
   outlinesRocketEnabled: true,
   showJourneyRemaining: false,
   showFuelCapacity: false,
