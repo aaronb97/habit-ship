@@ -13,11 +13,11 @@ function xpTotalThresholdForLevel(level: number): number {
 // Tweakable config for XP requirements
 export const XP_CONFIG = {
   // Per-level (1-indexed) requirement for level 1
-  baseRequirement: 100,
+  baseRequirement: 150,
   // Increment added for each next level up to and including switchIncrementLevel
   firstIncrement: 50,
   // Levels up to this level use firstIncrement; from the next level onward use secondIncrement
-  switchIncrementLevel: 19,
+  switchIncrementLevel: 18,
   // Increment added per level after switchIncrementLevel
   secondIncrement: 100,
 } as const;
@@ -107,7 +107,10 @@ export function getLevelProgress(totalXP: number): number {
 
 // Maximum distance that can be gained per day for a given level
 export function getDailyDistanceForLevel(level: number): number {
-  const L = Math.max(1, Math.floor(level));
-  const distance = 1_000_000 * Math.pow(1.2, L - 1);
+  // start at 10M km for a nice round number
+  if (level === 1) return 10_000_000;
+
+  // level 2 should be 13M km for approximately a week of travel to mercury at its average distance
+  const distance = 13_000_000 * Math.pow(1.1, level - 2);
   return Math.round(distance / 100_000) * 100_000;
 }
