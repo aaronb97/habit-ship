@@ -9,13 +9,14 @@ import {
 import { colors, fonts } from '../../styles/theme';
 import { useStore } from '../../utils/store';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { advanceTime, getCurrentDate } from '../../utils/time';
+import { advanceTime, useGetCurrentDate } from '../../utils/time';
 import { cBodies } from '../../planets';
 import { getXPToNextLevel } from '../../utils/experience';
 
 export function Dev() {
   const store = useStore();
   const { clearData, quickReset, warpTo } = useStore();
+  const getCurrentDate = useGetCurrentDate();
 
   const handleAdvanceTime = (hours: number) => {
     const { userPosition } = useStore.getState();
@@ -140,13 +141,17 @@ export function Dev() {
             <View style={styles.stepperRow}>
               <TouchableOpacity
                 style={styles.stepperButton}
-                onPress={() => store.setTiltShiftFocus(store.tiltShiftFocus - 0.02)}
+                onPress={() =>
+                  store.setTiltShiftFocus(store.tiltShiftFocus - 0.02)
+                }
               >
                 <Text style={styles.stepperText}>-</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.stepperButton}
-                onPress={() => store.setTiltShiftFocus(store.tiltShiftFocus + 0.02)}
+                onPress={() =>
+                  store.setTiltShiftFocus(store.tiltShiftFocus + 0.02)
+                }
               >
                 <Text style={styles.stepperText}>+</Text>
               </TouchableOpacity>
@@ -159,13 +164,17 @@ export function Dev() {
             <View style={styles.stepperRow}>
               <TouchableOpacity
                 style={styles.stepperButton}
-                onPress={() => store.setTiltShiftRange(store.tiltShiftRange - 0.02)}
+                onPress={() =>
+                  store.setTiltShiftRange(store.tiltShiftRange - 0.02)
+                }
               >
                 <Text style={styles.stepperText}>-</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.stepperButton}
-                onPress={() => store.setTiltShiftRange(store.tiltShiftRange + 0.02)}
+                onPress={() =>
+                  store.setTiltShiftRange(store.tiltShiftRange + 0.02)
+                }
               >
                 <Text style={styles.stepperText}>+</Text>
               </TouchableOpacity>
@@ -178,13 +187,17 @@ export function Dev() {
             <View style={styles.stepperRow}>
               <TouchableOpacity
                 style={styles.stepperButton}
-                onPress={() => store.setTiltShiftFeather(store.tiltShiftFeather - 0.02)}
+                onPress={() =>
+                  store.setTiltShiftFeather(store.tiltShiftFeather - 0.02)
+                }
               >
                 <Text style={styles.stepperText}>-</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.stepperButton}
-                onPress={() => store.setTiltShiftFeather(store.tiltShiftFeather + 0.02)}
+                onPress={() =>
+                  store.setTiltShiftFeather(store.tiltShiftFeather + 0.02)
+                }
               >
                 <Text style={styles.stepperText}>+</Text>
               </TouchableOpacity>

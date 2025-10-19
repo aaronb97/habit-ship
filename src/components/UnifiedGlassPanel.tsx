@@ -18,7 +18,7 @@ import {
   getDailyDistanceForLevel,
 } from '../utils/experience';
 import { useTimer } from 'react-timer-hook';
-import { getCurrentDate } from '../utils/time';
+import { useGetCurrentDate } from '../utils/time';
 import { MaterialIcons } from '@expo/vector-icons';
 
 type UnifiedGlassPanelProps = {
@@ -41,6 +41,7 @@ export function UnifiedGlassPanel({
     expireTimer,
     completeHabit,
   } = useStore();
+  const getCurrentDate = useGetCurrentDate();
   const fuelKm = useStore((s) => s.fuelKm);
   const showJourneyRemaining = useStore((s) => s.showJourneyRemaining);
   const setShowJourneyRemaining = useStore((s) => s.setShowJourneyRemaining);

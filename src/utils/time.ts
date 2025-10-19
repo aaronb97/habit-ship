@@ -18,6 +18,28 @@ export function getCurrentDate(): Date {
 }
 
 /**
+ * Should be preferred to getCurrentTime() in React components or hooks
+ */
+export function useGetCurrentTime() {
+  const timeOffset = useStore((state) => state.timeOffset);
+
+  return () => {
+    return Date.now() + timeOffset;
+  };
+}
+
+/**
+ * Should be preferred to getCurrentDate() in React components or hooks
+ */
+export function useGetCurrentDate() {
+  const timeOffset = useStore((state) => state.timeOffset);
+
+  return () => {
+    return new Date(Date.now() + timeOffset);
+  };
+}
+
+/**
  * Advances the system time by the specified number of milliseconds.
  * This is useful for testing time-based features.
  */
