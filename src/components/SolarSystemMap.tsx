@@ -86,6 +86,8 @@ export function SolarSystemMap({
   const finalizeLandingAfterAnimation = useStore(
     (s) => s.finalizeLandingAfterAnimation,
   );
+  const applyFuelToTravel = useStore((s) => s.applyFuelToTravel);
+  const fuelKm = useStore((s) => s.fuelKm);
 
   // Focus replaced by explicit interactive flag from parent (Map tab focus)
   const isInteractiveRef = useRef<boolean>(interactiveEffective);
@@ -140,9 +142,8 @@ export function SolarSystemMap({
       } = useStore.getState().userPosition;
 
       const pending =
-        useStore.getState().pendingTravelAnimation ||
-        (typeof distanceTraveled === 'number' &&
-          distanceTraveled !== previousDistanceTraveled);
+        typeof distanceTraveled === 'number' &&
+        distanceTraveled !== previousDistanceTraveled;
 
       const denom =
         initialDistance && initialDistance > 0 ? initialDistance : 1;
@@ -257,6 +258,17 @@ export function SolarSystemMap({
       curr: distanceTraveledVal,
     };
   }, [distanceTraveledVal, previousDistanceTraveledVal]);
+
+  // Apply fuel when Map is interactive and there's no existing delta to animate.
+  useEffect(() => {
+    if (!interactiveEffective) return;
+    const { target, initialDistance, distanceTraveled, previousDistanceTraveled } =
+      useStore.getState().userPosition;
+    const hasDelta = distanceTraveled !== previousDistanceTraveled;
+    if (fuelKm > 0 && target && typeof initialDistance === 'number' && !hasDelta) {
+      applyFuelToTravel();
+    }
+  }, [interactiveEffective, fuelKm, distanceTraveledVal, previousDistanceTraveledVal, applyFuelToTravel]);
 
   const animAlphaRef = useRef(0);
   const animSyncedRef = useRef(true);

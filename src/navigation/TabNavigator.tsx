@@ -11,8 +11,8 @@ const Tab = createNativeBottomTabNavigator<TabParamList>();
 
 export function TabNavigator() {
   const isDevelopment = __DEV__;
-  const pendingMapAnim = useStore(
-    (s) => s.pendingTravelAnimation || s.pendingLanding,
+  const hasFuelAndTarget = useStore(
+    (s) => s.fuelKm > 0 && !!s.userPosition.target,
   );
 
   const homeNeedsSelection = useStore((s) => s.justLanded);
@@ -48,7 +48,7 @@ export function TabNavigator() {
           component={SolarMap}
           options={{
             title: 'Map',
-            tabBarBadge: pendingMapAnim ? ' ' : undefined,
+            tabBarBadge: hasFuelAndTarget ? ' ' : undefined,
             tabBarIcon: () => ({ sfSymbol: 'map' }),
           }}
           listeners={{

@@ -9,7 +9,7 @@ import { schedulePushNotification } from './schedulePushNotification';
 import { getCurrentTime, getCurrentDate } from './time';
 import { Coordinates, UserPosition, XPGain } from '../types';
 import { useShallow } from 'zustand/shallow';
-import { XP_REWARDS, calculateLevel } from './experience';
+import { calculateLevel, getHabitDistanceForLevel } from './experience';
 
 // =================================================================
 // TYPES
@@ -53,12 +53,7 @@ export function getPlanetPosition(planetName: string): Coordinates {
   return planet.getPosition();
 }
 
-// Distance awarded per habit completion based on level
-function getHabitDistancePerCompletion(level: number): number {
-  // 1,000,000 km base, scaled by 1.2^(level - 1)
-  const L = Math.max(1, Math.floor(level));
-  return 1_000_000 * Math.pow(1.2, L - 1);
-}
+ 
 
 // =================================================================
 // STORE DEFINITION
@@ -102,8 +97,6 @@ type Store = {
   rocketColor: number;
 
   // Animation/landing flow flags
-  // True when there is visual travel to animate between previousDistanceTraveled -> distanceTraveled
-  pendingTravelAnimation: boolean;
   // True when user has reached target distance but landing should be finalized after the map animation
   pendingLanding: boolean;
   // True after landing has been finalized and Home should prompt/select next destination
@@ -113,6 +106,13 @@ type Store = {
 
   // Navigation state
   activeTab: TabName;
+  
+  fuelKm: number;
+  fuelEarnedTodayKm: number;
+  fuelEarnedDate?: string;
+
+  xpEarnedToday: number;
+  xpEarnedDate?: string;
 
   // Actions
   setIsSetupFinished: (value: boolean) => void;
@@ -120,6 +120,7 @@ type Store = {
   warpTo: (planetName: string) => void;
   // Mark that the user has visually seen the latest travel progress; sync prev->curr
   syncTravelVisuals: () => void;
+  applyFuelToTravel: () => void;
   addHabit: (habit: {
     title: string;
     description?: string;
@@ -199,11 +200,15 @@ const initialData = {
   tiltShiftFeather: 0.2,
   tiltShiftBlur: 1,
   rocketColor: randomColorInt(),
-  pendingTravelAnimation: false,
   pendingLanding: false,
   justLanded: false,
   isLevelUpModalVisible: false,
   activeTab: 'HomeTab' as TabName,
+  fuelKm: 0,
+  fuelEarnedTodayKm: 0,
+  fuelEarnedDate: undefined,
+  xpEarnedToday: 0,
+  xpEarnedDate: undefined,
 } satisfies Partial<Store>;
 
 export const useStore = create<Store>()(
@@ -335,6 +340,11 @@ export const useStore = create<Store>()(
           tiltShiftFeather,
           tiltShiftBlur,
           isSetupFinished: true,
+          fuelKm: 0,
+          fuelEarnedTodayKm: 0,
+          fuelEarnedDate: getCurrentDate().toDateString(),
+          xpEarnedToday: 0,
+          xpEarnedDate: getCurrentDate().toDateString(),
           habits: [
             {
               id: '0' as HabitId,
@@ -389,11 +399,18 @@ export const useStore = create<Store>()(
 
       // --- Complex/Async Actions ---
 
-      /**
-       * Completes a habit, awards XP, and advances travel by a fixed distance based on level.
-       */
       completeHabit: async (habitId) => {
-        get().addXP(XP_REWARDS.HABIT_COMPLETION, 'habit_completion');
+        const s = get();
+        const todayKey = getCurrentDate().toDateString();
+        const habitsCount = Math.max(1, s.habits.length);
+        const perHabitXP = Math.max(100 / habitsCount, 20);
+        const earnedToday = s.xpEarnedDate === todayKey ? s.xpEarnedToday : 0;
+        const remainingXPAllowance = Math.max(0, 100 - earnedToday);
+        const xpGrant = Math.min(perHabitXP, remainingXPAllowance);
+
+        if (xpGrant > 0) {
+          get().addXP(xpGrant, 'habit_completion');
+        }
 
         set((state) => {
           const habitToComplete = state.habits.find((h) => h.id === habitId);
@@ -401,36 +418,27 @@ export const useStore = create<Store>()(
             habitToComplete.completions.push(getCurrentDate().toISOString());
           }
 
-          const target = state.userPosition.target;
-          if (
-            target &&
-            typeof state.userPosition.initialDistance === 'number'
-          ) {
-            // First movement establishes launch time
-            if (!state.userPosition.launchTime) {
-              state.userPosition.launchTime = getCurrentDate().toISOString();
-            }
-
-            const level = calculateLevel(state.totalXP);
-            const moveKm = getHabitDistancePerCompletion(level);
-            const prev = state.userPosition.distanceTraveled ?? 0;
-            const next = Math.min(
-              state.userPosition.initialDistance,
-              prev + moveKm,
-            );
-
-            // Record update time; do NOT update previousDistanceTraveled here.
-            state.userPosition.distanceTraveled = next;
-            state.lastUpdateTime = getCurrentTime();
-            state.pendingTravelAnimation = true;
-
-            // If we've reached the destination distance, mark landing as pending.
-            // Finalization (updating startingLocation, awarding XP) will occur
-            // after the SolarSystemMap finishes animating this step.
-            if (next >= (state.userPosition.initialDistance ?? 0)) {
-              state.pendingLanding = true;
-            }
+          if (state.xpEarnedDate !== todayKey) {
+            state.xpEarnedDate = todayKey;
+            state.xpEarnedToday = 0;
           }
+          state.xpEarnedToday += xpGrant;
+
+          // Accrue fuel for today, divided by number of habits; cap at daily limit
+          if (state.fuelEarnedDate !== todayKey) {
+            state.fuelEarnedDate = todayKey;
+            state.fuelEarnedTodayKm = 0;
+          }
+
+          const level = calculateLevel(state.totalXP);
+          const dailyCap = getHabitDistanceForLevel(level);
+          const fuelHabitsCount = Math.max(1, state.habits.length);
+          const perCompletion = dailyCap / fuelHabitsCount;
+          const remainingAllowance = Math.max(0, dailyCap - state.fuelEarnedTodayKm);
+          const grant = Math.min(perCompletion, remainingAllowance);
+
+          state.fuelKm += grant;
+          state.fuelEarnedTodayKm += grant;
         });
       },
 
@@ -517,7 +525,47 @@ export const useStore = create<Store>()(
           }
 
           console.log('Synced travel visuals');
-          state.pendingTravelAnimation = false;
+        });
+      },
+
+      /**
+       * Applies available fuel to advance toward the current target.
+       * - If landing occurs, leftover fuel is preserved (fuel - remaining).
+       * - If not landing, all fuel is spent.
+       * - This updates distanceTraveled but leaves previousDistanceTraveled unchanged,
+       *   so the map tab can animate the delta.
+       */
+      applyFuelToTravel: () => {
+        set((state) => {
+          const target = state.userPosition.target;
+          const initialDistance = state.userPosition.initialDistance;
+          if (!target || typeof initialDistance !== 'number') return;
+
+          const prev = state.userPosition.distanceTraveled ?? 0;
+          const remaining = Math.max(0, initialDistance - prev);
+          if (remaining <= 0) return;
+
+          const available = Math.max(0, state.fuelKm);
+          if (available <= 0) return;
+
+          const spend = Math.min(available, remaining);
+          const next = Math.min(initialDistance, prev + spend);
+
+          state.userPosition.distanceTraveled = next;
+          state.lastUpdateTime = getCurrentTime();
+          if (!state.userPosition.launchTime) {
+            state.userPosition.launchTime = getCurrentDate().toISOString();
+          }
+
+          // Landing if we've reached or exceeded the needed distance
+          if (next >= initialDistance) {
+            state.pendingLanding = true;
+            // Preserve leftover fuel beyond the remaining distance
+            state.fuelKm = available - remaining;
+          } else {
+            // Not landing: expend all available fuel
+            state.fuelKm = 0;
+          }
         });
       },
 
@@ -584,7 +632,7 @@ export const useStore = create<Store>()(
     {
       name: 'space-explorer-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 8,
+      version: 9,
       migrate: (persistedState, _version) => {
         const s = (persistedState || {}) as Partial<Store> & {
           // For backwards compatibility with older persisted shapes
@@ -603,9 +651,9 @@ export const useStore = create<Store>()(
         // Remove legacy key if present
         (s as Partial<Store> & { userLevel?: unknown }).userLevel = undefined;
 
-        // Defaults for newly added flags
-        if (s.pendingTravelAnimation === undefined)
-          s.pendingTravelAnimation = false;
+        // Remove deprecated flag if present
+        (s as Partial<Store> & { pendingTravelAnimation?: unknown }).pendingTravelAnimation =
+          undefined;
         if (s.pendingLanding === undefined) s.pendingLanding = false;
         if (s.justLanded === undefined) s.justLanded = false;
         if (s.showDebugOverlay === undefined) s.showDebugOverlay = false;
@@ -629,6 +677,18 @@ export const useStore = create<Store>()(
           (s as Partial<Store>).outlinesRocketEnabled =
             legacy !== undefined ? Boolean(legacy) : true;
         }
+
+        // Defaults for fuel system
+        if ((s as Partial<Store>).fuelKm === undefined)
+          (s as Partial<Store>).fuelKm = 0;
+        if ((s as Partial<Store>).fuelEarnedTodayKm === undefined)
+          (s as Partial<Store>).fuelEarnedTodayKm = 0;
+        if ((s as Partial<Store>).fuelEarnedDate === undefined)
+          (s as Partial<Store>).fuelEarnedDate = getCurrentDate().toDateString();
+        if ((s as Partial<Store>).xpEarnedToday === undefined)
+          (s as Partial<Store>).xpEarnedToday = 0;
+        if ((s as Partial<Store>).xpEarnedDate === undefined)
+          (s as Partial<Store>).xpEarnedDate = getCurrentDate().toDateString();
         return s as Store;
       },
     },

@@ -15,6 +15,7 @@ import {
   getLevelProgress,
   xpCurrentThresholdForLevel,
   getCurrentLevelXP,
+  getHabitDistanceForLevel,
 } from '../utils/experience';
 import { useTimer } from 'react-timer-hook';
 import { getCurrentDate } from '../utils/time';
@@ -40,6 +41,7 @@ export function UnifiedGlassPanel({
     expireTimer,
     completeHabit,
   } = useStore();
+  const fuelKm = useStore((s) => s.fuelKm);
 
   const isTraveling = useIsTraveling();
 
@@ -57,14 +59,12 @@ export function UnifiedGlassPanel({
     }
   }, [planet, clearData]);
 
-  // let distanceRemaining = 0;
   let distancePercentage = 0;
 
   if (userPosition.target) {
-    const { initialDistance, distanceTraveled } = userPosition;
+    const { initialDistance, previousDistanceTraveled } = userPosition;
     if (typeof initialDistance === 'number' && initialDistance > 0) {
-      const traveled = distanceTraveled ?? 0;
-      // distanceRemaining = Math.max(0, initialDistance - traveled);
+      const traveled = previousDistanceTraveled ?? 0;
       distancePercentage = Math.min(1, Math.max(0, traveled / initialDistance));
     }
   }
@@ -74,6 +74,9 @@ export function UnifiedGlassPanel({
   const levelProgress = getLevelProgress(totalXP);
   const levelThreshold = xpCurrentThresholdForLevel(level);
   const currentXP = getCurrentLevelXP(totalXP);
+  const dailyFuelCap = getHabitDistanceForLevel(level);
+  const fuelProgress =
+    dailyFuelCap > 0 ? Math.min(1, fuelKm / dailyFuelCap) : 0;
 
   const timerHabit = activeTimer
     ? habits.find((h) => h.id === activeTimer.habitId)
@@ -180,6 +183,11 @@ export function UnifiedGlassPanel({
                 {planet.name}
               </Text>
             )}
+            {!isTraveling && userPosition.target && fuelKm > 0 ? (
+              <Text style={[styles.statusText, { color: bodyHex }]}>
+                Open the map tab to launch to {userPosition.target.name}
+              </Text>
+            ) : null}
           </View>
 
           {/* <View style={styles.progressContainer}>
@@ -209,6 +217,17 @@ export function UnifiedGlassPanel({
           `${currentXP} / ${levelThreshold} XP`,
           levelProgress,
           colors.accent,
+        )}
+      </View>
+
+      <View style={styles.levelSection}>
+        {renderProgressItem(
+          'Fuel',
+          `${fuelKm.toLocaleString(undefined, {
+            maximumFractionDigits: 0,
+          })} km`,
+          fuelProgress,
+          '#90EE90',
         )}
       </View>
 
@@ -292,7 +311,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   levelSection: {
-    marginBottom: 18,
+    marginBottom: 12,
   },
   levelText: {
     fontFamily: fonts.semiBold,

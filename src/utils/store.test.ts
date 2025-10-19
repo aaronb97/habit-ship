@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useIsSetupFinished, useIsTraveling, useStore } from './store';
 import { calculateLevel, getHabitDistanceForLevel } from './experience';
+import { advanceTime } from './time';
 import { moon } from '../planets';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -127,7 +128,7 @@ describe('store', () => {
     expect(result.current.habits).toHaveLength(0);
   });
 
-  it('should complete a habit and advance distance by base amount', async () => {
+  it('should accrue fuel on completion and advance when fuel is applied', async () => {
     const { result } = renderHook(() => useStore());
     const { result: traveling } = renderHook(() => useIsTraveling());
 
@@ -146,19 +147,28 @@ describe('store', () => {
     });
 
     expect(result.current.habits[0]!.completions).toHaveLength(1);
-    const move = getHabitDistanceForLevel(
+    const per = getHabitDistanceForLevel(
       calculateLevel(result.current.totalXP),
     );
-    expect(result.current.userPosition.distanceTraveled).toBeDefined();
+
+    // Fuel accrued, but no travel yet
+    expect(result.current.fuelKm).toBe(per);
+    expect(result.current.userPosition.distanceTraveled).toBe(0);
+    expect(traveling.current).toBe(false);
+
+    // Apply fuel to initiate travel
+    act(() => {
+      result.current.applyFuelToTravel();
+    });
+
     const initialDist = result.current.userPosition.initialDistance!;
     expect(result.current.userPosition!.distanceTraveled).toBe(
-      Math.min(initialDist, move),
+      Math.min(initialDist, per),
     );
-
     expect(traveling.current).toBe(true);
   });
 
-  it('should scale distance per habit by 1.2^(level-1)', async () => {
+  it('should scale distance per habit by 1.2^(level-1) and cap daily fuel', async () => {
     const { result } = renderHook(() => useStore());
 
     act(() => {
@@ -169,24 +179,32 @@ describe('store', () => {
 
     await act(async () => {
       result.current.setDestination('The Moon');
-      await result.current.completeHabit(habitId); // First completion
+      await result.current.completeHabit(habitId); // First completion (fuel)
     });
-
     const level = calculateLevel(result.current.totalXP);
     const firstMove = getHabitDistanceForLevel(level);
 
-    await act(async () => {
-      await result.current.completeHabit(habitId); // Second completion
+    act(() => {
+      result.current.applyFuelToTravel();
     });
 
-    const secondMove = getHabitDistanceForLevel(level);
-    expect(secondMove).toBeCloseTo(firstMove); // same level yields same distance per habit
-    expect(result.current.userPosition.distanceTraveled).toBe(
-      Math.min(
-        result.current.userPosition.initialDistance!,
-        firstMove + secondMove,
-      ),
+    const distAfterFirst = result.current.userPosition.distanceTraveled!;
+    expect(distAfterFirst).toBe(
+      Math.min(result.current.userPosition.initialDistance!, firstMove),
     );
+
+    await act(async () => {
+      await result.current.completeHabit(habitId); // Second completion (fuel)
+    });
+    const secondMove = getHabitDistanceForLevel(level);
+    expect(secondMove).toBeCloseTo(firstMove);
+
+    // Applying fuel again the same day should not increase beyond the daily cap total
+    act(() => {
+      result.current.applyFuelToTravel();
+    });
+
+    expect(result.current.userPosition.distanceTraveled).toBe(distAfterFirst);
   });
 
   it('should set destination correctly', () => {
@@ -200,7 +218,7 @@ describe('store', () => {
     expect(result.current.userPosition.initialDistance).toBeGreaterThan(0);
   });
 
-  it('should track distanceTraveled when completing habits', () => {
+  it('should track distanceTraveled when applying fuel after a completion', () => {
     const { result } = renderHook(() => useStore());
     const { result: traveling } = renderHook(() => useIsTraveling());
 
@@ -217,6 +235,14 @@ describe('store', () => {
     return (async () => {
       await act(async () => {
         await result.current.completeHabit(habitId);
+      });
+
+      // No travel yet until fuel is applied
+      expect(result.current.userPosition.distanceTraveled ?? 0).toBe(0);
+      expect(traveling.current).toBe(false);
+
+      act(() => {
+        result.current.applyFuelToTravel();
       });
 
       const moved = result.current.userPosition.distanceTraveled ?? 0;
@@ -241,17 +267,27 @@ describe('store', () => {
       await result.current.completeHabit(habitId);
     });
 
-    // Complete habits until arrival
+    // Apply fuel for the first completion
+    act(() => {
+      result.current.applyFuelToTravel();
+    });
+
+    // Loop completing habits across days and applying fuel until arrival
     const initialDist = result.current.userPosition.initialDistance!;
     const perHabit = getHabitDistanceForLevel(
       calculateLevel(result.current.totalXP),
     );
     const needed = Math.ceil(initialDist / perHabit);
     for (let i = 1; i < needed; i++) {
-      // i already completed once
-
       await act(async () => {
         await result.current.completeHabit(habitId);
+      });
+      act(() => {
+        result.current.applyFuelToTravel();
+      });
+      // Move to the next day to allow more fuel accrual
+      act(() => {
+        advanceTime(24 * 60 * 60 * 1000);
       });
     }
 
@@ -264,8 +300,8 @@ describe('store', () => {
     expect(result.current.userPosition.startingLocation).toBe('The Moon');
     expect(result.current.userPosition.target).toBeUndefined();
     expect(result.current.completedPlanets.includes('The Moon')).toBe(true);
-    expect(result.current.xpHistory).toHaveLength(2);
-    expect(result.current.xpHistory[1]!.amount).toBe(moon.xpReward);
+    const last = result.current.xpHistory[result.current.xpHistory.length - 1]!;
+    expect(last.amount).toBe(moon.xpReward);
   });
 
   it('should clear all data', () => {
