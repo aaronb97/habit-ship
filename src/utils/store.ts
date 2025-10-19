@@ -9,7 +9,7 @@ import { schedulePushNotification } from './schedulePushNotification';
 import { getCurrentTime, getCurrentDate } from './time';
 import { Coordinates, UserPosition, XPGain } from '../types';
 import { useShallow } from 'zustand/shallow';
-import { calculateLevel, getHabitDistanceForLevel } from './experience';
+import { calculateLevel, getDailyDistanceForLevel } from './experience';
 
 // =================================================================
 // TYPES
@@ -52,8 +52,6 @@ export function getPlanetPosition(planetName: string): Coordinates {
 
   return planet.getPosition();
 }
-
- 
 
 // =================================================================
 // STORE DEFINITION
@@ -106,7 +104,7 @@ type Store = {
 
   // Navigation state
   activeTab: TabName;
-  
+
   fuelKm: number;
   fuelEarnedTodayKm: number;
   fuelEarnedDate?: string;
@@ -298,8 +296,10 @@ export const useStore = create<Store>()(
       setShowTrails: (value) => set({ showTrails: value }),
       setShowTextures: (value) => set({ showTextures: value }),
       setShowDebugOverlay: (value) => set({ showDebugOverlay: value }),
-      setOutlinesBodiesEnabled: (value) => set({ outlinesBodiesEnabled: value }),
-      setOutlinesRocketEnabled: (value) => set({ outlinesRocketEnabled: value }),
+      setOutlinesBodiesEnabled: (value) =>
+        set({ outlinesBodiesEnabled: value }),
+      setOutlinesRocketEnabled: (value) =>
+        set({ outlinesRocketEnabled: value }),
       setLevelUpModalVisible: (value) => set({ isLevelUpModalVisible: value }),
       setActiveTab: (tab) => set({ activeTab: tab }),
 
@@ -431,10 +431,13 @@ export const useStore = create<Store>()(
           }
 
           const level = calculateLevel(state.totalXP);
-          const dailyCap = getHabitDistanceForLevel(level);
+          const dailyCap = getDailyDistanceForLevel(level);
           const fuelHabitsCount = Math.max(1, state.habits.length);
           const perCompletion = dailyCap / fuelHabitsCount;
-          const remainingAllowance = Math.max(0, dailyCap - state.fuelEarnedTodayKm);
+          const remainingAllowance = Math.max(
+            0,
+            dailyCap - state.fuelEarnedTodayKm,
+          );
           const grant = Math.min(perCompletion, remainingAllowance);
 
           state.fuelKm += grant;
@@ -652,8 +655,9 @@ export const useStore = create<Store>()(
         (s as Partial<Store> & { userLevel?: unknown }).userLevel = undefined;
 
         // Remove deprecated flag if present
-        (s as Partial<Store> & { pendingTravelAnimation?: unknown }).pendingTravelAnimation =
-          undefined;
+        (
+          s as Partial<Store> & { pendingTravelAnimation?: unknown }
+        ).pendingTravelAnimation = undefined;
         if (s.pendingLanding === undefined) s.pendingLanding = false;
         if (s.justLanded === undefined) s.justLanded = false;
         if (s.showDebugOverlay === undefined) s.showDebugOverlay = false;
@@ -684,7 +688,8 @@ export const useStore = create<Store>()(
         if ((s as Partial<Store>).fuelEarnedTodayKm === undefined)
           (s as Partial<Store>).fuelEarnedTodayKm = 0;
         if ((s as Partial<Store>).fuelEarnedDate === undefined)
-          (s as Partial<Store>).fuelEarnedDate = getCurrentDate().toDateString();
+          (s as Partial<Store>).fuelEarnedDate =
+            getCurrentDate().toDateString();
         if ((s as Partial<Store>).xpEarnedToday === undefined)
           (s as Partial<Store>).xpEarnedToday = 0;
         if ((s as Partial<Store>).xpEarnedDate === undefined)

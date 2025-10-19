@@ -15,7 +15,7 @@ import {
   getLevelProgress,
   xpCurrentThresholdForLevel,
   getCurrentLevelXP,
-  getHabitDistanceForLevel,
+  getDailyDistanceForLevel,
 } from '../utils/experience';
 import { useTimer } from 'react-timer-hook';
 import { getCurrentDate } from '../utils/time';
@@ -74,7 +74,7 @@ export function UnifiedGlassPanel({
   const levelProgress = getLevelProgress(totalXP);
   const levelThreshold = xpCurrentThresholdForLevel(level);
   const currentXP = getCurrentLevelXP(totalXP);
-  const dailyFuelCap = getHabitDistanceForLevel(level);
+  const dailyFuelCap = getDailyDistanceForLevel(level);
   const fuelProgress =
     dailyFuelCap > 0 ? Math.min(1, fuelKm / dailyFuelCap) : 0;
 

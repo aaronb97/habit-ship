@@ -4,7 +4,7 @@ import { useStore, useUserLevel } from '../utils/store';
 import { cBodies } from '../planets';
 import { LevelUpModal } from './LevelUpModal';
 import { useIsFocused } from '@react-navigation/native';
-import { getHabitDistanceForLevel } from '../utils/experience';
+import { getDailyDistanceForLevel } from '../utils/experience';
 
 function formatNumber(n: number): string {
   const s = Math.round(n).toString();
@@ -31,9 +31,9 @@ export function LevelUpListener() {
     if (curr > prev) {
       // Update ref immediately to avoid repeated triggers while modal is open
       prevLevelRef.current = curr;
-      // Compute distance per habit change
-      const prevDist = getHabitDistanceForLevel(prev);
-      const currDist = getHabitDistanceForLevel(curr);
+
+      const prevDist = getDailyDistanceForLevel(prev);
+      const currDist = getDailyDistanceForLevel(curr);
 
       const newBodies = cBodies.filter(
         (b) => b.minLevel && b.minLevel <= curr && b.minLevel > prev,

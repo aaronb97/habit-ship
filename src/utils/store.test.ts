@@ -3,7 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useIsSetupFinished, useIsTraveling, useStore } from './store';
-import { calculateLevel, getHabitDistanceForLevel } from './experience';
+import { calculateLevel, getDailyDistanceForLevel } from './experience';
 import { advanceTime } from './time';
 import { moon } from '../planets';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -147,7 +147,7 @@ describe('store', () => {
     });
 
     expect(result.current.habits[0]!.completions).toHaveLength(1);
-    const per = getHabitDistanceForLevel(
+    const per = getDailyDistanceForLevel(
       calculateLevel(result.current.totalXP),
     );
 
@@ -182,7 +182,7 @@ describe('store', () => {
       await result.current.completeHabit(habitId); // First completion (fuel)
     });
     const level = calculateLevel(result.current.totalXP);
-    const firstMove = getHabitDistanceForLevel(level);
+    const firstMove = getDailyDistanceForLevel(level);
 
     act(() => {
       result.current.applyFuelToTravel();
@@ -196,7 +196,7 @@ describe('store', () => {
     await act(async () => {
       await result.current.completeHabit(habitId); // Second completion (fuel)
     });
-    const secondMove = getHabitDistanceForLevel(level);
+    const secondMove = getDailyDistanceForLevel(level);
     expect(secondMove).toBeCloseTo(firstMove);
 
     // Applying fuel again the same day should not increase beyond the daily cap total
@@ -274,7 +274,7 @@ describe('store', () => {
 
     // Loop completing habits across days and applying fuel until arrival
     const initialDist = result.current.userPosition.initialDistance!;
-    const perHabit = getHabitDistanceForLevel(
+    const perHabit = getDailyDistanceForLevel(
       calculateLevel(result.current.totalXP),
     );
     const needed = Math.ceil(initialDist / perHabit);

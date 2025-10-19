@@ -42,7 +42,8 @@ export function xpCurrentThresholdForLevel(level: number): number {
   }
 
   // After the switch, continue growth using second increment
-  const atSwitch = baseRequirement + firstIncrement * (switchIncrementLevel - 1);
+  const atSwitch =
+    baseRequirement + firstIncrement * (switchIncrementLevel - 1);
   return atSwitch + secondIncrement * (L - switchIncrementLevel);
 }
 
@@ -104,8 +105,8 @@ export function getLevelProgress(totalXP: number): number {
   return Math.max(0, Math.min(1, ratio));
 }
 
-// Distance gained per habit completion for a given level
-export function getHabitDistanceForLevel(level: number): number {
+// Maximum distance that can be gained per day for a given level
+export function getDailyDistanceForLevel(level: number): number {
   const L = Math.max(1, Math.floor(level));
   const distance = 1_000_000 * Math.pow(1.2, L - 1);
   return Math.round(distance / 100_000) * 100_000;
