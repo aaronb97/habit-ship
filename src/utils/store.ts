@@ -80,6 +80,9 @@ type Store = {
   outlinesBodiesEnabled: boolean;
   outlinesRocketEnabled: boolean;
 
+  showJourneyRemaining: boolean;
+  showFuelCapacity: boolean;
+
   // Tilt-shift (miniature) post-processing controls
   tiltShiftEnabled: boolean;
   // normalized [0..1] focus band center (vertical UV)
@@ -154,6 +157,9 @@ type Store = {
   setTiltShiftFeather: (value: number) => void;
   setTiltShiftBlur: (value: number) => void;
 
+  setShowJourneyRemaining: (value: boolean) => void;
+  setShowFuelCapacity: (value: boolean) => void;
+
   completeHabit: (habitId: HabitId) => Promise<void>;
   startTimer: (habitId: HabitId) => Promise<boolean>; // Returns true on success, false on failure
   cancelTimer: () => Promise<void>;
@@ -184,6 +190,8 @@ const initialData = {
   showDebugOverlay: false,
   outlinesBodiesEnabled: true,
   outlinesRocketEnabled: true,
+  showJourneyRemaining: false,
+  showFuelCapacity: false,
   tiltShiftEnabled: true,
   // tiltShiftFocus: 0.55,
   // tiltShiftRange: 0,
@@ -302,6 +310,8 @@ export const useStore = create<Store>()(
         set({ outlinesRocketEnabled: value }),
       setLevelUpModalVisible: (value) => set({ isLevelUpModalVisible: value }),
       setActiveTab: (tab) => set({ activeTab: tab }),
+      setShowJourneyRemaining: (value) => set({ showJourneyRemaining: value }),
+      setShowFuelCapacity: (value) => set({ showFuelCapacity: value }),
 
       // --- Tilt-shift setters ---
       setTiltShiftEnabled: (value) => set({ tiltShiftEnabled: value }),
@@ -326,6 +336,8 @@ export const useStore = create<Store>()(
           tiltShiftRange,
           tiltShiftFeather,
           tiltShiftBlur,
+          showJourneyRemaining,
+          showFuelCapacity,
         } = get();
         set({
           ...initialData,
@@ -339,6 +351,8 @@ export const useStore = create<Store>()(
           tiltShiftRange,
           tiltShiftFeather,
           tiltShiftBlur,
+          showJourneyRemaining,
+          showFuelCapacity,
           isSetupFinished: true,
           fuelKm: 0,
           fuelEarnedTodayKm: 0,
@@ -635,7 +649,7 @@ export const useStore = create<Store>()(
     {
       name: 'space-explorer-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 9,
+      version: 10,
       migrate: (persistedState, _version) => {
         const s = (persistedState || {}) as Partial<Store> & {
           // For backwards compatibility with older persisted shapes
@@ -694,6 +708,11 @@ export const useStore = create<Store>()(
           (s as Partial<Store>).xpEarnedToday = 0;
         if ((s as Partial<Store>).xpEarnedDate === undefined)
           (s as Partial<Store>).xpEarnedDate = getCurrentDate().toDateString();
+
+        if ((s as Partial<Store>).showJourneyRemaining === undefined)
+          (s as Partial<Store>).showJourneyRemaining = false;
+        if ((s as Partial<Store>).showFuelCapacity === undefined)
+          (s as Partial<Store>).showFuelCapacity = false;
         return s as Store;
       },
     },

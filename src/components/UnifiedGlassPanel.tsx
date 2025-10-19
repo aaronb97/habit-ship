@@ -42,6 +42,10 @@ export function UnifiedGlassPanel({
     completeHabit,
   } = useStore();
   const fuelKm = useStore((s) => s.fuelKm);
+  const showJourneyRemaining = useStore((s) => s.showJourneyRemaining);
+  const setShowJourneyRemaining = useStore((s) => s.setShowJourneyRemaining);
+  const showFuelCapacity = useStore((s) => s.showFuelCapacity);
+  const setShowFuelCapacity = useStore((s) => s.setShowFuelCapacity);
 
   const isTraveling = useIsTraveling();
 
@@ -60,12 +64,14 @@ export function UnifiedGlassPanel({
   }, [planet, clearData]);
 
   let distancePercentage = 0;
+  let distanceRemaining = 0;
 
   if (userPosition.target) {
     const { initialDistance, previousDistanceTraveled } = userPosition;
     if (typeof initialDistance === 'number' && initialDistance > 0) {
       const traveled = previousDistanceTraveled ?? 0;
       distancePercentage = Math.min(1, Math.max(0, traveled / initialDistance));
+      distanceRemaining = Math.max(0, initialDistance - traveled);
     }
   }
 
@@ -190,24 +196,21 @@ export function UnifiedGlassPanel({
             ) : null}
           </View>
 
-          {/* <View style={styles.progressContainer}>
-            <View style={styles.progressRow}>
-              <Text style={styles.progressLabel}>Distance Remaining</Text>
-              <Text style={styles.progressValue}>
-                {distanceRemaining.toLocaleString(undefined, {
-                  maximumFractionDigits: 0,
-                })}{' '}
-                km
-              </Text>
-            </View>
-          </View> */}
-
-          {renderProgressItem(
-            'Journey Progress',
-            `${(distancePercentage * 100).toFixed(1)}%`,
-            distancePercentage,
-            colors.primary,
-          )}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => setShowJourneyRemaining(!showJourneyRemaining)}
+          >
+            {renderProgressItem(
+              showJourneyRemaining ? 'Distance Remaining' : 'Journey Progress',
+              showJourneyRemaining
+                ? `${distanceRemaining.toLocaleString(undefined, {
+                    maximumFractionDigits: 0,
+                  })} km`
+                : `${(distancePercentage * 100).toFixed(1)}%`,
+              distancePercentage,
+              colors.primary,
+            )}
+          </TouchableOpacity>
         </View>
       )}
 
@@ -221,14 +224,25 @@ export function UnifiedGlassPanel({
       </View>
 
       <View style={styles.levelSection}>
-        {renderProgressItem(
-          'Fuel',
-          `${fuelKm.toLocaleString(undefined, {
-            maximumFractionDigits: 0,
-          })} km`,
-          fuelProgress,
-          '#90EE90',
-        )}
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => setShowFuelCapacity(!showFuelCapacity)}
+        >
+          {renderProgressItem(
+            'Fuel',
+            showFuelCapacity
+              ? `${fuelKm.toLocaleString(undefined, {
+                  maximumFractionDigits: 0,
+                })} km / ${dailyFuelCap.toLocaleString(undefined, {
+                  maximumFractionDigits: 0,
+                })} km`
+              : `${fuelKm.toLocaleString(undefined, {
+                  maximumFractionDigits: 0,
+                })} km`,
+            fuelProgress,
+            '#90EE90',
+          )}
+        </TouchableOpacity>
       </View>
 
       <View style={styles.habitsHeaderRow}>
