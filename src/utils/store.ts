@@ -79,6 +79,8 @@ type Store = {
   showDebugOverlay: boolean;
   outlinesBodiesEnabled: boolean;
   outlinesRocketEnabled: boolean;
+ 
+  skipRocketAnimation: boolean;
 
   showJourneyRemaining: boolean;
   showFuelCapacity: boolean;
@@ -157,6 +159,7 @@ type Store = {
   setTiltShiftFeather: (value: number) => void;
   setTiltShiftBlur: (value: number) => void;
 
+  setSkipRocketAnimation: (value: boolean) => void;
   setShowJourneyRemaining: (value: boolean) => void;
   setShowFuelCapacity: (value: boolean) => void;
 
@@ -190,6 +193,7 @@ const initialData = {
   showDebugOverlay: false,
   outlinesBodiesEnabled: false,
   outlinesRocketEnabled: true,
+  skipRocketAnimation: false,
   showJourneyRemaining: false,
   showFuelCapacity: false,
   tiltShiftEnabled: true,
@@ -310,6 +314,7 @@ export const useStore = create<Store>()(
         set({ outlinesRocketEnabled: value }),
       setLevelUpModalVisible: (value) => set({ isLevelUpModalVisible: value }),
       setActiveTab: (tab) => set({ activeTab: tab }),
+      setSkipRocketAnimation: (value) => set({ skipRocketAnimation: value }),
       setShowJourneyRemaining: (value) => set({ showJourneyRemaining: value }),
       setShowFuelCapacity: (value) => set({ showFuelCapacity: value }),
 
@@ -331,6 +336,7 @@ export const useStore = create<Store>()(
           showTrails,
           outlinesBodiesEnabled,
           outlinesRocketEnabled,
+          skipRocketAnimation,
           tiltShiftEnabled,
           tiltShiftFocus,
           tiltShiftRange,
@@ -346,6 +352,7 @@ export const useStore = create<Store>()(
           showTrails,
           outlinesBodiesEnabled,
           outlinesRocketEnabled,
+          skipRocketAnimation,
           tiltShiftEnabled,
           tiltShiftFocus,
           tiltShiftRange,
@@ -649,7 +656,7 @@ export const useStore = create<Store>()(
     {
       name: 'space-explorer-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 10,
+      version: 11,
       migrate: (persistedState, _version) => {
         const s = (persistedState || {}) as Partial<Store> & {
           // For backwards compatibility with older persisted shapes
@@ -713,6 +720,8 @@ export const useStore = create<Store>()(
           (s as Partial<Store>).showJourneyRemaining = false;
         if ((s as Partial<Store>).showFuelCapacity === undefined)
           (s as Partial<Store>).showFuelCapacity = false;
+        if ((s as Partial<Store>).skipRocketAnimation === undefined)
+          (s as Partial<Store>).skipRocketAnimation = false;
         return s as Store;
       },
     },

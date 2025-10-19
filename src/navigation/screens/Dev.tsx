@@ -117,6 +117,13 @@ export function Dev() {
             />
           </View>
           <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Skip Rocket Animation</Text>
+            <Switch
+              value={!!store.skipRocketAnimation}
+              onValueChange={(v) => store.setSkipRocketAnimation(v)}
+            />
+          </View>
+          <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Debug Overlay</Text>
             <Switch
               value={!!store.showDebugOverlay}

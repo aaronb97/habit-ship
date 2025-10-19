@@ -88,12 +88,18 @@ export function SolarSystemMap({
   );
   const applyFuelToTravel = useStore((s) => s.applyFuelToTravel);
   const fuelKm = useStore((s) => s.fuelKm);
+  const skipRocketAnimation = useStore((s) => s.skipRocketAnimation);
 
   // Focus replaced by explicit interactive flag from parent (Map tab focus)
   const isInteractiveRef = useRef<boolean>(interactiveEffective);
   useEffect(() => {
     isInteractiveRef.current = interactiveEffective;
-  }, [interactiveEffective]);
+  }, [
+    interactiveEffective,
+    skipRocketAnimation,
+    syncTravelVisuals,
+    finalizeLandingAfterAnimation,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -174,6 +180,13 @@ export function SolarSystemMap({
       vantageEndRef.current = vEndAdj;
 
       if (pending) {
+        if (skipRocketAnimation) {
+          syncTravelVisuals();
+          finalizeLandingAfterAnimation();
+          animSyncedRef.current = true;
+          pendingScriptedStartRef.current = null;
+          return;
+        }
         const controller = cameraControllerRef.current;
         if (controller) {
           controller.startScriptedCamera(
@@ -195,7 +208,12 @@ export function SolarSystemMap({
     } else {
       focusAnimStartRef.current = null;
     }
-  }, [interactiveEffective]);
+  }, [
+    finalizeLandingAfterAnimation,
+    interactiveEffective,
+    skipRocketAnimation,
+    syncTravelVisuals,
+  ]);
 
   // Reset animation start when distance updates while focused
   const prevDistanceRef = useRef<{ prev?: number; curr?: number }>({});
@@ -207,6 +225,20 @@ export function SolarSystemMap({
       previousDistanceTraveledVal !== prevDistanceRef.current.prev;
 
     if (changed && isInteractiveRef.current) {
+      if (skipRocketAnimation) {
+        syncTravelVisuals();
+        finalizeLandingAfterAnimation();
+        animSyncedRef.current = true;
+        pendingScriptedStartRef.current = null;
+        const { distanceTraveled, previousDistanceTraveled } =
+          useStore.getState().userPosition;
+        prevDistanceRef.current = {
+          prev: previousDistanceTraveled,
+          curr: distanceTraveled,
+        };
+        return;
+      }
+
       const start = getCurrentTime();
       focusAnimStartRef.current = start;
 
@@ -257,18 +289,60 @@ export function SolarSystemMap({
       prev: previousDistanceTraveledVal,
       curr: distanceTraveledVal,
     };
-  }, [distanceTraveledVal, previousDistanceTraveledVal]);
+  }, [
+    distanceTraveledVal,
+    previousDistanceTraveledVal,
+    skipRocketAnimation,
+    syncTravelVisuals,
+    finalizeLandingAfterAnimation,
+  ]);
+
+  useEffect(() => {
+    if (!interactiveEffective) return;
+    if (!skipRocketAnimation) return;
+    const { distanceTraveled, previousDistanceTraveled } =
+      useStore.getState().userPosition;
+    const hasDelta = distanceTraveled !== previousDistanceTraveled;
+    if (hasDelta) {
+      syncTravelVisuals();
+      finalizeLandingAfterAnimation();
+      animSyncedRef.current = true;
+      pendingScriptedStartRef.current = null;
+    }
+  }, [
+    skipRocketAnimation,
+    interactiveEffective,
+    syncTravelVisuals,
+    finalizeLandingAfterAnimation,
+    distanceTraveledVal,
+    previousDistanceTraveledVal,
+  ]);
 
   // Apply fuel when Map is interactive and there's no existing delta to animate.
   useEffect(() => {
     if (!interactiveEffective) return;
-    const { target, initialDistance, distanceTraveled, previousDistanceTraveled } =
-      useStore.getState().userPosition;
+    const {
+      target,
+      initialDistance,
+      distanceTraveled,
+      previousDistanceTraveled,
+    } = useStore.getState().userPosition;
     const hasDelta = distanceTraveled !== previousDistanceTraveled;
-    if (fuelKm > 0 && target && typeof initialDistance === 'number' && !hasDelta) {
+    if (
+      fuelKm > 0 &&
+      target &&
+      typeof initialDistance === 'number' &&
+      !hasDelta
+    ) {
       applyFuelToTravel();
     }
-  }, [interactiveEffective, fuelKm, distanceTraveledVal, previousDistanceTraveledVal, applyFuelToTravel]);
+  }, [
+    interactiveEffective,
+    fuelKm,
+    distanceTraveledVal,
+    previousDistanceTraveledVal,
+    applyFuelToTravel,
+  ]);
 
   const animAlphaRef = useRef(0);
   const animSyncedRef = useRef(true);
@@ -310,7 +384,9 @@ export function SolarSystemMap({
       const now = getCurrentTime();
       // Only animate rocket when there is a pending distance delta to show
       const shouldAnimateTravel =
-        isInteractiveRef.current && !animSyncedRef.current;
+        isInteractiveRef.current &&
+        !animSyncedRef.current &&
+        !skipRocketAnimation;
 
       const effectiveStart =
         (shouldAnimateTravel ? focusAnimStartRef.current : null) ?? now;
