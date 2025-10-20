@@ -1,16 +1,16 @@
 {
   "expo": {
-    "name": "react-nav-test",
-    "slug": "react-nav-test",
+    "name": "HabitShip",
+    "slug": "habit-ship",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "scheme": "reactnavtest",
+    "scheme": "habit-ship",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.reactnavtest",
+      "bundleIdentifier": "com.habit-ship",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -20,7 +20,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.reactnavtest"
+      "package": "habit.ship"
     },
     "web": {
       "favicon": "./assets/favicon.png"
