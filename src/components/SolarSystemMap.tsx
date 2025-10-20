@@ -20,12 +20,7 @@ import { toVec3 } from './solarsystem/helpers';
 import { type MappedMaterial } from './solarsystem/builders';
 import { loadBodyTextures } from './solarsystem/textures';
 import { createSky } from './solarsystem/sky';
-import {
-  vantageForProgress,
-  CameraController,
-  clamp01,
-  easeInOutCubic,
-} from './solarsystem/camera';
+import { CameraController, clamp01, easeInOutCubic } from './solarsystem/camera';
 import { Rocket } from './solarsystem/rocket';
 import { CelestialBodyNode, BodyNodesRegistry } from './solarsystem/bodies';
 import { getRelevantPlanetSystemsFor } from './solarsystem/relevance';
@@ -165,9 +160,6 @@ export function SolarSystemMap({
 
       const toAbs = Math.min(1, Math.max(0, (distanceTraveled ?? 0) / denom));
 
-      const vStart = vantageForProgress(fromAbs);
-      const vEnd = vantageForProgress(toAbs);
-
       // If start/target centers are very close in scene units, lock yaw side-on for the
       // entire scripted camera sequence to avoid ending up behind the parent body.
       const startBody =
@@ -178,11 +170,11 @@ export function SolarSystemMap({
       const targetCenter = toVec3(targetBody.getVisualPosition());
       const separation = startCenter.distanceTo(targetCenter);
       const lockSideOn = separation < YAW_SIDE_ON_DISTANCE_CUTOFF;
-      const SIDE_YAW = Math.PI / 2;
-      const vStartAdj = lockSideOn ? { ...vStart, yaw: SIDE_YAW } : vStart;
-      const vEndAdj = lockSideOn ? { ...vEnd, yaw: SIDE_YAW } : vEnd;
-      vantageStartRef.current = vStartAdj;
-      vantageEndRef.current = vEndAdj;
+      // Configure controller policies for short-hop
+      const controller = cameraControllerRef.current;
+      if (controller) {
+        controller.setShortHopLockActive(lockSideOn);
+      }
 
       if (pending) {
         if (skipRocketAnimation) {
@@ -193,19 +185,21 @@ export function SolarSystemMap({
           return;
         }
 
-        const controller = cameraControllerRef.current;
-        if (controller) {
-          controller.startScriptedCamera(
+        const controller2 = cameraControllerRef.current;
+        if (controller2) {
+          controller2.startScriptedCameraFromProgress(
             start,
-            controller.state,
-            vStartAdj,
-            vEndAdj,
+            controller2.state,
+            fromAbs,
+            toAbs,
+            { lockSideOnYaw: lockSideOn },
           );
         } else {
           pendingScriptedStartRef.current = {
             nowTs: start,
-            vantageStart: vStartAdj,
-            vantageEnd: vEndAdj,
+            fromAbs,
+            toAbs,
+            lockSideOn,
           };
         }
       } else {
@@ -256,8 +250,6 @@ export function SolarSystemMap({
 
       const fromAbs = clamp01((previousDistanceTraveledVal ?? 0) / denom);
       const toAbs = clamp01((distanceTraveledVal ?? 0) / denom);
-      const vStart = vantageForProgress(fromAbs);
-      const vEnd = vantageForProgress(toAbs);
 
       // Check separation again on distance change; if small, lock yaw side-on.
       const { startingLocation, target } = useStore.getState().userPosition;
@@ -269,25 +261,23 @@ export function SolarSystemMap({
       const targetCenter = toVec3(targetBody.getVisualPosition());
       const separation = startCenter.distanceTo(targetCenter);
       const lockSideOn = separation < YAW_SIDE_ON_DISTANCE_CUTOFF;
-      const SIDE_YAW = Math.PI / 2;
-      const vStartAdj = lockSideOn ? { ...vStart, yaw: SIDE_YAW } : vStart;
-      const vEndAdj = lockSideOn ? { ...vEnd, yaw: SIDE_YAW } : vEnd;
-      vantageStartRef.current = vStartAdj;
-      vantageEndRef.current = vEndAdj;
-
+      // Configure controller policies for short-hop
       const controller = cameraControllerRef.current;
       if (controller) {
-        controller.startScriptedCamera(
+        controller.setShortHopLockActive(lockSideOn);
+        controller.startScriptedCameraFromProgress(
           start,
           controller.state,
-          vStartAdj,
-          vEndAdj,
+          fromAbs,
+          toAbs,
+          { lockSideOnYaw: lockSideOn },
         );
       } else {
         pendingScriptedStartRef.current = {
           nowTs: start,
-          vantageStart: vStartAdj,
-          vantageEnd: vEndAdj,
+          fromAbs,
+          toAbs,
+          lockSideOn,
         };
       }
     }
@@ -367,13 +357,11 @@ export function SolarSystemMap({
   const animAlphaRef = useRef(0);
   const animSyncedRef = useRef(true);
 
-  const vantageStartRef = useRef<{ yaw: number; pitch: number } | null>(null);
-  const vantageEndRef = useRef<{ yaw: number; pitch: number } | null>(null);
-
   const pendingScriptedStartRef = useRef<{
     nowTs: number;
-    vantageStart: { yaw: number; pitch: number };
-    vantageEnd: { yaw: number; pitch: number };
+    fromAbs: number;
+    toAbs: number;
+    lockSideOn: boolean;
   } | null>(null);
 
   // ----- Debug overlay state (generic hook) -----
@@ -528,11 +516,13 @@ export function SolarSystemMap({
     registerController(cameraControllerRef.current);
     if (pendingScriptedStartRef.current) {
       const p = pendingScriptedStartRef.current;
-      cameraControllerRef.current.startScriptedCamera(
+      cameraControllerRef.current.setShortHopLockActive(p.lockSideOn);
+      cameraControllerRef.current.startScriptedCameraFromProgress(
         p.nowTs,
         cameraControllerRef.current.state,
-        p.vantageStart,
-        p.vantageEnd,
+        p.fromAbs,
+        p.toAbs,
+        { lockSideOnYaw: p.lockSideOn },
       );
 
       pendingScriptedStartRef.current = null;
@@ -703,36 +693,18 @@ export function SolarSystemMap({
         const controller = cameraControllerRef.current;
         const cam = cameraRef.current;
         if (controller && cam) {
-          const { target: targetState, startingLocation } =
+          const { target: targetState } =
             useStore.getState().userPosition;
 
           const targetBody =
             PLANETS.find((b) => b.name === targetState?.name) ?? earth;
-
-          const startBody =
-            PLANETS.find((b) => b.name === startingLocation) ?? earth;
 
           const center = displayUserPosRef.current.clone();
           const targetVisual = targetState
             ? toVec3(targetBody.getVisualPosition())
             : center.clone();
 
-          // Disable auto-rotate during short-hop animations so yaw stays locked.
-          let autoRotate = true;
-          if (targetState) {
-            const startCenter = toVec3(startBody.getVisualPosition());
-            const separation = startCenter.distanceTo(targetVisual);
-            const lockSideOn = separation < YAW_SIDE_ON_DISTANCE_CUTOFF;
-            const animActive = interactive && !animSyncedRef.current;
-            if (lockSideOn && animActive) {
-              autoRotate = false;
-            }
-          }
-
-          controller.tick(center, targetVisual, {
-            nowTs: getCurrentTime(),
-            autoRotate,
-          });
+          controller.tick(center, targetVisual);
         }
       }
 

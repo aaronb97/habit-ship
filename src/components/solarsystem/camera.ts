@@ -238,6 +238,8 @@ export class CameraController {
   private vantageStart?: Vantage;
   private vantageEnd?: Vantage;
   private _nowTs: number = 0;
+  // When active during scripted phases, disables auto-rotate in tick()
+  private shortHopLockActive = false;
 
   private doubleTapStages: DoubleTapStage[] = [
     {
@@ -360,6 +362,15 @@ export class CameraController {
    */
   configureDoubleTapStages(stages: DoubleTapStage[]) {
     this.doubleTapStages = stages.slice();
+  }
+
+  /**
+   * Enable/disable short-hop yaw lock mode, which disables auto-rotate
+   * during active scripted phases so the yaw remains stable.
+   * @param active Whether the short-hop lock should be active.
+   */
+  setShortHopLockActive(active: boolean) {
+    this.shortHopLockActive = active;
   }
 
   /**
@@ -602,6 +613,32 @@ export class CameraController {
   }
 
   /**
+   * Convenience API: compute vantages from absolute journey progress and optionally
+   * lock yaw to a side-on angle for the entire scripted sequence.
+   * @param nowTs Anchor timestamp (ms).
+   * @param cameraStart Starting camera state.
+   * @param fromAbs Start progress in [0,1].
+   * @param toAbs End progress in [0,1].
+   * @param opts Optional yaw-lock settings.
+   */
+  startScriptedCameraFromProgress(
+    nowTs: number,
+    cameraStart: CameraStart,
+    fromAbs: number,
+    toAbs: number,
+    opts?: { lockSideOnYaw?: boolean; sideYaw?: number },
+  ) {
+    const vStart = vantageForProgress(fromAbs);
+    const vEnd = vantageForProgress(toAbs);
+    const lock = opts?.lockSideOnYaw ?? false;
+    const side = opts?.sideYaw ?? Math.PI / 2;
+
+    const vStartAdj = lock ? { ...vStart, yaw: side } : vStart;
+    const vEndAdj = lock ? { ...vEnd, yaw: side } : vEnd;
+    this.startScriptedCamera(nowTs, cameraStart, vStartAdj, vEndAdj);
+  }
+
+  /**
    * Stop any active scripted camera sequence.
    */
   stopScriptedCamera() {
@@ -703,7 +740,7 @@ export class CameraController {
     target: THREE.Vector3,
     opts?: { autoRotate?: boolean; nowTs?: number },
   ) {
-    const autoRotate = opts?.autoRotate ?? true;
+    const requestedAuto = opts?.autoRotate ?? true;
     const nowTs = opts?.nowTs ?? getCurrentTime();
     this._nowTs = nowTs;
 
@@ -726,6 +763,18 @@ export class CameraController {
     }
 
     // Auto-rotate when not panning and no significant yaw inertia
+    let autoRotate = requestedAuto;
+    if (this.shortHopLockActive && this.scriptedActive) {
+      const phase = this.getCameraPhase();
+      if (
+        phase === CameraPhase.PreRollMove ||
+        phase === CameraPhase.Hold ||
+        phase === CameraPhase.RocketFollow
+      ) {
+        autoRotate = false;
+      }
+    }
+
     if (
       !this.isPanning &&
       Math.abs(this.yawVelocity) < INERTIA_STOP_EPSILON &&
