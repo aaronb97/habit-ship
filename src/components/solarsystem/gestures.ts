@@ -17,10 +17,11 @@ export function useComposedGesture(params: {
   const { controllerRef, width, height, onDoubleTap, enabled = true } = params;
   const lastPanXRef = useRef(0);
   const lastPanYRef = useRef(0);
+  const panStartedRef = useRef(false);
 
   const pinch = Gesture.Pinch()
     .enabled(enabled)
-    .onBegin(() => {
+    .onStart(() => {
       controllerRef.current?.beginPinch();
     })
     .onUpdate((e: PinchGestureHandlerEventPayload) => {
@@ -30,7 +31,8 @@ export function useComposedGesture(params: {
 
   const pan = Gesture.Pan()
     .enabled(enabled)
-    .onBegin(() => {
+    .onStart(() => {
+      panStartedRef.current = true;
       controllerRef.current?.beginPan();
       lastPanXRef.current = 0;
       lastPanYRef.current = 0;
@@ -46,10 +48,17 @@ export function useComposedGesture(params: {
     })
     .onEnd((e) => {
       controllerRef.current?.endPan(e.velocityX, e.velocityY, width, height);
+      panStartedRef.current = false;
       lastPanXRef.current = 0;
       lastPanYRef.current = 0;
     })
     .onFinalize(() => {
+      // If pan began but was cancelled due to another gesture (e.g., pinch/tap),
+      // finalize it without inertia to ensure proper cleanup.
+      if (panStartedRef.current) {
+        controllerRef.current?.endPan(0, 0, width, height);
+        panStartedRef.current = false;
+      }
       lastPanXRef.current = 0;
       lastPanYRef.current = 0;
     })
