@@ -35,8 +35,6 @@ export type Vantage = { yaw: number; pitch: number };
 
 export type CameraStart = CameraState;
 
-export type ScriptSchedule = { preRollEnd: number; rocketEnd: number };
-
 export enum CameraPhase {
   Idle = 'Idle',
   PreRollMove = 'PreRollMove',
@@ -64,13 +62,16 @@ export function easeInOutCubic(t: number) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-export function lerp(a: number, b: number, t: number) {
+function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
 
-export function lerpAngle(a: number, b: number, t: number) {
+function lerpAngle(a: number, b: number, t: number) {
   let diff = ((b - a + Math.PI) % (2 * Math.PI)) - Math.PI;
-  if (diff < -Math.PI) diff += 2 * Math.PI;
+  if (diff < -Math.PI) {
+    diff += 2 * Math.PI;
+  }
+
   return a + diff * t;
 }
 
@@ -96,7 +97,7 @@ export function vantageForProgress(p: number): Vantage {
   return { yaw, pitch };
 }
 
-export function updateOrbitCamera(
+function updateOrbitCamera(
   camera: THREE.PerspectiveCamera,
   center: THREE.Vector3,
   target: THREE.Vector3,
@@ -127,12 +128,16 @@ export function updateOrbitCamera(
         : new THREE.Vector3(1, 0, 0);
 
     n.copy(a.clone().cross(helper));
-    if (n.lengthSq() < PLANE_NORMAL_EPS) n.set(0, 1, 0);
+    if (n.lengthSq() < PLANE_NORMAL_EPS) {
+      n.set(0, 1, 0);
+    }
   }
 
   // Normalize and enforce a consistent hemisphere so the view never flips.
   n.normalize();
-  if (n.dot(ECLIPTIC_UP) > 0) n.multiplyScalar(-1);
+  if (n.dot(ECLIPTIC_UP) > 0) {
+    n.multiplyScalar(-1);
+  }
 
   // Orthonormal basis (U, V) spanning the plane with a stable orientation.
   // Start from the target direction projected into the plane. If degenerate, use
@@ -175,62 +180,6 @@ export function updateOrbitCamera(
   camera.lookAt(center);
 }
 
-export function computeScriptedCameraTargets(params: {
-  nowTs: number;
-  focusAnimStart: number;
-  cameraStart: CameraStart;
-  vantageStart: Vantage;
-  vantageEnd: Vantage;
-}): {
-  phase: CameraPhase;
-  yawTarget: number;
-  pitchTarget: number;
-  radiusTarget: number;
-} {
-  const { nowTs, focusAnimStart, cameraStart, vantageStart, vantageEnd } =
-    params;
-
-  const elapsed = Math.max(0, nowTs - focusAnimStart);
-  const preRoll = CAMERA_MOVE_MS + CAMERA_HOLD_MS;
-  // Compute the pre-roll ending yaw using the same wrap-aware logic as lerpAngle.
-  // This preserves the multiple-of-π branch chosen during PreRollMove so we don't
-  // snap back to the normalized principal angle during Hold or RocketFollow.
-  const preRollYawEnd = lerpAngle(cameraStart.yaw, vantageStart.yaw, 1);
-
-  if (elapsed < CAMERA_MOVE_MS) {
-    const u = clamp01(elapsed / CAMERA_MOVE_MS);
-    return {
-      phase: CameraPhase.PreRollMove,
-      yawTarget: lerpAngle(cameraStart.yaw, vantageStart.yaw, u),
-      // Keep pitch anchored at the starting value during pre-roll so initial load pitch stays at 0
-      pitchTarget: cameraStart.pitch,
-      radiusTarget: ORBIT_INITIAL_RADIUS,
-    };
-  }
-
-  if (elapsed < preRoll) {
-    return {
-      phase: CameraPhase.Hold,
-      // Ratchet to the same multiple-of-π branch we ended PreRoll on
-      yawTarget: preRollYawEnd,
-      // Continue holding the starting pitch value during the hold phase
-      pitchTarget: cameraStart.pitch,
-      radiusTarget: ORBIT_INITIAL_RADIUS,
-    };
-  }
-
-  const alpha = clamp01((elapsed - preRoll) / HABIT_TRAVEL_ANIM_MS);
-  const e = easeInOutCubic(alpha);
-  return {
-    phase: CameraPhase.RocketFollow,
-    // Preserve yaw continuity by starting from the preserved pre-roll yaw branch
-    yawTarget: lerpAngle(preRollYawEnd, vantageEnd.yaw, e),
-    // Keep pitch anchored at the starting value during rocket follow as well
-    pitchTarget: cameraStart.pitch,
-    radiusTarget: ORBIT_INITIAL_RADIUS,
-  };
-}
-
 // CameraController encapsulates camera orbit state, gesture interactions,
 // scripted camera sequencing, and per-frame updates.
 export class CameraController {
@@ -268,8 +217,7 @@ export class CameraController {
   private cameraStart?: CameraStart;
   private vantageStart?: Vantage;
   private vantageEnd?: Vantage;
-  private schedule?: ScriptSchedule;
-  private _lastPhase: CameraPhase = CameraPhase.Idle;
+  private _nowTs: number = 0;
 
   private doubleTapStages: DoubleTapStage[] = [
     {
@@ -311,10 +259,6 @@ export class CameraController {
     };
   }
 
-  get lastPhase(): CameraPhase {
-    return this._lastPhase;
-  }
-
   resetZoom() {
     this.radiusTarget = ORBIT_INITIAL_RADIUS;
     // Make the reset feel snappy by stopping inertial motion
@@ -328,6 +272,7 @@ export class CameraController {
       ZOOM_MIN_RADIUS,
       ZOOM_MAX_RADIUS,
     );
+
     this.yawVelocity = 0;
     this.pitchVelocity = 0;
   }
@@ -362,22 +307,42 @@ export class CameraController {
   }
 
   private resolveRadiusTarget(t: StageRadiusTarget): number {
-    if (t === 'initial') return ORBIT_INITIAL_RADIUS;
-    if (t === 'min') return ZOOM_MIN_RADIUS;
+    if (t === 'initial') {
+      return ORBIT_INITIAL_RADIUS;
+    }
+
+    if (t === 'min') {
+      return ZOOM_MIN_RADIUS;
+    }
+
     return t;
   }
 
   private resolvePitchTarget(t: StagePitchTarget): number {
-    if (t === 'max') return MAX_PITCH_RAD;
-    if (t === 'keep') return this.pitch;
+    if (t === 'max') {
+      return MAX_PITCH_RAD;
+    }
+
+    if (t === 'keep') {
+      return this.pitch;
+    }
+
     return t;
   }
 
   private epsFor(target: StageRadiusTarget, provided?: number): number {
-    if (typeof provided === 'number') return provided;
-    if (target === 'initial')
+    if (typeof provided === 'number') {
+      return provided;
+    }
+
+    if (target === 'initial') {
       return Math.max(0.01, ORBIT_INITIAL_RADIUS * 0.05);
-    if (target === 'min') return Math.max(0.01, ZOOM_MIN_RADIUS * 0.1);
+    }
+
+    if (target === 'min') {
+      return Math.max(0.01, ZOOM_MIN_RADIUS * 0.1);
+    }
+
     return 1.0;
   }
 
@@ -393,7 +358,10 @@ export class CameraController {
     let currentIndex = -1;
     for (let i = 0; i < this.doubleTapStages.length; i++) {
       const s = this.doubleTapStages[i];
-      if (!s) continue;
+      if (!s) {
+        continue;
+      }
+
       const matchR = this.resolveRadiusTarget(s.matchRadius);
       const eps = this.epsFor(s.matchRadius, s.epsilon);
       if (this.approxEq(r, matchR, eps)) {
@@ -404,8 +372,11 @@ export class CameraController {
 
     const nextIndex =
       currentIndex >= 0 ? (currentIndex + 1) % this.doubleTapStages.length : 0;
+
     const next = this.doubleTapStages[nextIndex];
-    if (!next) return;
+    if (!next) {
+      return;
+    }
 
     if (next.action === 'reset') {
       this.resetZoom();
@@ -419,6 +390,7 @@ export class CameraController {
         const pp = this.resolvePitchTarget(next.pitch);
         this.setPitchTarget(pp);
       }
+
       return;
     } else {
       const rr = this.resolveRadiusTarget(next.radius ?? 'initial');
@@ -515,10 +487,6 @@ export class CameraController {
     this.cameraStart = cameraStart;
     this.vantageStart = vantageStart;
     this.vantageEnd = vantageEnd;
-    this.schedule = {
-      preRollEnd: nowTs + CAMERA_MOVE_MS + CAMERA_HOLD_MS,
-      rocketEnd: nowTs + CAMERA_MOVE_MS + CAMERA_HOLD_MS + HABIT_TRAVEL_ANIM_MS,
-    };
 
     this.scriptedActive = true;
     // Stop inertial motion and set zoom radius target for the move
@@ -529,7 +497,83 @@ export class CameraController {
 
   stopScriptedCamera() {
     this.scriptedActive = false;
-    this.schedule = undefined;
+  }
+
+  private getCameraPhase(): CameraPhase {
+    if (!this.scriptedActive || this.focusAnimStart === undefined) {
+      return CameraPhase.Idle;
+    }
+
+    const nowTs = this._nowTs || getCurrentTime();
+    const elapsed = Math.max(0, nowTs - this.focusAnimStart);
+    if (elapsed < CAMERA_MOVE_MS) {
+      return CameraPhase.PreRollMove;
+    }
+
+    const preRoll = CAMERA_MOVE_MS + CAMERA_HOLD_MS;
+    if (elapsed < preRoll) {
+      return CameraPhase.Hold;
+    }
+
+    if (elapsed < preRoll + HABIT_TRAVEL_ANIM_MS) {
+      return CameraPhase.RocketFollow;
+    }
+
+    return CameraPhase.Complete;
+  }
+
+  private computeScriptedCameraTargets(): {
+    phase: CameraPhase;
+    yawTarget: number;
+    pitchTarget: number;
+    radiusTarget: number;
+  } {
+    const nowTs = this._nowTs || getCurrentTime();
+    const focusAnimStart = this.focusAnimStart!;
+    const cameraStart = this.cameraStart!;
+    const vantageStart = this.vantageStart!;
+    const vantageEnd = this.vantageEnd ?? this.vantageStart!;
+
+    const elapsed = Math.max(0, nowTs - focusAnimStart);
+    const preRoll = CAMERA_MOVE_MS + CAMERA_HOLD_MS;
+    // Compute the pre-roll ending yaw using the same wrap-aware logic as lerpAngle.
+    // This preserves the multiple-of-π branch chosen during PreRollMove so we don't
+    // snap back to the normalized principal angle during Hold or RocketFollow.
+    const preRollYawEnd = lerpAngle(cameraStart.yaw, vantageStart.yaw, 1);
+
+    const phase = this.getCameraPhase();
+    if (phase === CameraPhase.PreRollMove) {
+      const u = clamp01(elapsed / CAMERA_MOVE_MS);
+      return {
+        phase,
+        yawTarget: lerpAngle(cameraStart.yaw, vantageStart.yaw, u),
+        // Keep pitch anchored at the starting value during pre-roll so initial load pitch stays at 0
+        pitchTarget: cameraStart.pitch,
+        radiusTarget: ORBIT_INITIAL_RADIUS,
+      };
+    }
+
+    if (phase === CameraPhase.Hold) {
+      return {
+        phase,
+        // Ratchet to the same multiple-of-π branch we ended PreRoll on
+        yawTarget: preRollYawEnd,
+        // Continue holding the starting pitch value during the hold phase
+        pitchTarget: cameraStart.pitch,
+        radiusTarget: ORBIT_INITIAL_RADIUS,
+      };
+    }
+
+    const alpha = clamp01((elapsed - preRoll) / HABIT_TRAVEL_ANIM_MS);
+    const e = easeInOutCubic(alpha);
+    return {
+      phase: CameraPhase.RocketFollow,
+      // Preserve yaw continuity by starting from the preserved pre-roll yaw branch
+      yawTarget: lerpAngle(preRollYawEnd, vantageEnd.yaw, e),
+      // Keep pitch anchored at the starting value during rocket follow as well
+      pitchTarget: cameraStart.pitch,
+      radiusTarget: ORBIT_INITIAL_RADIUS,
+    };
   }
 
   // ----- Per-frame update -----
@@ -540,28 +584,20 @@ export class CameraController {
   ) {
     const autoRotate = opts?.autoRotate ?? true;
     const nowTs = opts?.nowTs ?? getCurrentTime();
+    this._nowTs = nowTs;
 
     // Update scripted camera targets if active
     if (
       this.scriptedActive &&
       this.focusAnimStart !== undefined &&
-      this.schedule &&
       this.cameraStart &&
       this.vantageStart
     ) {
-      const { rocketEnd } = this.schedule;
-      if (nowTs >= rocketEnd) {
+      const phase = this.getCameraPhase();
+      if (phase === CameraPhase.Complete) {
         this.scriptedActive = false;
       } else {
-        const res = computeScriptedCameraTargets({
-          nowTs,
-          focusAnimStart: this.focusAnimStart,
-          cameraStart: this.cameraStart,
-          vantageStart: this.vantageStart,
-          vantageEnd: this.vantageEnd ?? this.vantageStart,
-        });
-
-        this._lastPhase = res.phase;
+        const res = this.computeScriptedCameraTargets();
         this.yawTarget = res.yawTarget;
         // Do not modify pitch via scripted animation; user panning controls pitch exclusively
         this.radiusTarget = res.radiusTarget;
@@ -581,8 +617,9 @@ export class CameraController {
     if (Math.abs(this.yawVelocity) > INERTIA_STOP_EPSILON) {
       this.yawTarget += this.yawVelocity;
       this.yawVelocity *= INERTIA_FRICTION;
-      if (Math.abs(this.yawVelocity) < INERTIA_STOP_EPSILON)
+      if (Math.abs(this.yawVelocity) < INERTIA_STOP_EPSILON) {
         this.yawVelocity = 0;
+      }
     }
 
     if (Math.abs(this.pitchVelocity) > INERTIA_STOP_EPSILON) {
@@ -593,8 +630,9 @@ export class CameraController {
       );
 
       this.pitchVelocity *= INERTIA_FRICTION;
-      if (Math.abs(this.pitchVelocity) < INERTIA_STOP_EPSILON)
+      if (Math.abs(this.pitchVelocity) < INERTIA_STOP_EPSILON) {
         this.pitchVelocity = 0;
+      }
     }
 
     if (this.tweenActive) {
