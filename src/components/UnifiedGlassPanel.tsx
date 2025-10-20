@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
   newHabitText: {
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.medium,
-    color: colors.primary,
+    color: colors.primaryText,
   },
   habitsList: {
     maxHeight: 320,
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   completedHabitTitle: {
-    color: colors.primary,
+    color: colors.primaryText,
   },
   habitDescription: {
     fontFamily: fonts.regular,

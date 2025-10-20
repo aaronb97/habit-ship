@@ -1,19 +1,19 @@
 export const colors = {
-  background: '#0A0E27', // Deep space dark blue
-  backgroundDarker: '#060914', // Darker space blue
-  card: '#1A1F3A', // Dark card with slight blue tint
-  text: '#E8E9F3', // Light text for dark background
-  primary: '#7B68EE', // Medium slate blue (nebula-like)
-  primaryText: '#9D8DF1', // Lighter purple
-  accent: '#00D9FF', // Bright cyan (like stars/plasma)
-  white: '#FFFFFF',
-  black: '#000000',
-  grey: '#8B92B0',
-  darkGray: '#2A2F4A',
-  border: '#2D3250', // Subtle border for dark theme
-  danger: '#FF6B9D',
-  starfield: '#4A5578', // For locked items
-  cosmic: '#B794F6', // Purple accent
+  background: 'rgb(10, 14, 39)', // Deep space dark blue
+  backgroundDarker: 'rgb(6, 9, 20)', // Darker space blue
+  card: 'rgb(26, 31, 58)', // Dark card with slight blue tint
+  text: 'rgb(232, 233, 243)', // Light text for dark background
+  primary: 'rgb(123, 104, 238)', // Medium slate blue (nebula-like)
+  primaryText: 'rgb(157, 141, 241)', // Lighter purple
+  accent: 'rgb(0, 217, 255)', // Bright cyan (like stars/plasma)
+  white: 'rgb(255, 255, 255)',
+  black: 'rgb(0, 0, 0)',
+  grey: 'rgb(139, 146, 176)',
+  darkGray: 'rgb(42, 47, 74)',
+  border: 'rgb(45, 50, 80)', // Subtle border for dark theme
+  danger: 'rgb(255, 107, 157)',
+  starfield: 'rgb(74, 85, 120)', // For locked items
+  cosmic: 'rgb(183, 148, 246)', // Purple accent
 };
 
 export const fonts = {
