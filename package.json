@@ -4,8 +4,7 @@
   "main": "index.tsx",
   "scripts": {
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix && eslint --config eslint.precommit.config.js --fix",
-    "lint:style": "eslint --config eslint.precommit.config.js --fix",
+    "lint:fix": "prettier . --write && eslint . --fix && eslint --config eslint.precommit.config.js --fix",
     "tsc:watch": "tsc --watch",
     "start": "concurrently \"tsc --watch\" \"expo start --dev-client\"",
     "web": "expo start --web",
@@ -75,6 +74,7 @@
     "eslint-plugin-react-compiler": "^19.1.0-rc.2",
     "globals": "^16.4.0",
     "jsdom": "^26.1.0",
+    "prettier": "^3.6.2",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.46.1",
     "vitest": "^3.2.4"

@@ -40,6 +40,7 @@ module.exports = defineConfig([
           noSortAlphabetically: true,
         },
       ],
+      curly: ['error'],
 
       // Stylistic
       '@stylistic/padding-line-between-statements': [
