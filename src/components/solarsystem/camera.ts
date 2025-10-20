@@ -54,18 +54,30 @@ export type DoubleTapStage = {
   durationMs?: number;
 };
 
+/**
+ * Clamp a value to the [0,1] range.
+ */
 export function clamp01(x: number) {
   return Math.min(1, Math.max(0, x));
 }
 
+/**
+ * Symmetric ease-in-out cubic curve for smooth animations.
+ */
 export function easeInOutCubic(t: number) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
+/**
+ * Linear interpolation between a and b by t in [0,1].
+ */
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
 
+/**
+ * Angle-aware interpolation that respects wrap-around across ±π.
+ */
 function lerpAngle(a: number, b: number, t: number) {
   let diff = ((b - a + Math.PI) % (2 * Math.PI)) - Math.PI;
   if (diff < -Math.PI) {
@@ -75,6 +87,9 @@ function lerpAngle(a: number, b: number, t: number) {
   return a + diff * t;
 }
 
+/**
+ * Map absolute journey progress [0,1] to a camera yaw/pitch vantage.
+ */
 export function vantageForProgress(p: number): Vantage {
   // Map absolute journey progress to camera yaw/pitch
   const PITCH_HIGH = MAX_PITCH_RAD * 0.95; // almost straight-down
@@ -97,6 +112,11 @@ export function vantageForProgress(p: number): Vantage {
   return { yaw, pitch };
 }
 
+/**
+ * Place and orient the camera on an orbit around a center within the plane
+ * defined by (sun, center, target). Keeps camera up aligned to the plane normal
+ * and looks at the center to stabilize framing.
+ */
 function updateOrbitCamera(
   camera: THREE.PerspectiveCamera,
   center: THREE.Vector3,
@@ -242,15 +262,27 @@ export class CameraController {
     },
   ];
 
+  /**
+   * Create a controller for an orbit camera.
+   * @param camera The THREE.PerspectiveCamera to control.
+   */
   constructor(camera: THREE.PerspectiveCamera) {
     this.camera = camera;
   }
 
   // ----- Public accessors -----
+  /**
+   * Current smoothed orbit state.
+   * @returns The current yaw, pitch, and radius.
+   */
   get state(): CameraState {
     return { yaw: this.yaw, pitch: this.pitch, radius: this.radius };
   }
 
+  /**
+   * Current tween targets being approached each frame.
+   * @returns The target yaw, pitch, and radius.
+   */
   get targets(): CameraState {
     return {
       yaw: this.yawTarget,
@@ -259,6 +291,9 @@ export class CameraController {
     };
   }
 
+  /**
+   * Reset zoom to the initial radius and clear inertial motion.
+   */
   resetZoom() {
     this.radiusTarget = ORBIT_INITIAL_RADIUS;
     // Make the reset feel snappy by stopping inertial motion
@@ -266,6 +301,10 @@ export class CameraController {
     this.pitchVelocity = 0;
   }
 
+  /**
+   * Set a new radius target (clamped to bounds) and clear inertia.
+   * @param r Desired orbit radius in scene units.
+   */
   setRadiusTarget(r: number) {
     this.radiusTarget = THREE.MathUtils.clamp(
       r,
@@ -277,16 +316,29 @@ export class CameraController {
     this.pitchVelocity = 0;
   }
 
+  /**
+   * Set a new pitch target (radians) and clear inertia.
+   * @param p Pitch in radians.
+   */
   setPitchTarget(p: number) {
     this.pitchTarget = THREE.MathUtils.clamp(p, -MAX_PITCH_RAD, MAX_PITCH_RAD);
     this.yawVelocity = 0;
     this.pitchVelocity = 0;
   }
 
+  /**
+   * Cancel any active radius/pitch tween.
+   */
   cancelTween() {
     this.tweenActive = false;
   }
 
+  /**
+   * Animate radius and pitch with easing over a duration. Cancels scripted camera.
+   * @param radius Target orbit radius.
+   * @param pitch Target pitch in radians.
+   * @param durationMs Duration in milliseconds.
+   */
   animateToRadiusAndPitch(radius: number, pitch: number, durationMs: number) {
     const r = THREE.MathUtils.clamp(radius, ZOOM_MIN_RADIUS, ZOOM_MAX_RADIUS);
     const p = THREE.MathUtils.clamp(pitch, -MAX_PITCH_RAD, MAX_PITCH_RAD);
@@ -302,10 +354,17 @@ export class CameraController {
     this.tweenActive = true;
   }
 
+  /**
+   * Replace the double-tap stage sequence.
+   * @param stages Ordered stages to cycle through.
+   */
   configureDoubleTapStages(stages: DoubleTapStage[]) {
     this.doubleTapStages = stages.slice();
   }
 
+  /**
+   * Resolve a stage radius token to a numeric radius.
+   */
   private resolveRadiusTarget(t: StageRadiusTarget): number {
     if (t === 'initial') {
       return ORBIT_INITIAL_RADIUS;
@@ -318,6 +377,9 @@ export class CameraController {
     return t;
   }
 
+  /**
+   * Resolve a stage pitch token to a numeric pitch.
+   */
   private resolvePitchTarget(t: StagePitchTarget): number {
     if (t === 'max') {
       return MAX_PITCH_RAD;
@@ -330,6 +392,9 @@ export class CameraController {
     return t;
   }
 
+  /**
+   * Determine an epsilon for matching a stage's radius.
+   */
   private epsFor(target: StageRadiusTarget, provided?: number): number {
     if (typeof provided === 'number') {
       return provided;
@@ -346,10 +411,18 @@ export class CameraController {
     return 1.0;
   }
 
+  /**
+   * Approximately equal with tolerance.
+   */
   private approxEq(a: number, b: number, eps: number) {
     return Math.abs(a - b) <= eps;
   }
 
+
+  /**
+   * Advance to the next configured double-tap stage.
+   * Stops scripted/tweened motion before applying the next stage.
+   */
   cycleDoubleTap() {
     this.stopScriptedCamera();
     this.cancelTween();
@@ -402,6 +475,9 @@ export class CameraController {
   }
 
   // ----- Gesture handling -----
+  /**
+   * Begin a pan gesture; cancels scripted/tween motion.
+   */
   beginPan() {
     this.isPanning = true;
     // Any user interaction cancels scripted camera for this sequence
@@ -409,6 +485,13 @@ export class CameraController {
     this.tweenActive = false;
   }
 
+  /**
+   * Update the pan gesture deltas.
+   * @param dx Delta X in pixels since last update.
+   * @param dy Delta Y in pixels since last update.
+   * @param viewportWidth Current viewport width in pixels.
+   * @param viewportHeight Current viewport height in pixels.
+   */
   updatePan(
     dx: number,
     dy: number,
@@ -429,6 +512,13 @@ export class CameraController {
     );
   }
 
+  /**
+   * End a pan gesture and seed inertial motion from velocity.
+   * @param velocityX End velocity X in px/s.
+   * @param velocityY End velocity Y in px/s.
+   * @param viewportWidth Viewport width in px.
+   * @param viewportHeight Viewport height in px.
+   */
   endPan(
     velocityX: number,
     velocityY: number,
@@ -459,6 +549,9 @@ export class CameraController {
     );
   }
 
+  /**
+   * Begin a pinch gesture; cancels scripted/tween motion.
+   */
   beginPinch() {
     this.pinchStartRadius = this.radiusTarget;
     // Any user interaction cancels scripted camera for this sequence
@@ -466,6 +559,10 @@ export class CameraController {
     this.tweenActive = false;
   }
 
+  /**
+   * Update pinch scale to set a new radius target.
+   * @param scale The gesture scale factor relative to begin (>= 0).
+   */
   updatePinch(scale: number) {
     const newRadius = THREE.MathUtils.clamp(
       this.pinchStartRadius / Math.max(1e-6, scale),
@@ -477,6 +574,15 @@ export class CameraController {
   }
 
   // ----- Scripted camera control -----
+
+  /**
+   * Start the scripted camera sequence from the given state and vantages.
+   * Also resets inertia and sets the radius target for the move.
+   * @param nowTs Current timestamp (ms) to anchor the sequence.
+   * @param cameraStart The starting camera yaw/pitch/radius.
+   * @param vantageStart The starting yaw/pitch vantage.
+   * @param vantageEnd The ending yaw/pitch vantage.
+   */
   startScriptedCamera(
     nowTs: number,
     cameraStart: CameraStart,
@@ -495,10 +601,16 @@ export class CameraController {
     this.radiusTarget = ORBIT_INITIAL_RADIUS;
   }
 
+  /**
+   * Stop any active scripted camera sequence.
+   */
   stopScriptedCamera() {
     this.scriptedActive = false;
   }
 
+  /**
+   * Compute the current scripted phase based on elapsed time.
+   */
   private getCameraPhase(): CameraPhase {
     if (!this.scriptedActive || this.focusAnimStart === undefined) {
       return CameraPhase.Idle;
@@ -522,6 +634,9 @@ export class CameraController {
     return CameraPhase.Complete;
   }
 
+  /**
+   * Compute scripted yaw/pitch/radius targets for the current phase.
+   */
   private computeScriptedCameraTargets(): {
     phase: CameraPhase;
     yawTarget: number;
@@ -577,6 +692,12 @@ export class CameraController {
   }
 
   // ----- Per-frame update -----
+  /**
+   * Per-frame update: advances inertia/tweens, updates targets and applies the orbit transform.
+   * @param center Scene-space center to orbit around (user/display position).
+   * @param target Scene-space target to frame; defines the orbit plane normal.
+   * @param opts Optional flags: autoRotate and an optional timestamp override.
+   */
   tick(
     center: THREE.Vector3,
     target: THREE.Vector3,
