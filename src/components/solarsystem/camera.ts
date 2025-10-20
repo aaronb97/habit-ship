@@ -648,7 +648,7 @@ export class CameraController {
   /**
    * Compute the current scripted phase based on elapsed time.
    */
-  private getCameraPhase(): CameraPhase {
+  public getCameraPhase(): CameraPhase {
     if (!this.scriptedActive || this.focusAnimStart === undefined) {
       return CameraPhase.Idle;
     }

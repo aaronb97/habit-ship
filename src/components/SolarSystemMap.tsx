@@ -735,13 +735,16 @@ export function SolarSystemMap({
         const yaw = state?.yaw ?? 0;
         const pitch = state?.pitch ?? 0;
         const animAlpha = animAlphaRef.current;
+        if (cameraControllerRef.current) {
         publishDebug({
           fps,
           yaw,
           pitch,
-          radius: cameraControllerRef.current?.radius ?? 0,
+            radius: cameraControllerRef.current.radius,
           animAlpha,
+            cameraPhase: cameraControllerRef.current.getCameraPhase(),
         });
+        }
       }
 
       gl.endFrameEXP();

@@ -4,7 +4,7 @@ import { Pressable, View, Text, StyleSheet } from 'react-native';
 
 // ----- Debug Overlay Component -----
 export function DebugOverlay(props: {
-  values: { [k: string]: number };
+  values: { [k: string]: number | string };
   expanded: boolean;
   onToggle: () => void;
   history: Record<string, { t: number; v: number }[]>;
@@ -30,7 +30,7 @@ export function DebugOverlay(props: {
         {entries.map(([k, v]) => (
           <View key={k} style={styles.debugRow}>
             <Text style={styles.debugText}>
-              {k}: {Number.isFinite(v) ? v.toFixed(3) : '—'}
+              {k}: {typeof v === 'number' ? v.toFixed(3) : v}
             </Text>
           </View>
         ))}

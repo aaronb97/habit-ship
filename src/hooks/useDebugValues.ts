@@ -7,14 +7,18 @@ export type DebugMinMax = Record<string, { min: number; max: number }>;
 export function useDebugValues(options?: { windowMs?: number }) {
   const windowMs = options?.windowMs ?? 10000;
 
-  const [values, setValues] = useState<Record<string, number>>({});
+  const [values, setValues] = useState<Record<string, number | string>>({});
   const historyRef = useRef<DebugSeries>({});
   const minMaxRef = useRef<DebugMinMax>({});
 
-  const publish = (vals: Record<string, number>) => {
+  const publish = (vals: Record<string, number | string>) => {
     const now = getCurrentTime();
 
     for (const [k, v] of Object.entries(vals)) {
+      if (typeof v !== 'number') {
+        continue;
+      }
+
       // append sample
       const arr = historyRef.current[k] ?? (historyRef.current[k] = []);
       arr.push({ t: now, v });
