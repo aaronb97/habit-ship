@@ -86,8 +86,14 @@ export function useVisibleLandablePlanets(): LandablePlanetWithDistance[] {
 
   const nextLockedLevel = locked.reduce<number | undefined>((min, item) => {
     const ml = item.planet.minLevel ?? Infinity;
-    if (ml === Infinity) return min;
-    if (min === undefined || ml < min) return ml;
+    if (ml === Infinity) {
+      return min;
+    }
+
+    if (min === undefined || ml < min) {
+      return ml;
+    }
+
     return min;
   }, undefined);
 

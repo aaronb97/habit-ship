@@ -13,12 +13,8 @@ import { UnifiedGlassPanel } from '../../components/UnifiedGlassPanel';
 export function Home() {
   const isFocused = useIsFocused();
 
-  const {
-    editHabit,
-    addHabit,
-    userPosition,
-    acknowledgeLandingOnHome,
-  } = useStore();
+  const { editHabit, addHabit, userPosition, acknowledgeLandingOnHome } =
+    useStore();
 
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);

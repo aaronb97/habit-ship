@@ -66,8 +66,8 @@ export function LevelUpListener() {
   return (
     <LevelUpModal
       visible={visible && isFocused}
-      onClose={close}
       lines={lines}
+      onClose={close}
     />
   );
 }

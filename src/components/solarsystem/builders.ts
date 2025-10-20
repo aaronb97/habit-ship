@@ -22,7 +22,11 @@ export function createPlanetMesh(
   radius: number,
   texture?: THREE.Texture,
 ): THREE.Mesh {
-  const geom = new THREE.SphereGeometry(radius, SPHERE_SEGMENTS, SPHERE_SEGMENTS);
+  const geom = new THREE.SphereGeometry(
+    radius,
+    SPHERE_SEGMENTS,
+    SPHERE_SEGMENTS,
+  );
 
   let mat: THREE.Material;
 
@@ -53,7 +57,10 @@ export function createTrailLine(
   color: number,
   nearFadeDistance: number,
 ): THREE.Line | undefined {
-  if (points.length < 2) return undefined;
+  if (points.length < 2) {
+    return undefined;
+  }
+
   const geom = new THREE.BufferGeometry().setFromPoints(points);
 
   // Build a per-vertex alpha attribute that fades from 0 (oldest)

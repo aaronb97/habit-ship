@@ -33,7 +33,7 @@ export function getTrailForBody(
   // adjustPositionForOrbits
   const multiplier =
     body instanceof Moon
-      ? body.orbitOffsetMultiplier ?? ORBIT_OFFSET_MULTIPLIER
+      ? (body.orbitOffsetMultiplier ?? ORBIT_OFFSET_MULTIPLIER)
       : ORBIT_OFFSET_MULTIPLIER;
 
   if (drawOrbitAroundParent && parent && parent instanceof Planet) {
@@ -119,7 +119,9 @@ export function adjustPositionForOrbits(
       const dir = basePosition.clone().sub(parentPos);
 
       return parentPos.add(
-        dir.multiplyScalar(body.orbitOffsetMultiplier ?? ORBIT_OFFSET_MULTIPLIER),
+        dir.multiplyScalar(
+          body.orbitOffsetMultiplier ?? ORBIT_OFFSET_MULTIPLIER,
+        ),
       );
     }
   }

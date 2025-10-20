@@ -116,22 +116,47 @@ export function createTiltShiftPasses(
     passH.enabled = next.enabled;
     passV.enabled = next.enabled;
 
-    (passH as unknown as { uniforms: typeof shaderH.uniforms }).uniforms.focus.value = next.focus;
-    (passV as unknown as { uniforms: typeof shaderV.uniforms }).uniforms.focus.value = next.focus;
+    (
+      passH as unknown as { uniforms: typeof shaderH.uniforms }
+    ).uniforms.focus.value = next.focus;
 
-    (passH as unknown as { uniforms: typeof shaderH.uniforms }).uniforms.range.value = next.range;
-    (passV as unknown as { uniforms: typeof shaderV.uniforms }).uniforms.range.value = next.range;
+    (
+      passV as unknown as { uniforms: typeof shaderV.uniforms }
+    ).uniforms.focus.value = next.focus;
 
-    (passH as unknown as { uniforms: typeof shaderH.uniforms }).uniforms.feather.value = next.feather;
-    (passV as unknown as { uniforms: typeof shaderV.uniforms }).uniforms.feather.value = next.feather;
+    (
+      passH as unknown as { uniforms: typeof shaderH.uniforms }
+    ).uniforms.range.value = next.range;
 
-    (passH as unknown as { uniforms: typeof shaderH.uniforms }).uniforms.blur.value = next.blur;
-    (passV as unknown as { uniforms: typeof shaderV.uniforms }).uniforms.blur.value = next.blur;
+    (
+      passV as unknown as { uniforms: typeof shaderV.uniforms }
+    ).uniforms.range.value = next.range;
+
+    (
+      passH as unknown as { uniforms: typeof shaderH.uniforms }
+    ).uniforms.feather.value = next.feather;
+
+    (
+      passV as unknown as { uniforms: typeof shaderV.uniforms }
+    ).uniforms.feather.value = next.feather;
+
+    (
+      passH as unknown as { uniforms: typeof shaderH.uniforms }
+    ).uniforms.blur.value = next.blur;
+
+    (
+      passV as unknown as { uniforms: typeof shaderV.uniforms }
+    ).uniforms.blur.value = next.blur;
   };
 
   const setSize = (v: THREE.Vector2) => {
-    (passH as unknown as { uniforms: typeof shaderH.uniforms }).uniforms.resolution.value.copy(v);
-    (passV as unknown as { uniforms: typeof shaderV.uniforms }).uniforms.resolution.value.copy(v);
+    (
+      passH as unknown as { uniforms: typeof shaderH.uniforms }
+    ).uniforms.resolution.value.copy(v);
+
+    (
+      passV as unknown as { uniforms: typeof shaderV.uniforms }
+    ).uniforms.resolution.value.copy(v);
   };
 
   setSize(size);

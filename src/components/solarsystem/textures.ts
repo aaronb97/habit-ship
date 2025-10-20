@@ -34,7 +34,9 @@ export async function loadBodyTextures(
 
   for (const name of names) {
     const req = BODY_TEXTURE_REQUIRE[name];
-    if (!req) continue;
+    if (!req) {
+      continue;
+    }
 
     try {
       const asset = Asset.fromModule(req);

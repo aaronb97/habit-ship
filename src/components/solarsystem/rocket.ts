@@ -84,6 +84,7 @@ export class Rocket {
     this.outlineGlobalEnabled = Boolean(
       useStore.getState().outlinesRocketEnabled,
     );
+
     if (this.outlinePass) {
       this.outlinePass.enabled =
         this.outlineGlobalEnabled && this.group.visible;
@@ -98,6 +99,7 @@ export class Rocket {
             this.outlineGlobalEnabled && this.group.visible;
         }
       });
+
       this.unsubOutlines = unsub;
     }
   }
@@ -153,13 +155,16 @@ export class Rocket {
   }
 
   setResolution(v: THREE.Vector2) {
-    if (this.outlinePass) this.outlinePass.resolution.copy(v);
+    if (this.outlinePass) {
+      this.outlinePass.resolution.copy(v);
+    }
   }
 
   setVisible(visible: boolean) {
     this.group.visible = visible;
-    if (this.outlinePass)
+    if (this.outlinePass) {
       this.outlinePass.enabled = this.outlineGlobalEnabled && visible;
+    }
   }
 
   update(
@@ -295,6 +300,7 @@ export class Rocket {
       try {
         this.unsubOutlines();
       } catch {}
+
       this.unsubOutlines = undefined;
     }
   }

@@ -48,7 +48,9 @@ function randomColorInt(): number {
 
 export function getPlanetPosition(planetName: string): Coordinates {
   const planet = cBodies.find((p) => p.name === planetName);
-  if (!planet) throw new Error(`Planet ${planetName} not found`);
+  if (!planet) {
+    throw new Error(`Planet ${planetName} not found`);
+  }
 
   return planet.getPosition();
 }
@@ -79,7 +81,7 @@ type Store = {
   showDebugOverlay: boolean;
   outlinesBodiesEnabled: boolean;
   outlinesRocketEnabled: boolean;
- 
+
   skipRocketAnimation: boolean;
 
   showJourneyRemaining: boolean;
@@ -345,6 +347,7 @@ export const useStore = create<Store>()(
           showJourneyRemaining,
           showFuelCapacity,
         } = get();
+
         set({
           ...initialData,
           showDebugOverlay,
@@ -443,6 +446,7 @@ export const useStore = create<Store>()(
             state.xpEarnedDate = todayKey;
             state.xpEarnedToday = 0;
           }
+
           state.xpEarnedToday += xpGrant;
 
           // Accrue fuel for today, divided by number of habits; cap at daily limit
@@ -459,6 +463,7 @@ export const useStore = create<Store>()(
             0,
             dailyCap - state.fuelEarnedTodayKm,
           );
+
           const grant = Math.min(perCompletion, remainingAllowance);
 
           state.fuelKm += grant;
@@ -563,14 +568,20 @@ export const useStore = create<Store>()(
         set((state) => {
           const target = state.userPosition.target;
           const initialDistance = state.userPosition.initialDistance;
-          if (!target || typeof initialDistance !== 'number') return;
+          if (!target || typeof initialDistance !== 'number') {
+            return;
+          }
 
           const prev = state.userPosition.distanceTraveled ?? 0;
           const remaining = Math.max(0, initialDistance - prev);
-          if (remaining <= 0) return;
+          if (remaining <= 0) {
+            return;
+          }
 
           const available = Math.max(0, state.fuelKm);
-          if (available <= 0) return;
+          if (available <= 0) {
+            return;
+          }
 
           const spend = Math.min(available, remaining);
           const next = Math.min(initialDistance, prev + spend);
@@ -598,9 +609,14 @@ export const useStore = create<Store>()(
         const target = state.userPosition.target;
         const initialDistance = state.userPosition.initialDistance ?? 0;
         const traveled = state.userPosition.distanceTraveled ?? 0;
-        if (!target) return;
+        if (!target) {
+          return;
+        }
+
         // Only finalize if marked pending or if traveled >= initialDistance
-        if (!state.pendingLanding && traveled < initialDistance) return;
+        if (!state.pendingLanding && traveled < initialDistance) {
+          return;
+        }
 
         const destinationName = target.name;
         const isNewPlanet = !state.completedPlanets.includes(destinationName);
@@ -663,6 +679,7 @@ export const useStore = create<Store>()(
           userLevel?: { level?: number; currentXP?: number; totalXP?: number };
           outlinesEnabled?: boolean;
         };
+
         if (s.rocketColor === undefined) {
           s.rocketColor = randomColorInt();
         }
@@ -672,6 +689,7 @@ export const useStore = create<Store>()(
           const prevTotal = s.userLevel?.totalXP;
           s.totalXP = typeof prevTotal === 'number' ? prevTotal : 0;
         }
+
         // Remove legacy key if present
         (s as Partial<Store> & { userLevel?: unknown }).userLevel = undefined;
 
@@ -679,49 +697,93 @@ export const useStore = create<Store>()(
         (
           s as Partial<Store> & { pendingTravelAnimation?: unknown }
         ).pendingTravelAnimation = undefined;
-        if (s.pendingLanding === undefined) s.pendingLanding = false;
-        if (s.justLanded === undefined) s.justLanded = false;
-        if (s.showDebugOverlay === undefined) s.showDebugOverlay = false;
-        if (s.isLevelUpModalVisible === undefined)
+
+        if (s.pendingLanding === undefined) {
+          s.pendingLanding = false;
+        }
+
+        if (s.justLanded === undefined) {
+          s.justLanded = false;
+        }
+
+        if (s.showDebugOverlay === undefined) {
+          s.showDebugOverlay = false;
+        }
+
+        if (s.isLevelUpModalVisible === undefined) {
           s.isLevelUpModalVisible = false;
-        if ((s as Partial<Store>).activeTab === undefined)
+        }
+
+        if ((s as Partial<Store>).activeTab === undefined) {
           (s as Partial<Store>).activeTab = 'HomeTab';
+        }
 
         // Defaults for tilt-shift controls
-        if (s.tiltShiftEnabled === undefined) s.tiltShiftEnabled = true;
-        if (s.tiltShiftFocus === undefined) s.tiltShiftFocus = 0.55;
-        if (s.tiltShiftRange === undefined) s.tiltShiftRange = 0.18;
-        if (s.tiltShiftFeather === undefined) s.tiltShiftFeather = 0.22;
-        if (s.tiltShiftBlur === undefined) s.tiltShiftBlur = 8;
+        if (s.tiltShiftEnabled === undefined) {
+          s.tiltShiftEnabled = true;
+        }
+
+        if (s.tiltShiftFocus === undefined) {
+          s.tiltShiftFocus = 0.55;
+        }
+
+        if (s.tiltShiftRange === undefined) {
+          s.tiltShiftRange = 0.18;
+        }
+
+        if (s.tiltShiftFeather === undefined) {
+          s.tiltShiftFeather = 0.22;
+        }
+
+        if (s.tiltShiftBlur === undefined) {
+          s.tiltShiftBlur = 8;
+        }
+
         const legacy = s.outlinesEnabled;
         if ((s as Partial<Store>).outlinesBodiesEnabled === undefined) {
           (s as Partial<Store>).outlinesBodiesEnabled =
             legacy !== undefined ? Boolean(legacy) : true;
         }
+
         if ((s as Partial<Store>).outlinesRocketEnabled === undefined) {
           (s as Partial<Store>).outlinesRocketEnabled =
             legacy !== undefined ? Boolean(legacy) : true;
         }
 
         // Defaults for fuel system
-        if ((s as Partial<Store>).fuelKm === undefined)
+        if ((s as Partial<Store>).fuelKm === undefined) {
           (s as Partial<Store>).fuelKm = 0;
-        if ((s as Partial<Store>).fuelEarnedTodayKm === undefined)
+        }
+
+        if ((s as Partial<Store>).fuelEarnedTodayKm === undefined) {
           (s as Partial<Store>).fuelEarnedTodayKm = 0;
-        if ((s as Partial<Store>).fuelEarnedDate === undefined)
+        }
+
+        if ((s as Partial<Store>).fuelEarnedDate === undefined) {
           (s as Partial<Store>).fuelEarnedDate =
             getCurrentDate().toDateString();
-        if ((s as Partial<Store>).xpEarnedToday === undefined)
-          (s as Partial<Store>).xpEarnedToday = 0;
-        if ((s as Partial<Store>).xpEarnedDate === undefined)
-          (s as Partial<Store>).xpEarnedDate = getCurrentDate().toDateString();
+        }
 
-        if ((s as Partial<Store>).showJourneyRemaining === undefined)
+        if ((s as Partial<Store>).xpEarnedToday === undefined) {
+          (s as Partial<Store>).xpEarnedToday = 0;
+        }
+
+        if ((s as Partial<Store>).xpEarnedDate === undefined) {
+          (s as Partial<Store>).xpEarnedDate = getCurrentDate().toDateString();
+        }
+
+        if ((s as Partial<Store>).showJourneyRemaining === undefined) {
           (s as Partial<Store>).showJourneyRemaining = false;
-        if ((s as Partial<Store>).showFuelCapacity === undefined)
+        }
+
+        if ((s as Partial<Store>).showFuelCapacity === undefined) {
           (s as Partial<Store>).showFuelCapacity = false;
-        if ((s as Partial<Store>).skipRocketAnimation === undefined)
+        }
+
+        if ((s as Partial<Store>).skipRocketAnimation === undefined) {
           (s as Partial<Store>).skipRocketAnimation = false;
+        }
+
         return s as Store;
       },
     },

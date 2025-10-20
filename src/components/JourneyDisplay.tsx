@@ -47,7 +47,7 @@ export function JourneyDisplay({
         {!isTraveling && <Text style={styles.statusText}>Welcome to </Text>}
         {isTraveling && <Text style={styles.statusText}>En route to </Text>}
         {onPressTitle ? (
-          <TouchableOpacity onPress={onPressTitle} activeOpacity={0.7}>
+          <TouchableOpacity activeOpacity={0.7} onPress={onPressTitle}>
             <Text style={styles.planetTitle}>{planet.name}</Text>
           </TouchableOpacity>
         ) : (

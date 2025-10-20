@@ -86,6 +86,7 @@ export function SolarSystemMap({
   const finalizeLandingAfterAnimation = useStore(
     (s) => s.finalizeLandingAfterAnimation,
   );
+
   const applyFuelToTravel = useStore((s) => s.applyFuelToTravel);
   const fuelKm = useStore((s) => s.fuelKm);
   const skipRocketAnimation = useStore((s) => s.skipRocketAnimation);
@@ -122,9 +123,12 @@ export function SolarSystemMap({
     PLANETS.forEach((b) => {
       if (b instanceof Planet) {
         const ml = b.minLevel ?? 0;
-        if (level >= ml) set.add(b.name);
+        if (level >= ml) {
+          set.add(b.name);
+        }
       }
     });
+
     return set;
   };
 
@@ -168,6 +172,7 @@ export function SolarSystemMap({
       // entire scripted camera sequence to avoid ending up behind the parent body.
       const startBody =
         PLANETS.find((b) => b.name === startingLocation) ?? earth;
+
       const targetBody = PLANETS.find((b) => b.name === target?.name) ?? earth;
       const startCenter = toVec3(startBody.getVisualPosition());
       const targetCenter = toVec3(targetBody.getVisualPosition());
@@ -187,6 +192,7 @@ export function SolarSystemMap({
           pendingScriptedStartRef.current = null;
           return;
         }
+
         const controller = cameraControllerRef.current;
         if (controller) {
           controller.startScriptedCamera(
@@ -232,10 +238,12 @@ export function SolarSystemMap({
         pendingScriptedStartRef.current = null;
         const { distanceTraveled, previousDistanceTraveled } =
           useStore.getState().userPosition;
+
         prevDistanceRef.current = {
           prev: previousDistanceTraveled,
           curr: distanceTraveled,
         };
+
         return;
       }
 
@@ -255,6 +263,7 @@ export function SolarSystemMap({
       const { startingLocation, target } = useStore.getState().userPosition;
       const startBody =
         PLANETS.find((b) => b.name === startingLocation) ?? earth;
+
       const targetBody = PLANETS.find((b) => b.name === target?.name) ?? earth;
       const startCenter = toVec3(startBody.getVisualPosition());
       const targetCenter = toVec3(targetBody.getVisualPosition());
@@ -298,10 +307,17 @@ export function SolarSystemMap({
   ]);
 
   useEffect(() => {
-    if (!interactiveEffective) return;
-    if (!skipRocketAnimation) return;
+    if (!interactiveEffective) {
+      return;
+    }
+
+    if (!skipRocketAnimation) {
+      return;
+    }
+
     const { distanceTraveled, previousDistanceTraveled } =
       useStore.getState().userPosition;
+
     const hasDelta = distanceTraveled !== previousDistanceTraveled;
     if (hasDelta) {
       syncTravelVisuals();
@@ -320,13 +336,17 @@ export function SolarSystemMap({
 
   // Apply fuel when Map is interactive and there's no existing delta to animate.
   useEffect(() => {
-    if (!interactiveEffective) return;
+    if (!interactiveEffective) {
+      return;
+    }
+
     const {
       target,
       initialDistance,
       distanceTraveled,
       previousDistanceTraveled,
     } = useStore.getState().userPosition;
+
     const hasDelta = distanceTraveled !== previousDistanceTraveled;
     if (
       fuelKm > 0 &&
@@ -442,7 +462,10 @@ export function SolarSystemMap({
   // Double-tap: delegate to controller's configurable cycle
   const zoomCamera = () => {
     const controller = cameraControllerRef.current;
-    if (!controller) return;
+    if (!controller) {
+      return;
+    }
+
     controller.cycleDoubleTap();
   };
 
@@ -682,8 +705,10 @@ export function SolarSystemMap({
         if (controller && cam) {
           const { target: targetState, startingLocation } =
             useStore.getState().userPosition;
+
           const targetBody =
             PLANETS.find((b) => b.name === targetState?.name) ?? earth;
+
           const startBody =
             PLANETS.find((b) => b.name === startingLocation) ?? earth;
 
@@ -699,7 +724,9 @@ export function SolarSystemMap({
             const separation = startCenter.distanceTo(targetVisual);
             const lockSideOn = separation < YAW_SIDE_ON_DISTANCE_CUTOFF;
             const animActive = interactive && !animSyncedRef.current;
-            if (lockSideOn && animActive) autoRotate = false;
+            if (lockSideOn && animActive) {
+              autoRotate = false;
+            }
           }
 
           controller.tick(center, targetVisual, {
@@ -790,7 +817,10 @@ export function SolarSystemMap({
     return () => {
       // Unregister controller on unmount
       registerController(null);
-      if (frameRef.current) cancelAnimationFrame(frameRef.current);
+      if (frameRef.current) {
+        cancelAnimationFrame(frameRef.current);
+      }
+
       // Dispose body nodes first to remove their meshes and trails
       try {
         registryAtMount.disposeAll();

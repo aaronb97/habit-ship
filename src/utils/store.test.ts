@@ -165,6 +165,7 @@ describe('store', () => {
     expect(result.current.userPosition!.distanceTraveled).toBe(
       Math.min(initialDist, per),
     );
+
     expect(traveling.current).toBe(true);
   });
 
@@ -181,6 +182,7 @@ describe('store', () => {
       result.current.setDestination('The Moon');
       await result.current.completeHabit(habitId); // First completion (fuel)
     });
+
     const level = calculateLevel(result.current.totalXP);
     const firstMove = getDailyDistanceForLevel(level);
 
@@ -196,6 +198,7 @@ describe('store', () => {
     await act(async () => {
       await result.current.completeHabit(habitId); // Second completion (fuel)
     });
+
     const secondMove = getDailyDistanceForLevel(level);
     expect(secondMove).toBeCloseTo(firstMove);
 
@@ -277,14 +280,17 @@ describe('store', () => {
     const perHabit = getDailyDistanceForLevel(
       calculateLevel(result.current.totalXP),
     );
+
     const needed = Math.ceil(initialDist / perHabit);
     for (let i = 1; i < needed; i++) {
       await act(async () => {
         await result.current.completeHabit(habitId);
       });
+
       act(() => {
         result.current.applyFuelToTravel();
       });
+
       // Move to the next day to allow more fuel accrual
       act(() => {
         advanceTime(24 * 60 * 60 * 1000);

@@ -14,7 +14,10 @@ function deg2rad(d: number): number {
 
 function norm360(deg: number): number {
   let a = deg % 360;
-  if (a < 0) a += 360;
+  if (a < 0) {
+    a += 360;
+  }
+
   return a;
 }
 

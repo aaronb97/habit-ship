@@ -16,13 +16,16 @@ vi.mock('expo/src/async-require/setup', () => ({}));
 vi.mock('expo/src/winner/ImportMetaRegistry', () => ({
   ImportMetaRegistry: class {},
 }));
+
 vi.mock('expo/src/winter/ImportMetaRegistry', () => ({
   ImportMetaRegistry: class {},
 }));
+
 vi.mock('expo-notifications', () => ({
   scheduleNotificationAsync: vi.fn(async () => 'mock-notif-id'),
   cancelScheduledNotificationAsync: vi.fn(async () => {}),
 }));
+
 vi.mock('@react-native-async-storage/async-storage', () => ({
   default: {
     getItem: vi.fn(async () => null),

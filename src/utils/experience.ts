@@ -3,10 +3,16 @@
  */
 function xpTotalThresholdForLevel(level: number): number {
   // Sum per-level requirements up to the given level (1-indexed)
-  if (!Number.isFinite(level) || level <= 0) return 0;
+  if (!Number.isFinite(level) || level <= 0) {
+    return 0;
+  }
+
   const L = Math.floor(level);
   let total = 0;
-  for (let i = 1; i <= L; i++) total += xpCurrentThresholdForLevel(i);
+  for (let i = 1; i <= L; i++) {
+    total += xpCurrentThresholdForLevel(i);
+  }
+
   return total;
 }
 
@@ -34,7 +40,9 @@ export function xpCurrentThresholdForLevel(level: number): number {
   } = XP_CONFIG;
 
   const L = Math.max(1, Math.floor(level));
-  if (L === 1) return baseRequirement;
+  if (L === 1) {
+    return baseRequirement;
+  }
 
   if (L <= switchIncrementLevel) {
     // Linear growth with first increment
@@ -44,6 +52,7 @@ export function xpCurrentThresholdForLevel(level: number): number {
   // After the switch, continue growth using second increment
   const atSwitch =
     baseRequirement + firstIncrement * (switchIncrementLevel - 1);
+
   return atSwitch + secondIncrement * (L - switchIncrementLevel);
 }
 
@@ -64,6 +73,7 @@ function getLevelBounds(totalXP: number): {
     level += 1;
     need = xpCurrentThresholdForLevel(level);
   }
+
   return { level, startXP, endXP: startXP + need };
 }
 
@@ -99,7 +109,10 @@ export function getXPToNextLevel(totalXP: number): number {
 export function getLevelProgress(totalXP: number): number {
   const { startXP, endXP } = getLevelBounds(totalXP);
   const denom = endXP - startXP;
-  if (denom <= 0) return 0;
+  if (denom <= 0) {
+    return 0;
+  }
+
   const ratio = (totalXP - startXP) / denom;
   // Clamp to [0, 1]; exact threshold will map to 0 when level increments
   return Math.max(0, Math.min(1, ratio));
@@ -108,7 +121,9 @@ export function getLevelProgress(totalXP: number): number {
 // Maximum distance that can be gained per day for a given level
 export function getDailyDistanceForLevel(level: number): number {
   // start at 10M km for a nice round number
-  if (level === 1) return 10_000_000;
+  if (level === 1) {
+    return 10_000_000;
+  }
 
   // level 2 should be 13M km for approximately a week of travel to mercury at its average distance
   const distance = 13_000_000 * Math.pow(1.1, level - 2);

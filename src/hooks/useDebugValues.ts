@@ -21,13 +21,20 @@ export function useDebugValues(options?: { windowMs?: number }) {
 
       // prune to window
       const cutoff = now - windowMs;
-      while (arr.length > 0 && (arr[0]?.t ?? Infinity) < cutoff) arr.shift();
+      while (arr.length > 0 && (arr[0]?.t ?? Infinity) < cutoff) {
+        arr.shift();
+      }
 
       // track overall min/max
       const stats = minMaxRef.current[k];
       if (stats) {
-        if (v < stats.min) stats.min = v;
-        if (v > stats.max) stats.max = v;
+        if (v < stats.min) {
+          stats.min = v;
+        }
+
+        if (v > stats.max) {
+          stats.max = v;
+        }
       } else {
         minMaxRef.current[k] = { min: v, max: v };
       }

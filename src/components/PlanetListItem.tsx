@@ -27,9 +27,18 @@ export function PlanetListItem({
 
   // Format distance for display
   const formatDistance = (dist: number): string => {
-    if (dist === 0) return '0 km';
-    if (dist < 1000) return `${dist.toFixed(0)} km`;
-    if (dist < 1000000) return `${(dist / 1000).toFixed(1)}K km`;
+    if (dist === 0) {
+      return '0 km';
+    }
+
+    if (dist < 1000) {
+      return `${dist.toFixed(0)} km`;
+    }
+
+    if (dist < 1000000) {
+      return `${(dist / 1000).toFixed(1)}K km`;
+    }
+
     return `${(dist / 1000000).toFixed(1)}M km`;
   };
 

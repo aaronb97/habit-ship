@@ -20,7 +20,10 @@ export function SolarMap() {
   }, [isFocused]);
 
   useEffect(() => {
-    if (!isFocused) return;
+    if (!isFocused) {
+      return;
+    }
+
     if (justLanded) {
       const loc = userPosition.startingLocation;
       if (shownForLocationRef.current !== loc) {

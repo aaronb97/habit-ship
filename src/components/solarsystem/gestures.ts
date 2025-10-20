@@ -61,8 +61,11 @@ export function useComposedGesture(params: {
     .maxDelay(250)
     .onEnd((_e, success) => {
       if (success) {
-        if (onDoubleTap) onDoubleTap();
-        else controllerRef.current?.resetZoom();
+        if (onDoubleTap) {
+          onDoubleTap();
+        } else {
+          controllerRef.current?.resetZoom();
+        }
       }
     })
     .runOnJS(true);

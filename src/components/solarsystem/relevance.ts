@@ -14,9 +14,15 @@ export function getRelevantPlanetSystemsFor(
   const systems = new Set<string>();
 
   const addSystemForName = (name: string | undefined) => {
-    if (!name) return;
+    if (!name) {
+      return;
+    }
+
     const body = bodies.find((b) => b.name === name);
-    if (!body) return;
+    if (!body) {
+      return;
+    }
+
     if (body instanceof Moon) {
       systems.add(body.orbits);
     } else if (body instanceof Planet) {

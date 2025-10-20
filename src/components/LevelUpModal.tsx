@@ -36,7 +36,10 @@ export function LevelUpModal({
 
   // Reset anim values whenever lines change or modal opens
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      return;
+    }
+
     // reset anim values
     titleAnimRef.current.setValue(0);
     animsRef.current.forEach((v) => v.setValue(0));
@@ -65,7 +68,10 @@ export function LevelUpModal({
 
     const sequence: Animated.CompositeAnimation[] = [titleIn];
     // Ensure 1s between title and distance
-    if (distanceAnim) sequence.push(Animated.delay(500), distanceAnim);
+    if (distanceAnim) {
+      sequence.push(Animated.delay(500), distanceAnim);
+    }
+
     // Ensure 1s between distance and first body, and 1s between each body (based on previous end)
     if (bodiesAnims.length > 0) {
       const bodiesSeq: Animated.CompositeAnimation[] = [];
@@ -76,6 +82,7 @@ export function LevelUpModal({
           bodiesSeq.push(Animated.delay(500), anim);
         }
       });
+
       sequence.push(Animated.delay(500), ...bodiesSeq, Animated.delay(500));
     }
 
@@ -86,7 +93,10 @@ export function LevelUpModal({
 
   // Animate OK button when it becomes visible
   useEffect(() => {
-    if (!showOk) return;
+    if (!showOk) {
+      return;
+    }
+
     okAnimRef.current.setValue(0);
     Animated.timing(okAnimRef.current, {
       toValue: 1,
@@ -102,11 +112,11 @@ export function LevelUpModal({
 
   return (
     <Modal
-      visible={visible}
       transparent
+      visible={visible}
       animationType="fade"
-      onRequestClose={handleClose}
       presentationStyle="overFullScreen"
+      onRequestClose={handleClose}
     >
       <View style={styles.backdrop}>
         <View style={styles.card}>
@@ -136,6 +146,7 @@ export function LevelUpModal({
                 inputRange: [0, 1],
                 outputRange: [12, 0],
               });
+
               return (
                 <Animated.View
                   key={`lvl-line-${i}`}
@@ -157,7 +168,7 @@ export function LevelUpModal({
 
           {showOk ? (
             <View style={styles.footer}>
-              <TouchableOpacity onPress={handleClose} activeOpacity={0.8}>
+              <TouchableOpacity activeOpacity={0.8} onPress={handleClose}>
                 <Animated.View
                   style={[
                     styles.okButton,

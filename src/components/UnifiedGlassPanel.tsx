@@ -41,6 +41,7 @@ export function UnifiedGlassPanel({
     expireTimer,
     completeHabit,
   } = useStore();
+
   const getCurrentDate = useGetCurrentDate();
   const fuelKm = useStore((s) => s.fuelKm);
   const showJourneyRemaining = useStore((s) => s.showJourneyRemaining);
@@ -53,6 +54,7 @@ export function UnifiedGlassPanel({
   const displayLocation = isTraveling
     ? userPosition.target?.name
     : userPosition.startingLocation;
+
   const planet = cBodies.find((p) => p.name === displayLocation);
   const bodyHex = planet
     ? `#${planet.color.toString(16).padStart(6, '0')}`
@@ -112,6 +114,7 @@ export function UnifiedGlassPanel({
           timeOffset +
           timerLen * 1000,
       );
+
       restart(expiry);
     } else {
       pause();
@@ -178,8 +181,8 @@ export function UnifiedGlassPanel({
             )}
             {onPressPlanetTitle ? (
               <TouchableOpacity
-                onPress={onPressPlanetTitle}
                 activeOpacity={0.7}
+                onPress={onPressPlanetTitle}
               >
                 <Text style={[styles.planetTitle, { color: bodyHex }]}>
                   {planet.name}
@@ -260,13 +263,18 @@ export function UnifiedGlassPanel({
       >
         {habits.map((h, idx) => {
           const isCompletedToday = (habit: Habit) => {
-            if (habit.completions.length === 0) return false;
+            if (habit.completions.length === 0) {
+              return false;
+            }
+
             const lastCompletion = new Date(
               habit.completions[habit.completions.length - 1]!,
             );
+
             const today = getCurrentDate();
             return lastCompletion.toDateString() === today.toDateString();
           };
+
           const completed = isCompletedToday(h);
           return (
             <View
@@ -287,7 +295,10 @@ export function UnifiedGlassPanel({
                 </Text>
                 {(() => {
                   const count = h.completions.length;
-                  if (count === 0) return null;
+                  if (count === 0) {
+                    return null;
+                  }
+
                   const last = new Date(h.completions[count - 1]!);
                   const today = getCurrentDate();
                   const todayStart = new Date(
@@ -295,24 +306,29 @@ export function UnifiedGlassPanel({
                     today.getMonth(),
                     today.getDate(),
                   );
+
                   const lastStart = new Date(
                     last.getFullYear(),
                     last.getMonth(),
                     last.getDate(),
                   );
+
                   const diffDays = Math.round(
                     (todayStart.getTime() - lastStart.getTime()) / 86400000,
                   );
+
                   const timeStr = last.toLocaleTimeString(undefined, {
                     hour: 'numeric',
                     minute: '2-digit',
                   });
+
                   const line1 =
                     diffDays === 0
                       ? `completed today at ${timeStr}`
                       : diffDays === 1
-                      ? 'completed yesterday'
-                      : `completed ${diffDays} days ago`;
+                        ? 'completed yesterday'
+                        : `completed ${diffDays} days ago`;
+
                   return (
                     <>
                       <Text
@@ -343,8 +359,8 @@ export function UnifiedGlassPanel({
                 ) : null}
 
                 <CompleteButton
-                  onPress={() => completeHabit(h.id)}
                   isCompleted={completed}
+                  onPress={() => completeHabit(h.id)}
                 />
               </View>
             </View>

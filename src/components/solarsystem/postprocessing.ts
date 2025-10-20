@@ -30,7 +30,12 @@ export function createComposer(
     feather: useStore.getState().tiltShiftFeather,
     blur: useStore.getState().tiltShiftBlur,
   };
-  const tilt = createTiltShiftPasses(new THREE.Vector2(size.x, size.y), initialTilt);
+
+  const tilt = createTiltShiftPasses(
+    new THREE.Vector2(size.x, size.y),
+    initialTilt,
+  );
+
   composer.addPass(tilt.horizontal);
   composer.addPass(tilt.vertical);
 
@@ -56,8 +61,9 @@ export function createComposer(
       // Insert just before the first tilt pass so tilt remains at the end
       arr.splice(tiltIndex, 0, pass);
       const maybe = pass as { setSize?: (w: number, h: number) => void };
-      if (typeof maybe.setSize === 'function')
+      if (typeof maybe.setSize === 'function') {
         maybe.setSize(currentSize.x, currentSize.y);
+      }
     } else {
       originalAddPass(pass);
     }
@@ -101,6 +107,7 @@ export function createComposer(
     try {
       unsub();
     } catch {}
+
     originalDispose();
   };
 

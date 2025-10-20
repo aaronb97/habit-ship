@@ -82,8 +82,9 @@ export class CelestialBodyNode {
     // Orientation: align equator horizontally, then apply axial tilt
     this.mesh.rotation.x = PLANET_MESH_X_ROTATION;
     const tiltDeg = body.axialTiltDeg ?? 0;
-    if (tiltDeg !== 0)
+    if (tiltDeg !== 0) {
       this.mesh.rotation.z += THREE.MathUtils.degToRad(tiltDeg);
+    }
 
     // Randomize static spin phase around local Y to avoid identical texture seams
     const randomPhase = Math.random() * Math.PI * 2;
@@ -129,10 +130,12 @@ export class CelestialBodyNode {
             const enabled =
               this.outlineGlobalEnabled &&
               this.outlineIntensity > OUTLINE_MIN_ENABLED_FACTOR;
+
             this.outlinePass.enabled = enabled;
           }
         }
       });
+
       this.unsubOutlines = unsub;
     }
 
@@ -159,7 +162,10 @@ export class CelestialBodyNode {
 
   setVisible(visible: boolean) {
     this.mesh.visible = visible;
-    if (this.trail) this.trail.visible = visible && this.trail.visible; // preserve if previously hidden
+    if (this.trail) {
+      this.trail.visible = visible && this.trail.visible;
+    } // preserve if previously hidden
+
     if (this.outlinePass) {
       if (!visible) {
         this.outlineIntensity = 0;
@@ -169,13 +175,16 @@ export class CelestialBodyNode {
         const enabled =
           this.outlineGlobalEnabled &&
           this.outlineIntensity > OUTLINE_MIN_ENABLED_FACTOR;
+
         this.outlinePass.enabled = enabled;
       }
     }
   }
 
   setTrailsEnabled(enabled: boolean) {
-    if (!(this.body instanceof Planet || this.body instanceof Moon)) return;
+    if (!(this.body instanceof Planet || this.body instanceof Moon)) {
+      return;
+    }
 
     if (enabled) {
       if (!this.trail) {
@@ -191,7 +200,9 @@ export class CelestialBodyNode {
       }
     }
 
-    if (this.trail) this.trail.visible = enabled && this.mesh.visible;
+    if (this.trail) {
+      this.trail.visible = enabled && this.mesh.visible;
+    }
   }
 
   getVisualRadius(): number {
@@ -199,7 +210,9 @@ export class CelestialBodyNode {
   }
 
   update(opts: BodyNodeUpdateOpts) {
-    if (this.disposed) return;
+    if (this.disposed) {
+      return;
+    }
 
     // Update position to current visual position (accounts for date/time changes)
     this.mesh.position.copy(toVec3(this.body.getVisualPosition()));
@@ -216,7 +229,9 @@ export class CelestialBodyNode {
     } else {
       // e.g., Sun — no trails
       this.mesh.visible = true;
-      if (this.trail) this.trail.visible = false;
+      if (this.trail) {
+        this.trail.visible = false;
+      }
     }
 
     // Keep trails in sync with current visual position without excess recompute.
@@ -241,7 +256,9 @@ export class CelestialBodyNode {
 
           // Rebuild
           const pts = getTrailForBody(this.body);
-          const nearFade = 2 * this.getVisualRadius() * TRAIL_NEAR_BODY_DIAMETERS;
+          const nearFade =
+            2 * this.getVisualRadius() * TRAIL_NEAR_BODY_DIAMETERS;
+
           const line = createTrailLine(pts, this.body.color, nearFade);
           if (line) {
             this.scene.add(line);
@@ -296,7 +313,10 @@ export class CelestialBodyNode {
   }
 
   dispose() {
-    if (this.disposed) return;
+    if (this.disposed) {
+      return;
+    }
+
     this.disposed = true;
 
     // Remove and dispose trail
@@ -314,12 +334,18 @@ export class CelestialBodyNode {
     if (Array.isArray(this.mesh.material)) {
       this.mesh.material.forEach((m) => {
         const mm = m as MappedMaterial;
-        if (mm.map) mm.map.dispose();
+        if (mm.map) {
+          mm.map.dispose();
+        }
+
         (m as THREE.Material).dispose();
       });
     } else {
       const mm = this.mesh.material as MappedMaterial;
-      if (mm.map) mm.map.dispose();
+      if (mm.map) {
+        mm.map.dispose();
+      }
+
       (this.mesh.material as THREE.Material).dispose();
     }
 
@@ -335,6 +361,7 @@ export class CelestialBodyNode {
       try {
         this.unsubOutlines();
       } catch {}
+
       this.unsubOutlines = undefined;
     }
 

@@ -71,8 +71,14 @@ const TimerSelection: React.FC<TimerSelectionProps> = ({
   };
 
   const isSelected = (option: { label: string; value: number | 'custom' }) => {
-    if (selectedTimer === null) return false;
-    if (option.value === selectedTimer) return true;
+    if (selectedTimer === null) {
+      return false;
+    }
+
+    if (option.value === selectedTimer) {
+      return true;
+    }
+
     if (
       option.value === 'custom' &&
       typeof selectedTimer === 'number' &&
