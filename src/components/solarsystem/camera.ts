@@ -37,6 +37,7 @@ export type CameraStart = CameraState;
 
 export enum CameraPhase {
   Idle = 'Idle',
+  AutoRotate = 'AutoRotate',
   PreRollMove = 'PreRollMove',
   Hold = 'Hold',
   RocketFollow = 'RocketFollow',
@@ -238,8 +239,6 @@ export class CameraController {
   private vantageStart?: Vantage;
   private vantageEnd?: Vantage;
   private _nowTs: number = 0;
-  // When active during scripted phases, disables auto-rotate in tick()
-  private shortHopLockActive = false;
 
   private doubleTapStages: DoubleTapStage[] = [
     {
@@ -365,15 +364,6 @@ export class CameraController {
   }
 
   /**
-   * Enable/disable short-hop yaw lock mode, which disables auto-rotate
-   * during active scripted phases so the yaw remains stable.
-   * @param active Whether the short-hop lock should be active.
-   */
-  setShortHopLockActive(active: boolean) {
-    this.shortHopLockActive = active;
-  }
-
-  /**
    * Resolve a stage radius token to a numeric radius.
    */
   private resolveRadiusTarget(t: StageRadiusTarget): number {
@@ -428,7 +418,6 @@ export class CameraController {
   private approxEq(a: number, b: number, eps: number) {
     return Math.abs(a - b) <= eps;
   }
-
 
   /**
    * Advance to the next configured double-tap stage.
@@ -620,6 +609,7 @@ export class CameraController {
    * @param fromAbs Start progress in [0,1].
    * @param toAbs End progress in [0,1].
    * @param opts Optional yaw-lock settings.
+   * Note: If fromAbs and toAbs are approximately equal, no scripted sequence is started.
    */
   startScriptedCameraFromProgress(
     nowTs: number,
@@ -628,6 +618,10 @@ export class CameraController {
     toAbs: number,
     opts?: { lockSideOnYaw?: boolean; sideYaw?: number },
   ) {
+    // Avoid starting a redundant scripted sequence when progress hasn't changed.
+    if (Math.abs(toAbs - fromAbs) <= 1e-6) {
+      return;
+    }
     const vStart = vantageForProgress(fromAbs);
     const vEnd = vantageForProgress(toAbs);
     const lock = opts?.lockSideOnYaw ?? false;
@@ -646,36 +640,45 @@ export class CameraController {
   }
 
   /**
-   * Compute the current scripted phase based on elapsed time.
+   * Compute the current camera phase.
+   * - During scripted sequences, returns PreRollMove, Hold, RocketFollow, or Complete based on elapsed time.
+   * - When not scripted, returns AutoRotate when background autorotation would apply; otherwise Idle.
+   * @returns The current CameraPhase value.
    */
   public getCameraPhase(): CameraPhase {
-    if (!this.scriptedActive || this.focusAnimStart === undefined) {
-      return CameraPhase.Idle;
+    if (this.scriptedActive && this.focusAnimStart !== undefined) {
+      const nowTs = this._nowTs || getCurrentTime();
+      const elapsed = Math.max(0, nowTs - this.focusAnimStart);
+      if (elapsed < CAMERA_MOVE_MS) {
+        return CameraPhase.PreRollMove;
+      }
+
+      const preRoll = CAMERA_MOVE_MS + CAMERA_HOLD_MS;
+      if (elapsed < preRoll) {
+        return CameraPhase.Hold;
+      }
+
+      if (elapsed < preRoll + HABIT_TRAVEL_ANIM_MS) {
+        return CameraPhase.RocketFollow;
+      }
+
+      return CameraPhase.Complete;
     }
 
-    const nowTs = this._nowTs || getCurrentTime();
-    const elapsed = Math.max(0, nowTs - this.focusAnimStart);
-    if (elapsed < CAMERA_MOVE_MS) {
-      return CameraPhase.PreRollMove;
-    }
+    // Not in a scripted sequence: classify between Idle and AutoRotate.
+    const hasUserMotion =
+      this.isPanning ||
+      Math.abs(this.yawVelocity) >= INERTIA_STOP_EPSILON ||
+      Math.abs(this.pitchVelocity) >= INERTIA_STOP_EPSILON ||
+      this.tweenActive;
 
-    const preRoll = CAMERA_MOVE_MS + CAMERA_HOLD_MS;
-    if (elapsed < preRoll) {
-      return CameraPhase.Hold;
-    }
-
-    if (elapsed < preRoll + HABIT_TRAVEL_ANIM_MS) {
-      return CameraPhase.RocketFollow;
-    }
-
-    return CameraPhase.Complete;
+    return hasUserMotion ? CameraPhase.Idle : CameraPhase.AutoRotate;
   }
 
   /**
    * Compute scripted yaw/pitch/radius targets for the current phase.
    */
   private computeScriptedCameraTargets(): {
-    phase: CameraPhase;
     yawTarget: number;
     pitchTarget: number;
     radiusTarget: number;
@@ -697,7 +700,6 @@ export class CameraController {
     if (phase === CameraPhase.PreRollMove) {
       const u = clamp01(elapsed / CAMERA_MOVE_MS);
       return {
-        phase,
         yawTarget: lerpAngle(cameraStart.yaw, vantageStart.yaw, u),
         // Keep pitch anchored at the starting value during pre-roll so initial load pitch stays at 0
         pitchTarget: cameraStart.pitch,
@@ -707,7 +709,6 @@ export class CameraController {
 
     if (phase === CameraPhase.Hold) {
       return {
-        phase,
         // Ratchet to the same multiple-of-π branch we ended PreRoll on
         yawTarget: preRollYawEnd,
         // Continue holding the starting pitch value during the hold phase
@@ -718,8 +719,8 @@ export class CameraController {
 
     const alpha = clamp01((elapsed - preRoll) / HABIT_TRAVEL_ANIM_MS);
     const e = easeInOutCubic(alpha);
+
     return {
-      phase: CameraPhase.RocketFollow,
       // Preserve yaw continuity by starting from the preserved pre-roll yaw branch
       yawTarget: lerpAngle(preRollYawEnd, vantageEnd.yaw, e),
       // Keep pitch anchored at the starting value during rocket follow as well
@@ -733,17 +734,11 @@ export class CameraController {
    * Per-frame update: advances inertia/tweens, updates targets and applies the orbit transform.
    * @param center Scene-space center to orbit around (user/display position).
    * @param target Scene-space target to frame; defines the orbit plane normal.
-   * @param opts Optional flags: autoRotate and an optional timestamp override.
    */
-  tick(
-    center: THREE.Vector3,
-    target: THREE.Vector3,
-    opts?: { autoRotate?: boolean; nowTs?: number },
-  ) {
-    const requestedAuto = opts?.autoRotate ?? true;
-    const nowTs = opts?.nowTs ?? getCurrentTime();
-    this._nowTs = nowTs;
+  tick(center: THREE.Vector3, target: THREE.Vector3) {
+    this._nowTs = getCurrentTime();
 
+    const phase = this.getCameraPhase();
     // Update scripted camera targets if active
     if (
       this.scriptedActive &&
@@ -751,7 +746,6 @@ export class CameraController {
       this.cameraStart &&
       this.vantageStart
     ) {
-      const phase = this.getCameraPhase();
       if (phase === CameraPhase.Complete) {
         this.scriptedActive = false;
       } else {
@@ -763,23 +757,8 @@ export class CameraController {
     }
 
     // Auto-rotate when not panning and no significant yaw inertia
-    let autoRotate = requestedAuto;
-    if (this.shortHopLockActive && this.scriptedActive) {
-      const phase = this.getCameraPhase();
-      if (
-        phase === CameraPhase.PreRollMove ||
-        phase === CameraPhase.Hold ||
-        phase === CameraPhase.RocketFollow
-      ) {
-        autoRotate = false;
-      }
-    }
 
-    if (
-      !this.isPanning &&
-      Math.abs(this.yawVelocity) < INERTIA_STOP_EPSILON &&
-      autoRotate
-    ) {
+    if (phase === CameraPhase.AutoRotate) {
       this.yawTarget += AUTO_ROTATE_YAW_SPEED;
     }
 
@@ -806,7 +785,9 @@ export class CameraController {
     }
 
     if (this.tweenActive) {
-      const t = clamp01((nowTs - this.tweenStartTs) / this.tweenDurationMs);
+      const t = clamp01(
+        (this._nowTs - this.tweenStartTs) / this.tweenDurationMs,
+      );
       const e = easeInOutCubic(t);
       this.radius = lerp(this.tweenStartRadius, this.tweenEndRadius, e);
       this.pitch = lerp(this.tweenStartPitch, this.tweenEndPitch, e);

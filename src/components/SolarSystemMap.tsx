@@ -20,7 +20,11 @@ import { toVec3 } from './solarsystem/helpers';
 import { type MappedMaterial } from './solarsystem/builders';
 import { loadBodyTextures } from './solarsystem/textures';
 import { createSky } from './solarsystem/sky';
-import { CameraController, clamp01, easeInOutCubic } from './solarsystem/camera';
+import {
+  CameraController,
+  clamp01,
+  easeInOutCubic,
+} from './solarsystem/camera';
 import { Rocket } from './solarsystem/rocket';
 import { CelestialBodyNode, BodyNodesRegistry } from './solarsystem/bodies';
 import { getRelevantPlanetSystemsFor } from './solarsystem/relevance';
@@ -170,11 +174,6 @@ export function SolarSystemMap({
       const targetCenter = toVec3(targetBody.getVisualPosition());
       const separation = startCenter.distanceTo(targetCenter);
       const lockSideOn = separation < YAW_SIDE_ON_DISTANCE_CUTOFF;
-      // Configure controller policies for short-hop
-      const controller = cameraControllerRef.current;
-      if (controller) {
-        controller.setShortHopLockActive(lockSideOn);
-      }
 
       if (pending) {
         if (skipRocketAnimation) {
@@ -185,11 +184,11 @@ export function SolarSystemMap({
           return;
         }
 
-        const controller2 = cameraControllerRef.current;
-        if (controller2) {
-          controller2.startScriptedCameraFromProgress(
+        const controller = cameraControllerRef.current;
+        if (controller) {
+          controller.startScriptedCameraFromProgress(
             start,
-            controller2.state,
+            controller.state,
             fromAbs,
             toAbs,
             { lockSideOnYaw: lockSideOn },
@@ -264,7 +263,6 @@ export function SolarSystemMap({
       // Configure controller policies for short-hop
       const controller = cameraControllerRef.current;
       if (controller) {
-        controller.setShortHopLockActive(lockSideOn);
         controller.startScriptedCameraFromProgress(
           start,
           controller.state,
@@ -516,7 +514,6 @@ export function SolarSystemMap({
     registerController(cameraControllerRef.current);
     if (pendingScriptedStartRef.current) {
       const p = pendingScriptedStartRef.current;
-      cameraControllerRef.current.setShortHopLockActive(p.lockSideOn);
       cameraControllerRef.current.startScriptedCameraFromProgress(
         p.nowTs,
         cameraControllerRef.current.state,
@@ -693,8 +690,7 @@ export function SolarSystemMap({
         const controller = cameraControllerRef.current;
         const cam = cameraRef.current;
         if (controller && cam) {
-          const { target: targetState } =
-            useStore.getState().userPosition;
+          const { target: targetState } = useStore.getState().userPosition;
 
           const targetBody =
             PLANETS.find((b) => b.name === targetState?.name) ?? earth;
@@ -736,14 +732,14 @@ export function SolarSystemMap({
         const pitch = state?.pitch ?? 0;
         const animAlpha = animAlphaRef.current;
         if (cameraControllerRef.current) {
-        publishDebug({
-          fps,
-          yaw,
-          pitch,
+          publishDebug({
+            fps,
+            yaw,
+            pitch,
             radius: cameraControllerRef.current.radius,
-          animAlpha,
+            animAlpha,
             cameraPhase: cameraControllerRef.current.getCameraPhase(),
-        });
+          });
         }
       }
 
