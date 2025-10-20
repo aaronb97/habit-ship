@@ -18,7 +18,6 @@ import Constants from 'expo-constants';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Navigation } from './navigation';
 import { colors } from './styles/theme';
-import { useIsSetupFinished } from './utils/store';
 
 const prefix = createURL('/');
 
@@ -55,8 +54,6 @@ export function App() {
     Poppins_700Bold,
   });
 
-  const isSetupFinished = useIsSetupFinished();
-
   const onLayoutRootView = async () => {
     if (fontsLoaded) {
       await SplashScreen.hideAsync();
@@ -91,15 +88,11 @@ export function App() {
     prefixes: [prefix],
     config: {
       screens: {
-        SetupFirstHabit: 'setup/habit',
-        SetupFirstPlanet: 'setup/planet',
         WelcomeTransition: 'welcome',
         Home: 'home',
         NotFound: '*',
       },
-      initialRouteName: isSetupFinished
-        ? ('Home' as const)
-        : ('SetupFirstHabit' as const),
+      initialRouteName: 'Home' as const,
     },
   };
 

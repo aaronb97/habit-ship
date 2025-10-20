@@ -181,6 +181,17 @@ const initialData = {
   habits: [],
   userPosition: {
     startingLocation: 'Earth',
+    target: {
+      name: 'The Moon',
+      position: moon.getPosition(),
+    },
+    initialDistance: Math.max(
+      0,
+      calculateDistance(getPlanetPosition('Earth'), moon.getPosition()) -
+        (earth.radiusKm + moon.radiusKm),
+    ),
+    distanceTraveled: 0,
+    previousDistanceTraveled: 0,
   },
   completedPlanets: ['Earth'],
   totalXP: 0,
