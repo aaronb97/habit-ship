@@ -1,5 +1,5 @@
-import { View, StyleSheet } from 'react-native';
-import { useState } from 'react';
+import { View, StyleSheet, Animated } from 'react-native';
+import { useState, useRef, useEffect } from 'react';
 import { Home } from './screens/Home';
 import { SolarMap } from './screens/SolarMap';
 import { Dev } from './screens/Dev';
@@ -35,6 +35,19 @@ export function TabNavigator() {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showPlanetModal, setShowPlanetModal] = useState(false);
+
+  const fadeOpacityRef = useRef<Animated.Value>(
+    new Animated.Value(activeTab === 'HomeTab' ? 1 : 0),
+  );
+  const fadeOpacity = fadeOpacityRef.current;
+
+  useEffect(() => {
+    Animated.timing(fadeOpacity, {
+      toValue: activeTab === 'HomeTab' ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [activeTab, fadeOpacity]);
 
   /**
    * Handles creating a new habit from the persistent overlay.
@@ -103,15 +116,15 @@ export function TabNavigator() {
 
       {/* Persistent overlay hosting UnifiedGlassPanel and related modals */}
       <View style={styles.panelOverlay} pointerEvents="box-none">
-        <View
+        <Animated.View
           pointerEvents={activeTab === 'HomeTab' ? 'auto' : 'none'}
-          style={activeTab === 'HomeTab' ? undefined : styles.hidden}
+          style={{ opacity: fadeOpacity }}
         >
           <UnifiedGlassPanel
             onPressPlanetTitle={() => setShowPlanetModal(true)}
             onPressNewHabit={() => setShowCreateModal(true)}
           />
-        </View>
+        </Animated.View>
         {/* </View> */}
         <CreateHabitModal
           visible={activeTab === 'HomeTab' && showCreateModal}
