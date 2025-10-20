@@ -373,11 +373,8 @@ export function UnifiedGlassPanel({
 
 const styles = StyleSheet.create({
   container: {
-    width: '92%',
-    maxWidth: 560,
     padding: 20,
     borderRadius: 16,
-    alignSelf: 'center',
   },
   centered: {
     alignItems: 'center',

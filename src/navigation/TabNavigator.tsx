@@ -1,4 +1,5 @@
 import { View, StyleSheet } from 'react-native';
+import { useState } from 'react';
 import { Home } from './screens/Home';
 import { SolarMap } from './screens/SolarMap';
 import { Dev } from './screens/Dev';
@@ -6,9 +7,18 @@ import { colors } from '../styles/theme';
 import { useStore } from '../utils/store';
 import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation';
 import { SolarSystemMap } from '../components/SolarSystemMap';
+import { UnifiedGlassPanel } from '../components/UnifiedGlassPanel';
+import { CreateHabitModal } from '../components/CreateHabitModal';
+import { PlanetSelectionModal } from '../components/PlanetSelectionModal';
 
 const Tab = createNativeBottomTabNavigator<TabParamList>();
 
+/**
+ * Root tab navigator. Hosts a persistent overlay containing `UnifiedGlassPanel`
+ * so it remains mounted across tab switches.
+ *
+ * Returns: JSX element for the bottom tab navigator with overlays.
+ */
 export function TabNavigator() {
   const isDevelopment = __DEV__;
   const hasFuelAndTarget = useStore(
@@ -18,7 +28,28 @@ export function TabNavigator() {
   const homeNeedsSelection = useStore((s) => s.justLanded);
   const activeTab = useStore((s) => s.activeTab);
   const setActiveTab = useStore((s) => s.setActiveTab);
+  const addHabit = useStore((s) => s.addHabit);
+  const userPosition = useStore((s) => s.userPosition);
+  const isLevelUpModalVisible = useStore((s) => s.isLevelUpModalVisible);
   const isMapFocused = activeTab === 'MapTab';
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showPlanetModal, setShowPlanetModal] = useState(false);
+
+  /**
+   * Handles creating a new habit from the persistent overlay.
+   *
+   * habit: New habit payload including title, optional description and timerLength.
+   * Returns: void
+   */
+  const handleCreate = (habit: {
+    title: string;
+    description: string;
+    timerLength?: number;
+  }) => {
+    addHabit(habit);
+    setShowCreateModal(false);
+  };
 
   return (
     <View style={styles.container}>
@@ -69,6 +100,33 @@ export function TabNavigator() {
           />
         )}
       </Tab.Navigator>
+
+      {/* Persistent overlay hosting UnifiedGlassPanel and related modals */}
+      <View style={styles.panelOverlay} pointerEvents="box-none">
+        <View
+          pointerEvents={activeTab === 'HomeTab' ? 'auto' : 'none'}
+          style={activeTab === 'HomeTab' ? undefined : styles.hidden}
+        >
+          <UnifiedGlassPanel
+            onPressPlanetTitle={() => setShowPlanetModal(true)}
+            onPressNewHabit={() => setShowCreateModal(true)}
+          />
+        </View>
+        {/* </View> */}
+        <CreateHabitModal
+          visible={activeTab === 'HomeTab' && showCreateModal}
+          onCreate={handleCreate}
+          onClose={() => setShowCreateModal(false)}
+        />
+        <PlanetSelectionModal
+          visible={
+            activeTab === 'HomeTab' &&
+            (showPlanetModal ||
+              (!userPosition.target && !isLevelUpModalVisible))
+          }
+          onClose={() => setShowPlanetModal(false)}
+        />
+      </View>
     </View>
   );
 }
@@ -85,5 +143,16 @@ const styles = StyleSheet.create({
   },
   mapOverlay: {
     ...StyleSheet.absoluteFillObject,
+  },
+  panelOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 16,
+  },
+  hidden: {
+    opacity: 0,
   },
 });
