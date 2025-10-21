@@ -346,10 +346,16 @@ export function Dashboard() {
             </Text>
           )}
           <View style={styles.flowHeaderTitleContainer}>
-            <Text style={styles.flowHeaderTitle}>Select Next Destination</Text>
-            <Text style={styles.flowHeaderSubTitle}>
-              You can change this later by tapping the destination name.
+            <Text style={styles.flowHeaderTitle}>
+              {!canCancelSelection
+                ? 'Select Next Destination'
+                : 'Change Destination'}
             </Text>
+            {!canCancelSelection ? (
+              <Text style={styles.flowHeaderSubTitle}>
+                You can change this later by tapping the destination name.
+              </Text>
+            ) : null}
           </View>
           {/* Spacer to balance layout */}
           <Text style={[styles.flowHeaderButton, { opacity: 0 }]}>Cancel</Text>
