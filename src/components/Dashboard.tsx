@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { GlassView, GlassViewProps } from 'expo-glass-effect';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import { Habit, useIsTraveling, useStore, useUserLevel } from '../utils/store';
+import { useIsTraveling, useStore, useUserLevel } from '../utils/store';
 import { cBodies } from '../planets';
 import { ProgressBar } from './ProgressBar';
 import TimerSelection from './TimerSelection';
@@ -24,10 +24,10 @@ import {
 } from '../utils/experience';
 import { useTimer } from 'react-timer-hook';
 import { useGetCurrentDate } from '../utils/time';
-import { MaterialIcons } from '@expo/vector-icons';
 import { LevelUpPanel } from './LevelUpPanel';
 import { OnboardingPanel } from './OnboardingPanel';
 import { HSTextInput } from './HSTextInput';
+import { HabitList } from './HabitList';
 
 export function Dashboard() {
   const {
@@ -345,7 +345,12 @@ export function Dashboard() {
               Cancel
             </Text>
           )}
-          <Text style={styles.flowHeaderTitle}>Select Planet</Text>
+          <View style={styles.flowHeaderTitleContainer}>
+            <Text style={styles.flowHeaderTitle}>Select Next Destination</Text>
+            <Text style={styles.flowHeaderSubTitle}>
+              You can change this later by tapping the destination name.
+            </Text>
+          </View>
           {/* Spacer to balance layout */}
           <Text style={[styles.flowHeaderButton, { opacity: 0 }]}>Cancel</Text>
         </View>
@@ -481,111 +486,11 @@ export function Dashboard() {
         style={styles.habitsList}
         contentContainerStyle={styles.habitsListContent}
       >
-        {habits.map((h, idx) => {
-          const isCompletedToday = (habit: Habit) => {
-            if (habit.completions.length === 0) {
-              return false;
-            }
-
-            const lastCompletion = new Date(
-              habit.completions[habit.completions.length - 1]!,
-            );
-
-            const today = getCurrentDate();
-            return lastCompletion.toDateString() === today.toDateString();
-          };
-
-          const completed = isCompletedToday(h);
-          return (
-            <View
-              key={h.id}
-              style={[
-                styles.habitRow,
-                idx < habits.length - 1 ? styles.habitRowDivider : null,
-              ]}
-            >
-              <View style={styles.habitRowInfo}>
-                <Text
-                  style={[
-                    styles.habitTitle,
-                    completed ? styles.completedHabitTitle : null,
-                  ]}
-                >
-                  {h.title}
-                </Text>
-                {(() => {
-                  const count = h.completions.length;
-                  if (count === 0) {
-                    return null;
-                  }
-
-                  const last = new Date(h.completions[count - 1]!);
-                  const today = getCurrentDate();
-                  const todayStart = new Date(
-                    today.getFullYear(),
-                    today.getMonth(),
-                    today.getDate(),
-                  );
-
-                  const lastStart = new Date(
-                    last.getFullYear(),
-                    last.getMonth(),
-                    last.getDate(),
-                  );
-
-                  const diffDays = Math.round(
-                    (todayStart.getTime() - lastStart.getTime()) / 86400000,
-                  );
-
-                  const timeStr = last.toLocaleTimeString(undefined, {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  });
-
-                  const line1 =
-                    diffDays === 0
-                      ? `completed today at ${timeStr}`
-                      : diffDays === 1
-                        ? 'completed yesterday'
-                        : `completed ${diffDays} days ago`;
-
-                  return (
-                    <>
-                      <Text
-                        style={[
-                          styles.habitDescription,
-                          completed ? styles.completedHabitTitle : null,
-                        ]}
-                      >
-                        {line1}
-                      </Text>
-                      {count > 1 ? (
-                        <Text
-                          style={[
-                            styles.habitDescription,
-                            completed ? styles.completedHabitTitle : null,
-                          ]}
-                        >
-                          {`${count} completions`}
-                        </Text>
-                      ) : null}
-                    </>
-                  );
-                })()}
-              </View>
-              <View style={styles.actionsRow}>
-                {h.timerLength ? (
-                  <TimerButton habit={h} onPress={() => startTimer(h.id)} />
-                ) : null}
-
-                <CompleteButton
-                  isCompleted={completed}
-                  onPress={() => completeHabit(h.id)}
-                />
-              </View>
-            </View>
-          );
-        })}
+        <HabitList
+          habits={habits}
+          onStartTimer={startTimer}
+          onCompleteHabit={completeHabit}
+        />
       </ScrollView>
     </GlassView>
   );
@@ -593,7 +498,8 @@ export function Dashboard() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderRadius: 16,
   },
   centered: {
@@ -791,12 +697,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   // Inline flows (Add Habit, Select Destination)
-  flowHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
+  flowHeader: {},
   flowHeaderButton: {
     fontFamily: fonts.regular,
     fontSize: fontSizes.medium,
@@ -808,9 +709,18 @@ const styles = StyleSheet.create({
   flowHeaderDisabled: {
     color: colors.grey,
   },
+  flowHeaderTitleContainer: {
+    gap: 4,
+  },
   flowHeaderTitle: {
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.large,
+    color: colors.white,
+    textAlign: 'center',
+  },
+  flowHeaderSubTitle: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.medium,
     color: colors.white,
     textAlign: 'center',
   },
@@ -841,47 +751,4 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
 });
-
-function TimerButton({
-  habit,
-  onPress,
-}: {
-  habit: Habit;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      style={[styles.actionButton, { backgroundColor: colors.accent }]}
-      onPress={onPress}
-    >
-      <MaterialIcons name="timer" size={20} color={colors.white} />
-      <Text style={styles.actionButtonText}>{`${
-        habit.timerLength! / 60
-      } min`}</Text>
-    </TouchableOpacity>
-  );
-}
-
-function CompleteButton({
-  onPress,
-  isCompleted,
-}: {
-  onPress: () => void;
-  isCompleted: boolean;
-}) {
-  return (
-    <TouchableOpacity
-      disabled={isCompleted}
-      style={[
-        styles.actionButton,
-        { backgroundColor: isCompleted ? colors.darkGray : colors.primary },
-      ]}
-      onPress={onPress}
-    >
-      <MaterialIcons name="check" size={20} color={colors.white} />
-      {isCompleted ? <Text style={styles.actionButtonText}>Done</Text> : null}
-    </TouchableOpacity>
-  );
-}
-
 export default Dashboard;
