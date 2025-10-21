@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Text,
@@ -10,6 +10,10 @@ import type { LevelUpInfo } from '../utils/store';
 import { cBodies } from '../planets';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { FadingTextList, FadingLine } from './FadingTextList';
+
+// Delays for title fade-in and text list rendering
+const TITLE_FADE_IN_START_DELAY_MS = 500;
+const TEXT_LIST_DELAY_MS = 750;
 
 /**
  * Creates a hex color string from a 24-bit integer color.
@@ -54,7 +58,9 @@ function formatKm(km: number): string {
 
 /**
  * Displays Level Up content with line-by-line fade-in and an OK button that
- * fades in once the text finishes animating.
+ * fades in once the text finishes animating. The title "Level Up!" fades in
+ * starting 500 ms after the component mounts, and the `FadingTextList` is
+ * rendered 750 ms after the title fade starts.
  *
  * info: Structured level-up data to display.
  * onOk: Called when user confirms the Level Up view.
@@ -69,11 +75,37 @@ export function LevelUpPanel({
   onOk: () => void;
 }) {
   const okOpacity = useRef(new Animated.Value(0)).current;
+  const titleOpacity = useRef(new Animated.Value(0)).current;
+  const [showList, setShowList] = useState(false);
 
   // Reset OK opacity whenever content changes to ensure animation runs every time
   useEffect(() => {
     okOpacity.setValue(0);
   }, [okOpacity, info.prevLevel, info.currLevel]);
+
+  // Orchestrate title fade-in and delayed rendering of the text list
+  useEffect(() => {
+    titleOpacity.setValue(0);
+    setShowList(false);
+
+    let listTimer: ReturnType<typeof setTimeout> | undefined;
+    const startTitleTimer = setTimeout(() => {
+      Animated.timing(titleOpacity, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }).start();
+
+      listTimer = setTimeout(() => {
+        setShowList(true);
+      }, TEXT_LIST_DELAY_MS);
+    }, TITLE_FADE_IN_START_DELAY_MS);
+
+    return () => {
+      clearTimeout(startTitleTimer);
+      if (listTimer) clearTimeout(listTimer);
+    };
+  }, [info.prevLevel, info.currLevel, titleOpacity]);
 
   const baseLines: FadingLine[] = [
     `Your level has increased from ${info.prevLevel} to ${info.currLevel}`,
@@ -113,22 +145,26 @@ export function LevelUpPanel({
 
   return (
     <View>
-      <Text style={styles.title}>Level Up!</Text>
-      <FadingTextList
-        key={`lvl-${info.prevLevel}-${info.currLevel}`}
-        lines={lines}
-        textStyle={styles.line}
-        intervalMs={750}
-        onAllVisible={() => {
-          setTimeout(() => {
-            Animated.timing(okOpacity, {
-              toValue: 1,
-              duration: 350,
-              useNativeDriver: true,
-            }).start();
-          }, 500);
-        }}
-      />
+      <Animated.Text style={[styles.title, { opacity: titleOpacity }]}>
+        Level Up!
+      </Animated.Text>
+      {showList && (
+        <FadingTextList
+          key={`lvl-${info.prevLevel}-${info.currLevel}`}
+          lines={lines}
+          textStyle={styles.line}
+          intervalMs={TEXT_LIST_DELAY_MS}
+          onAllVisible={() => {
+            setTimeout(() => {
+              Animated.timing(okOpacity, {
+                toValue: 1,
+                duration: 350,
+                useNativeDriver: true,
+              }).start();
+            }, 500);
+          }}
+        />
+      )}
       <Animated.View style={{ opacity: okOpacity }}>
         <TouchableOpacity
           style={[styles.okBtn, styles.okBtnPrimary, { marginTop: 12 }]}
