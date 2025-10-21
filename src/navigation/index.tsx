@@ -8,6 +8,7 @@ import { colors, fonts } from '../styles/theme';
 import { TabNavigator } from './TabNavigator';
 import { NotFound } from './screens/NotFound';
 import { WelcomeTransition } from './screens/WelcomeTransition';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -20,37 +21,39 @@ type NavigationProps = {
 export function Navigation({ theme, linking, onReady }: NavigationProps) {
   return (
     <NavigationContainer theme={theme} linking={linking} onReady={onReady}>
-      <Stack.Navigator
-        screenOptions={{
-          headerTintColor: colors.primaryText,
-          headerBackTitle: 'Back',
-          headerBackTitleStyle: {
-            fontFamily: fonts.regular,
-          },
-        }}
-      >
-        <Stack.Screen
-          name="Home"
-          component={TabNavigator}
-          options={{
-            headerShown: false,
+      <KeyboardProvider>
+        <Stack.Navigator
+          screenOptions={{
+            headerTintColor: colors.primaryText,
+            headerBackTitle: 'Back',
+            headerBackTitleStyle: {
+              fontFamily: fonts.regular,
+            },
           }}
-        />
-        <Stack.Screen
-          name="WelcomeTransition"
-          component={WelcomeTransition}
-          options={{
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
-          name="NotFound"
-          component={NotFound}
-          options={{
-            title: '404',
-          }}
-        />
-      </Stack.Navigator>
+        >
+          <Stack.Screen
+            name="Home"
+            component={TabNavigator}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="WelcomeTransition"
+            component={WelcomeTransition}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="NotFound"
+            component={NotFound}
+            options={{
+              title: '404',
+            }}
+          />
+        </Stack.Navigator>
+      </KeyboardProvider>
     </NavigationContainer>
   );
 }
