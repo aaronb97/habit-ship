@@ -1,18 +1,39 @@
-import { useStore } from './store';
+/**
+ * Lightweight time utilities that can optionally use a host-provided time offset.
+ * This module intentionally does not import the app store to avoid require cycles.
+ * The store should call `setTimeOffsetProvider()` at startup to wire in offset state.
+ */
+type TimeOffsetProvider = {
+  /**
+   * Returns the current time offset in milliseconds.
+   */
+  get: () => number;
+  /**
+   * Sets the current time offset in milliseconds.
+   */
+  set: (next: number) => void;
+};
+
+let provider: TimeOffsetProvider | undefined;
+
+/**
+ * Configures how this module reads/writes the time offset.
+ * Call from the store module to bridge to Zustand without creating a cycle.
+ *
+ * @param p Provider with `get()` and `set()` accessors for the offset in ms.
+ * @returns void
+ */
+export function setTimeOffsetProvider(p: TimeOffsetProvider): void {
+  provider = p;
+}
 
 /**
  * Gets the current time as a timestamp (milliseconds), accounting for dev time offset.
  * Use this instead of Date.now() throughout the app.
  */
 export function getCurrentTime(): number {
-  // TODO: fix
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-  if (!useStore) {
-    return Date.now();
-  }
-
-  const timeOffset = useStore.getState().timeOffset;
-  return Date.now() + timeOffset;
+  const offset = provider?.get() ?? 0;
+  return Date.now() + offset;
 }
 
 /**
@@ -27,22 +48,14 @@ export function getCurrentDate(): Date {
  * Should be preferred to getCurrentTime() in React components or hooks
  */
 export function useGetCurrentTime() {
-  const timeOffset = useStore((state) => state.timeOffset);
-
-  return () => {
-    return Date.now() + timeOffset;
-  };
+  return () => Date.now() + (provider?.get() ?? 0);
 }
 
 /**
  * Should be preferred to getCurrentDate() in React components or hooks
  */
 export function useGetCurrentDate() {
-  const timeOffset = useStore((state) => state.timeOffset);
-
-  return () => {
-    return new Date(Date.now() + timeOffset);
-  };
+  return () => new Date(Date.now() + (provider?.get() ?? 0));
 }
 
 /**
@@ -50,6 +63,6 @@ export function useGetCurrentDate() {
  * This is useful for testing time-based features.
  */
 export function advanceTime(milliseconds: number): void {
-  const currentOffset = useStore.getState().timeOffset;
-  useStore.setState({ timeOffset: currentOffset + milliseconds });
+  const currentOffset = provider?.get() ?? 0;
+  provider?.set(currentOffset + milliseconds);
 }

@@ -6,7 +6,7 @@ import { immer } from 'zustand/middleware/immer';
 
 import { earth, moon, cBodies } from '../planets';
 import { schedulePushNotification } from './schedulePushNotification';
-import { getCurrentTime, getCurrentDate } from './time';
+import { getCurrentTime, getCurrentDate, setTimeOffsetProvider } from './time';
 import { Coordinates, UserPosition, XPGain } from '../types';
 import { useShallow } from 'zustand/shallow';
 import { calculateLevel, getDailyDistanceForLevel } from './experience';
@@ -799,6 +799,11 @@ export const useStore = create<Store>()(
     },
   ),
 );
+
+setTimeOffsetProvider({
+  get: () => useStore.getState().timeOffset,
+  set: (next) => useStore.setState({ timeOffset: next }),
+});
 
 // =================================================================
 // SELECTOR HOOKS (for reading state)
