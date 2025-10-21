@@ -8,7 +8,6 @@ import {
   Animated,
   TextInput,
   Platform,
-  TextStyle,
   Alert,
 } from 'react-native';
 import { GlassView, GlassViewProps } from 'expo-glass-effect';
@@ -28,6 +27,11 @@ import {
 import { useTimer } from 'react-timer-hook';
 import { useGetCurrentDate } from '../utils/time';
 import { MaterialIcons } from '@expo/vector-icons';
+import { FadingTextList } from './FadingTextList';
+import { LevelUpPanel } from './LevelUpPanel';
+
+// Delay used in onboarding for the OK button fade-in after lines appear
+const ONBOARDING_OK_DELAY_MS = 2000;
 
 export function Dashboard() {
   const {
@@ -56,6 +60,9 @@ export function Dashboard() {
 
   const isTraveling = useIsTraveling();
   const isLevelUpModalVisible = useStore((s) => s.isLevelUpModalVisible);
+  const levelUpInfo = useStore((s) => s.levelUpInfo);
+  const hideLevelUp = useStore((s) => s.hideLevelUp);
+  const setLastLevelUpSeenLevel = useStore((s) => s.setLastLevelUpSeenLevel);
   const activeTab = useStore((s) => s.activeTab);
 
   const [mode, setMode] = useState<
@@ -183,6 +190,21 @@ export function Dashboard() {
     );
   }
 
+  if (isLevelUpModalVisible && levelUpInfo && activeTab === 'HomeTab') {
+    return (
+      <GlassView style={styles.container} {...glassViewProps}>
+        <LevelUpPanel
+          info={levelUpInfo}
+          onOk={() => {
+            setLastLevelUpSeenLevel(levelUpInfo.currLevel);
+            hideLevelUp();
+          }}
+        />
+      </GlassView>
+    );
+  }
+
+  // Timer screen shows when active and not blocked by Level Up view
   if (activeTimer && timerHabit) {
     return (
       <GlassView
@@ -327,7 +349,9 @@ export function Dashboard() {
               <Text style={styles.flowHeaderButton}>Cancel</Text>
             </TouchableOpacity>
           ) : (
-            <Text style={[styles.flowHeaderButton, { opacity: 0 }]}>Cancel</Text>
+            <Text style={[styles.flowHeaderButton, { opacity: 0 }]}>
+              Cancel
+            </Text>
           )}
           <Text style={styles.flowHeaderTitle}>Select Planet</Text>
           {/* Spacer to balance layout */}
@@ -582,13 +606,6 @@ const styles = StyleSheet.create({
   },
   centered: {
     alignItems: 'center',
-  },
-  onboardText: {
-    fontFamily: fonts.regular,
-    fontSize: fontSizes.medium,
-    color: colors.white,
-    textAlign: 'center',
-    marginTop: 6,
   },
   onboardTitle: {
     fontFamily: fonts.bold,
@@ -902,58 +919,6 @@ function CompleteButton({
   );
 }
 
-const DEFAULT_INTERVAL_MS = 2000;
-
-/**
- * Renders a list of white text lines that fade in sequentially.
- *
- * lines: Strings to display in order.
- * intervalMs: Delay between each line's fade-in start, in milliseconds.
- * textStyle: Optional additional TextStyle to merge with default.
- * onAllVisible: Callback invoked after the last line finishes animating.
- *
- * Returns: JSX element containing the animated text lines.
- */
-function FadingTextList({
-  lines,
-  intervalMs = DEFAULT_INTERVAL_MS,
-  textStyle,
-  onAllVisible,
-}: {
-  lines: string[];
-  intervalMs?: number;
-  textStyle?: TextStyle;
-  onAllVisible?: () => void;
-}) {
-  const opacities = useRef(lines.map(() => new Animated.Value(0))).current;
-
-  useEffect(() => {
-    const animations = opacities.map((o) =>
-      Animated.timing(o, { toValue: 1, duration: 400, useNativeDriver: true }),
-    );
-    const stagger = Animated.stagger(intervalMs, animations);
-    stagger.start(() => {
-      onAllVisible?.();
-    });
-    return () => {
-      animations.forEach((a) => a.stop());
-    };
-  }, [intervalMs, onAllVisible, opacities]);
-
-  return (
-    <View>
-      {lines.map((line, idx) => (
-        <Animated.Text
-          key={`${idx}-${line}`}
-          style={[styles.onboardText, textStyle, { opacity: opacities[idx] }]}
-        >
-          {line}
-        </Animated.Text>
-      ))}
-    </View>
-  );
-}
-
 /**
  * First-run onboarding flow inside the glass panel. Orchestrates three steps:
  *
@@ -1007,7 +972,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
         duration: 400,
         useNativeDriver: true,
       }).start();
-    }, DEFAULT_INTERVAL_MS);
+    }, ONBOARDING_OK_DELAY_MS);
   };
 
   const lines = [
@@ -1138,7 +1103,7 @@ function MoonStep({ onDone }: { onDone: () => void }) {
         duration: 400,
         useNativeDriver: true,
       }).start();
-    }, DEFAULT_INTERVAL_MS);
+    }, ONBOARDING_OK_DELAY_MS);
   };
 
   const lines = [

@@ -19,6 +19,19 @@ export type HabitId = string & { __habitId: true };
 
 export type TabName = 'HomeTab' | 'MapTab' | 'DevTab';
 
+/**
+ * Structured information to present when a user levels up.
+ * Includes the previous and current levels, travel distances per completion,
+ * and the names of any newly discovered celestial bodies.
+ */
+export type LevelUpInfo = {
+  prevLevel: number;
+  currLevel: number;
+  prevDistanceKm: number;
+  currDistanceKm: number;
+  discoveredBodies: string[];
+};
+
 export type Habit = {
   id: HabitId;
   title: string;
@@ -108,6 +121,10 @@ type Store = {
   justLanded: boolean;
   // True while the Level Up modal is visible; used to sequence other modals
   isLevelUpModalVisible: boolean;
+  // Structured data to render inline level-up content on the Dashboard
+  levelUpInfo?: LevelUpInfo;
+  // The most recent level the user has acknowledged via the Level Up UI
+  lastLevelUpSeenLevel?: number;
 
   // Navigation state
   activeTab: TabName;
@@ -152,6 +169,28 @@ type Store = {
   setOutlinesBodiesEnabled: (value: boolean) => void;
   setOutlinesRocketEnabled: (value: boolean) => void;
   setLevelUpModalVisible: (value: boolean) => void;
+  /**
+   * Show the inline Level Up content with provided details and set
+   * `isLevelUpModalVisible` for sequencing other flows.
+   *
+   * info: Structured level-up data to display.
+   * Returns: void
+   */
+  showLevelUp: (info: LevelUpInfo) => void;
+  /**
+   * Hide the inline Level Up content and clear stored details, unblocking
+   * other flows (like planet selection after landing).
+   *
+   * Returns: void
+   */
+  hideLevelUp: () => void;
+  /**
+   * Persist the most recent level the user has acknowledged in the Level Up UI.
+   *
+   * level: Level that has been acknowledged.
+   * Returns: void
+   */
+  setLastLevelUpSeenLevel: (level: number) => void;
   setActiveTab: (tab: TabName) => void;
 
   // Tilt-shift setters
@@ -226,6 +265,8 @@ const initialData = {
   pendingLanding: false,
   justLanded: false,
   isLevelUpModalVisible: false,
+  levelUpInfo: undefined,
+  lastLevelUpSeenLevel: undefined,
   fuelKm: 0,
   fuelEarnedTodayKm: 0,
   fuelEarnedDate: undefined,
@@ -325,6 +366,10 @@ export const useStore = create<Store>()(
       setOutlinesRocketEnabled: (value) =>
         set({ outlinesRocketEnabled: value }),
       setLevelUpModalVisible: (value) => set({ isLevelUpModalVisible: value }),
+      showLevelUp: (info) =>
+        set({ isLevelUpModalVisible: true, levelUpInfo: info }),
+      hideLevelUp: () => set({ isLevelUpModalVisible: false, levelUpInfo: undefined }),
+      setLastLevelUpSeenLevel: (level) => set({ lastLevelUpSeenLevel: level }),
       setActiveTab: (tab) => set({ activeTab: tab }),
       setSkipRocketAnimation: (value) => set({ skipRocketAnimation: value }),
       setShowJourneyRemaining: (value) => set({ showJourneyRemaining: value }),
