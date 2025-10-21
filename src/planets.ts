@@ -506,7 +506,7 @@ export const mercury = new Planet({
   radiusKm: 2439.7,
   orbitalPeriodDays: 87.969,
   kepler: HELIO.Mercury,
-  minLevel: 1,
+  minLevel: 2,
   xpReward: 500,
   axialTiltDeg: 0.03,
 });
@@ -517,7 +517,7 @@ export const venus = new Planet({
   radiusKm: 6051.8,
   orbitalPeriodDays: 224.701,
   kepler: HELIO.Venus,
-  minLevel: 1,
+  minLevel: 2,
   xpReward: 750,
   axialTiltDeg: 177.36,
 });
