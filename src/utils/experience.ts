@@ -32,6 +32,8 @@ export const XP_CONFIG = {
  * Returns the XP requirement for the given level (per-level threshold, not cumulative).
  */
 export function xpCurrentThresholdForLevel(level: number): number {
+  if (level === 1) return 100;
+
   const {
     baseRequirement,
     firstIncrement,

@@ -9,7 +9,7 @@ import {
 describe('experience', () => {
   describe('xpCurrentThresholdForLevel', () => {
     it('should calculate total XP thresholds correctly', () => {
-      expect(xpCurrentThresholdForLevel(1)).toBe(150);
+      expect(xpCurrentThresholdForLevel(1)).toBe(100);
       expect(xpCurrentThresholdForLevel(2)).toBe(200);
       expect(xpCurrentThresholdForLevel(3)).toBe(250);
       expect(xpCurrentThresholdForLevel(4)).toBe(300);
@@ -54,10 +54,16 @@ describe('experience', () => {
 
   describe('calculateLevel', () => {
     it('should calculate level correctly', () => {
+      const level1Xp = xpCurrentThresholdForLevel(1);
+      const level2Xp = xpCurrentThresholdForLevel(2);
+
       expect(calculateLevel(0)).toBe(1);
-      expect(calculateLevel(149)).toBe(1);
-      expect(calculateLevel(150)).toBe(2);
-      expect(calculateLevel(151)).toBe(2);
+      expect(calculateLevel(level1Xp * 0.5)).toBe(1);
+      expect(calculateLevel(level1Xp * 0.75)).toBe(1);
+      expect(calculateLevel(level1Xp)).toBe(2);
+      expect(calculateLevel(level1Xp + level2Xp * 0.5)).toBe(2);
+      expect(calculateLevel(level1Xp + level2Xp * 0.75)).toBe(2);
+      expect(calculateLevel(level1Xp + level2Xp)).toBe(3);
     });
   });
 
