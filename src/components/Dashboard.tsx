@@ -61,11 +61,13 @@ export function Dashboard() {
   const [mode, setMode] = useState<
     'default' | 'addHabit' | 'selectDestination'
   >('default');
+  const [canCancelSelection, setCanCancelSelection] = useState<boolean>(true);
 
   // Add Habit state
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [newTimer, setNewTimer] = useState(0);
+  const titleInputRef = useRef<TextInput | null>(null);
 
   // Available destinations
   const visiblePlanets = useVisibleLandablePlanets();
@@ -77,9 +79,19 @@ export function Dashboard() {
       !isLevelUpModalVisible &&
       !userPosition.target
     ) {
+      setCanCancelSelection(false);
       setMode('selectDestination');
     }
   }, [activeTab, isLevelUpModalVisible, userPosition.target]);
+
+  // Auto-focus title when entering Add Habit mode
+  useEffect(() => {
+    if (mode === 'addHabit') {
+      setTimeout(() => {
+        titleInputRef.current?.focus();
+      }, 0);
+    }
+  }, [mode]);
 
   const displayLocation = isTraveling
     ? userPosition.target?.name
@@ -234,7 +246,14 @@ export function Dashboard() {
     return (
       <GlassView style={styles.container} {...glassViewProps}>
         <View style={styles.flowHeader}>
-          <TouchableOpacity onPress={() => setMode('default')}>
+          <TouchableOpacity
+            onPress={() => {
+              setNewTitle('');
+              setNewDescription('');
+              setNewTimer(0);
+              setMode('default');
+            }}
+          >
             <Text style={styles.flowHeaderButton}>Cancel</Text>
           </TouchableOpacity>
           <Text style={styles.flowHeaderTitle}>New Habit</Text>
@@ -267,6 +286,8 @@ export function Dashboard() {
 
         <View style={styles.flowContent}>
           <TextInput
+            ref={titleInputRef}
+            autoFocus
             style={styles.onboardInput}
             placeholder="Habit Title (e.g., Morning Run)"
             placeholderTextColor="rgba(255,255,255,0.6)"
@@ -297,9 +318,17 @@ export function Dashboard() {
     return (
       <GlassView style={styles.container} {...glassViewProps}>
         <View style={styles.flowHeader}>
-          <TouchableOpacity onPress={() => setMode('default')}>
-            <Text style={styles.flowHeaderButton}>Cancel</Text>
-          </TouchableOpacity>
+          {canCancelSelection ? (
+            <TouchableOpacity
+              onPress={() => {
+                setMode('default');
+              }}
+            >
+              <Text style={styles.flowHeaderButton}>Cancel</Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={[styles.flowHeaderButton, { opacity: 0 }]}>Cancel</Text>
+          )}
           <Text style={styles.flowHeaderTitle}>Select Planet</Text>
           {/* Spacer to balance layout */}
           <Text style={[styles.flowHeaderButton, { opacity: 0 }]}>Cancel</Text>
@@ -361,7 +390,10 @@ export function Dashboard() {
             )}
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => setMode('selectDestination')}
+              onPress={() => {
+                setCanCancelSelection(true);
+                setMode('selectDestination');
+              }}
             >
               <Text style={[styles.planetTitle, { color: bodyHex }]}>
                 {planet.name}
