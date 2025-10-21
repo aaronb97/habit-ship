@@ -340,11 +340,8 @@ export function Dashboard() {
             >
               <Text style={styles.flowHeaderButton}>Cancel</Text>
             </TouchableOpacity>
-          ) : (
-            <Text style={[styles.flowHeaderButton, { opacity: 0 }]}>
-              Cancel
-            </Text>
-          )}
+          ) : null}
+
           <View style={styles.flowHeaderTitleContainer}>
             <Text style={styles.flowHeaderTitle}>
               {!canCancelSelection
@@ -703,7 +700,13 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   // Inline flows (Add Habit, Select Destination)
-  flowHeader: {},
+  flowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 4,
+    paddingBottom: 12,
+  },
   flowHeaderButton: {
     fontFamily: fonts.regular,
     fontSize: fontSizes.medium,
