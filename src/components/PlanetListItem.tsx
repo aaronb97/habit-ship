@@ -70,10 +70,6 @@ export function PlanetListItem({
         {planet.xpReward ?? 0} XP
       </Text>
 
-      {isDisabled ? null : (
-        <Text style={styles.planetDescription}>{planet.description}</Text>
-      )}
-
       {isLocked && minLevel !== undefined && (
         <View style={styles.lockOverlay}>
           <Text style={styles.lockText}>Level {minLevel} Required</Text>

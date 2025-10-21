@@ -849,7 +849,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
   },
   flowScroll: {
-    maxHeight: 360,
+    maxHeight: 450,
   },
   flowScrollContent: {
     paddingBottom: 8,
