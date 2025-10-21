@@ -233,7 +233,7 @@ function MoonStep({ onDone }: { onDone: () => void }) {
 
   const lines = [
     'The Solar System awaits you!',
-    "Let's see what you can accomplish.",
+    'You will be amazed by what you can accomplish with persistent effort.',
     "Don't worry; we're starting you off easy with The Moon.",
     'Complete your first habit to fuel your launch, then open the Map tab to begin your journey.',
   ];
