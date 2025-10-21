@@ -226,7 +226,6 @@ const initialData = {
   pendingLanding: false,
   justLanded: false,
   isLevelUpModalVisible: false,
-  activeTab: 'HomeTab' as TabName,
   fuelKm: 0,
   fuelEarnedTodayKm: 0,
   fuelEarnedDate: undefined,
@@ -238,7 +237,7 @@ export const useStore = create<Store>()(
   persist(
     immer((set, get) => ({
       ...initialData,
-
+      activeTab: 'HomeTab' as TabName,
       setIsSetupFinished: (value) => set({ isSetupFinished: value }),
       addHabit: (habit) => {
         set((state) => {

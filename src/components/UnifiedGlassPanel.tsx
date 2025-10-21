@@ -7,7 +7,6 @@ import {
   ScrollView,
   Animated,
   TextInput,
-  Keyboard,
   Platform,
   TextStyle,
 } from 'react-native';
@@ -50,7 +49,6 @@ export function UnifiedGlassPanel({
   const isSetupFinished = useStore((s) => s.isSetupFinished);
   const setIsSetupFinished = useStore((s) => s.setIsSetupFinished);
   const addHabit = useStore((s) => s.addHabit);
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
 
   const getCurrentDate = useGetCurrentDate();
   const fuelKm = useStore((s) => s.fuelKm);
@@ -140,13 +138,12 @@ export function UnifiedGlassPanel({
   if (!isSetupFinished) {
     return (
       <GlassView
-        style={[styles.container, styles.centered, keyboardOffset ? { marginBottom: keyboardOffset } : null]}
+        style={[styles.container, styles.centered]}
         {...glassViewProps}
       >
         <OnboardingPanel
           onCreateFirstHabit={(title) => addHabit({ title })}
           onComplete={() => setIsSetupFinished(true)}
-          onKeyboardOffsetChange={setKeyboardOffset}
         />
       </GlassView>
     );
@@ -427,6 +424,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
+  onboardOkButtonPrimary: {
+    backgroundColor: colors.primary,
+  },
   onboardOkText: {
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.medium,
@@ -671,6 +671,8 @@ function CompleteButton({
   );
 }
 
+const DEFAULT_INTERVAL_MS = 2000;
+
 /**
  * Renders a list of white text lines that fade in sequentially.
  *
@@ -683,7 +685,7 @@ function CompleteButton({
  */
 function FadingTextList({
   lines,
-  intervalMs = 400,
+  intervalMs = DEFAULT_INTERVAL_MS,
   textStyle,
   onAllVisible,
 }: {
@@ -730,18 +732,15 @@ function FadingTextList({
  *
  * onCreateFirstHabit: Adds the first habit with given title.
  * onComplete: Marks onboarding complete.
- * onKeyboardOffsetChange: Shifts the panel above the keyboard during step 2.
  *
  * Returns: JSX for the current step.
  */
 function OnboardingPanel({
   onCreateFirstHabit,
   onComplete,
-  onKeyboardOffsetChange,
 }: {
   onCreateFirstHabit: (title: string) => void;
   onComplete: () => void;
-  onKeyboardOffsetChange: (offset: number) => void;
 }) {
   const [step, setStep] = useState<0 | 1 | 2>(0);
 
@@ -756,7 +755,6 @@ function OnboardingPanel({
           onCreateFirstHabit(title);
           setStep(2);
         }}
-        onKeyboardOffsetChange={onKeyboardOffsetChange}
       />
     );
   }
@@ -772,24 +770,29 @@ function OnboardingPanel({
 function WelcomeStep({ onNext }: { onNext: () => void }) {
   const okOpacity = useRef(new Animated.Value(0)).current;
   const animateOk = () => {
-    Animated.timing(okOpacity, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
+    setTimeout(() => {
+      Animated.timing(okOpacity, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }).start();
+    }, DEFAULT_INTERVAL_MS);
   };
 
   const lines = [
-    'Welcome to HabitShip',
-    'Build small habits to fuel your journey',
-    'Explore the solar system as you progress',
+    'Welcome to HabitShip!',
+    'Build small habits to fuel your journey.',
+    'Explore the solar system as you progress.',
   ];
 
   return (
     <View style={{ width: '100%' }}>
       <FadingTextList lines={lines} onAllVisible={animateOk} />
       <Animated.View style={{ opacity: okOpacity }}>
-        <TouchableOpacity style={styles.onboardOkButton} onPress={onNext}>
+        <TouchableOpacity
+          style={[styles.onboardOkButton, styles.onboardOkButtonPrimary]}
+          onPress={onNext}
+        >
           <Text style={styles.onboardOkText}>OK</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -801,80 +804,90 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
  * Step 2: Create the first habit. Shows fading guidance and an auto-focused input.
  *
  * onSubmitHabit: Called with the habit title when user taps OK.
- * onKeyboardOffsetChange: Reports keyboard height so parent can shift the panel.
  */
 function FirstHabitStep({
   onSubmitHabit,
-  onKeyboardOffsetChange,
 }: {
   onSubmitHabit: (title: string) => void;
-  onKeyboardOffsetChange: (offset: number) => void;
 }) {
   const [title, setTitle] = useState('');
-  const [showOk, setShowOk] = useState(false);
+  const [showControls, setShowControls] = useState(false);
   const okOpacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const showSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => {
-        const height = (e as unknown as { endCoordinates?: { height?: number } })
-          .endCoordinates?.height;
-        onKeyboardOffsetChange(typeof height === 'number' ? height + 24 : 300);
-      },
-    );
-    const hideSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => onKeyboardOffsetChange(0),
-    );
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, [onKeyboardOffsetChange]);
+  const inputOpacity = useRef(new Animated.Value(0)).current;
+  const inputTranslateY = useRef(new Animated.Value(8)).current;
+  const inputRef = useRef<TextInput | null>(null);
 
   const afterLines = () => {
-    setShowOk(true);
-    Animated.timing(okOpacity, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
+    setShowControls(true);
+    Animated.parallel([
+      Animated.timing(okOpacity, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.timing(inputOpacity, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.timing(inputTranslateY, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // Focus the input when it becomes visible
+      inputRef.current?.focus();
+    });
   };
 
   const lines = [
-    "Let's set up your first habit",
-    'Keep it simple; one small action you can do daily',
+    "Let's set up your first habit!",
+    'Keep it simple; one small action you can do daily.',
   ];
+
+  const trimmed = title.trim();
+  const canSubmit = trimmed.length > 0;
 
   return (
     <View style={{ width: '100%' }}>
       <FadingTextList lines={lines} onAllVisible={afterLines} />
-      <TextInput
-        style={styles.onboardInput}
-        placeholder="e.g., Drink a glass of water"
-        placeholderTextColor="rgba(255,255,255,0.6)"
-        value={title}
-        onChangeText={setTitle}
-        autoFocus
-        returnKeyType="done"
-        onSubmitEditing={() => {
-          const t = title.trim();
-          if (t.length > 0) onSubmitHabit(t);
-        }}
-      />
-      {showOk ? (
-        <Animated.View style={{ opacity: okOpacity }}>
-          <TouchableOpacity
-            style={styles.onboardOkButton}
-            onPress={() => {
-              const t = title.trim();
-              if (t.length > 0) onSubmitHabit(t);
+      {showControls ? (
+        <>
+          <Animated.View
+            style={{
+              opacity: inputOpacity,
+              transform: [{ translateY: inputTranslateY }],
             }}
           >
-            <Text style={styles.onboardOkText}>OK</Text>
-          </TouchableOpacity>
-        </Animated.View>
+            <TextInput
+              ref={inputRef}
+              style={styles.onboardInput}
+              placeholder="e.g., Read twenty minutes"
+              placeholderTextColor="rgba(255,255,255,0.6)"
+              value={title}
+              onChangeText={setTitle}
+              returnKeyType="done"
+              onSubmitEditing={() => {
+                if (canSubmit) onSubmitHabit(trimmed);
+              }}
+            />
+          </Animated.View>
+          <Animated.View style={{ opacity: okOpacity }}>
+            <TouchableOpacity
+              disabled={!canSubmit}
+              style={[
+                styles.onboardOkButton,
+                canSubmit ? styles.onboardOkButtonPrimary : null,
+              ]}
+              onPress={() => {
+                if (canSubmit) onSubmitHabit(trimmed);
+              }}
+            >
+              <Text style={styles.onboardOkText}>OK</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </>
       ) : null}
     </View>
   );
@@ -888,24 +901,30 @@ function FirstHabitStep({
 function MoonStep({ onDone }: { onDone: () => void }) {
   const okOpacity = useRef(new Animated.Value(0)).current;
   const animateOk = () => {
-    Animated.timing(okOpacity, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
+    setTimeout(() => {
+      Animated.timing(okOpacity, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }).start();
+    }, DEFAULT_INTERVAL_MS);
   };
 
   const lines = [
-    "We're starting you off easy with The Moon",
-    'Complete your first habit to fuel your launch',
-    'Open the Map tab to begin your journey',
+    'The Solar System awaits you!',
+    "Let's see what you can accomplish.",
+    "Don't worry; we're starting you off easy with The Moon.",
+    'Complete your first habit to fuel your launch, then open the Map tab to begin your journey.',
   ];
 
   return (
     <View style={{ width: '100%' }}>
       <FadingTextList lines={lines} onAllVisible={animateOk} />
       <Animated.View style={{ opacity: okOpacity }}>
-        <TouchableOpacity style={styles.onboardOkButton} onPress={onDone}>
+        <TouchableOpacity
+          style={[styles.onboardOkButton, styles.onboardOkButtonPrimary]}
+          onPress={onDone}
+        >
           <Text style={styles.onboardOkText}>OK</Text>
         </TouchableOpacity>
       </Animated.View>

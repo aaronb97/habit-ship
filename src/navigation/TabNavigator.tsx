@@ -10,6 +10,7 @@ import { SolarSystemMap } from '../components/SolarSystemMap';
 import { UnifiedGlassPanel } from '../components/UnifiedGlassPanel';
 import { CreateHabitModal } from '../components/CreateHabitModal';
 import { PlanetSelectionModal } from '../components/PlanetSelectionModal';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const Tab = createNativeBottomTabNavigator<TabParamList>();
 
@@ -120,10 +121,12 @@ export function TabNavigator() {
           pointerEvents={activeTab === 'HomeTab' ? 'auto' : 'none'}
           style={{ opacity: fadeOpacity }}
         >
-          <UnifiedGlassPanel
-            onPressPlanetTitle={() => setShowPlanetModal(true)}
-            onPressNewHabit={() => setShowCreateModal(true)}
-          />
+          <SafeAreaView edges={['left', 'right', 'bottom']}>
+            <UnifiedGlassPanel
+              onPressPlanetTitle={() => setShowPlanetModal(true)}
+              onPressNewHabit={() => setShowCreateModal(true)}
+            />
+          </SafeAreaView>
         </Animated.View>
         {/* </View> */}
         <CreateHabitModal

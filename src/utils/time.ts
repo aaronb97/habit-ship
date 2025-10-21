@@ -5,6 +5,11 @@ import { useStore } from './store';
  * Use this instead of Date.now() throughout the app.
  */
 export function getCurrentTime(): number {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (!useStore) {
+    return Date.now();
+  }
+
   const timeOffset = useStore.getState().timeOffset;
   return Date.now() + timeOffset;
 }
