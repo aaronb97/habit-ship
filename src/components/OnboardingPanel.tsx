@@ -6,10 +6,10 @@ import {
   TextInput,
   Text,
   StyleSheet,
-  Platform,
 } from 'react-native';
 import { FadingTextList } from './FadingTextList';
 import { colors, fonts, fontSizes } from '../styles/theme';
+import { HSTextInput } from './HSTextInput';
 
 // Delay used in onboarding for the OK button fade-in after lines appear
 const ONBOARDING_OK_DELAY_MS = 2000;
@@ -30,17 +30,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.medium,
     color: colors.white,
-  },
-  onboardInput: {
-    marginTop: 16,
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.4)',
-    paddingHorizontal: 12,
-    paddingVertical: Platform.select({ ios: 12, android: 8 }) as number,
-    color: colors.white,
-    fontFamily: fonts.regular,
-    fontSize: fontSizes.medium,
   },
 });
 
@@ -181,11 +170,9 @@ function FirstHabitStep({
               transform: [{ translateY: inputTranslateY }],
             }}
           >
-            <TextInput
+            <HSTextInput
               ref={inputRef}
-              style={styles.onboardInput}
               placeholder="e.g., Read twenty minutes"
-              placeholderTextColor="rgba(255,255,255,0.6)"
               value={title}
               onChangeText={setTitle}
               returnKeyType="done"

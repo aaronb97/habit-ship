@@ -27,6 +27,7 @@ import { useGetCurrentDate } from '../utils/time';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LevelUpPanel } from './LevelUpPanel';
 import { OnboardingPanel } from './OnboardingPanel';
+import { HSTextInput } from './HSTextInput';
 
 export function Dashboard() {
   const {
@@ -302,20 +303,16 @@ export function Dashboard() {
         </View>
 
         <View style={styles.flowContent}>
-          <TextInput
+          <HSTextInput
             ref={titleInputRef}
             autoFocus
-            style={styles.input}
             placeholder="Habit Title (e.g., Morning Run)"
-            placeholderTextColor="rgba(255,255,255,0.6)"
             value={newTitle}
             onChangeText={setNewTitle}
           />
 
-          <TextInput
-            style={styles.input}
+          <HSTextInput
             placeholder="Description (optional)"
-            placeholderTextColor="rgba(255,255,255,0.6)"
             value={newDescription}
             onChangeText={setNewDescription}
           />
@@ -626,17 +623,6 @@ const styles = StyleSheet.create({
     opacity: 0.8,
     textAlign: 'center',
     marginTop: 6,
-  },
-  input: {
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: colors.white,
-    color: colors.white,
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    fontSize: 16,
-    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   journeySection: {
     marginBottom: 12,
