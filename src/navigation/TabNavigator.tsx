@@ -7,7 +7,7 @@ import { colors } from '../styles/theme';
 import { useStore } from '../utils/store';
 import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation';
 import { SolarSystemMap } from '../components/SolarSystemMap';
-import { UnifiedGlassPanel } from '../components/UnifiedGlassPanel';
+import { Dashboard } from '../components/Dashboard';
 import { CreateHabitModal } from '../components/CreateHabitModal';
 import { PlanetSelectionModal } from '../components/PlanetSelectionModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const Tab = createNativeBottomTabNavigator<TabParamList>();
 
 /**
- * Root tab navigator. Hosts a persistent overlay containing `UnifiedGlassPanel`
+ * Root tab navigator. Hosts a persistent overlay containing `Dashboard`
  * so it remains mounted across tab switches.
  *
  * Returns: JSX element for the bottom tab navigator with overlays.
@@ -115,14 +115,14 @@ export function TabNavigator() {
         )}
       </Tab.Navigator>
 
-      {/* Persistent overlay hosting UnifiedGlassPanel and related modals */}
+      {/* Persistent overlay hosting Dashboard and related modals */}
       <View style={styles.panelOverlay} pointerEvents="box-none">
         <Animated.View
           pointerEvents={activeTab === 'HomeTab' ? 'auto' : 'none'}
           style={{ opacity: fadeOpacity }}
         >
           <SafeAreaView edges={['left', 'right', 'bottom']}>
-            <UnifiedGlassPanel
+            <Dashboard
               onPressPlanetTitle={() => setShowPlanetModal(true)}
               onPressNewHabit={() => setShowCreateModal(true)}
             />

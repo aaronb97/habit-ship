@@ -25,15 +25,15 @@ import { useTimer } from 'react-timer-hook';
 import { useGetCurrentDate } from '../utils/time';
 import { MaterialIcons } from '@expo/vector-icons';
 
-type UnifiedGlassPanelProps = {
+type DashboardProps = {
   onPressPlanetTitle?: () => void;
   onPressNewHabit?: () => void;
 };
 
-export function UnifiedGlassPanel({
+export function Dashboard({
   onPressPlanetTitle,
   onPressNewHabit,
-}: UnifiedGlassPanelProps) {
+}: DashboardProps) {
   const {
     userPosition,
     clearData,
@@ -932,4 +932,4 @@ function MoonStep({ onDone }: { onDone: () => void }) {
   );
 }
 
-export default UnifiedGlassPanel;
+export default Dashboard;
