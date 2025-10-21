@@ -9,12 +9,16 @@ import {
   TextInput,
   Platform,
   TextStyle,
+  Alert,
 } from 'react-native';
 import { GlassView, GlassViewProps } from 'expo-glass-effect';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { Habit, useIsTraveling, useStore, useUserLevel } from '../utils/store';
 import { cBodies } from '../planets';
 import { ProgressBar } from './ProgressBar';
+import TimerSelection from './TimerSelection';
+import { PlanetListItem } from './PlanetListItem';
+import { useVisibleLandablePlanets } from '../hooks/usePlanets';
 import {
   getLevelProgress,
   xpCurrentThresholdForLevel,
@@ -25,15 +29,7 @@ import { useTimer } from 'react-timer-hook';
 import { useGetCurrentDate } from '../utils/time';
 import { MaterialIcons } from '@expo/vector-icons';
 
-type DashboardProps = {
-  onPressPlanetTitle?: () => void;
-  onPressNewHabit?: () => void;
-};
-
-export function Dashboard({
-  onPressPlanetTitle,
-  onPressNewHabit,
-}: DashboardProps) {
+export function Dashboard() {
   const {
     userPosition,
     clearData,
@@ -44,6 +40,7 @@ export function Dashboard({
     startTimer,
     expireTimer,
     completeHabit,
+    setDestination,
   } = useStore();
 
   const isSetupFinished = useStore((s) => s.isSetupFinished);
@@ -58,6 +55,31 @@ export function Dashboard({
   const setShowFuelCapacity = useStore((s) => s.setShowFuelCapacity);
 
   const isTraveling = useIsTraveling();
+  const isLevelUpModalVisible = useStore((s) => s.isLevelUpModalVisible);
+  const activeTab = useStore((s) => s.activeTab);
+
+  const [mode, setMode] = useState<
+    'default' | 'addHabit' | 'selectDestination'
+  >('default');
+
+  // Add Habit state
+  const [newTitle, setNewTitle] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [newTimer, setNewTimer] = useState(0);
+
+  // Available destinations
+  const visiblePlanets = useVisibleLandablePlanets();
+
+  useEffect(() => {
+    // Auto-open destination selection inline if no target and Home is focused
+    if (
+      activeTab === 'HomeTab' &&
+      !isLevelUpModalVisible &&
+      !userPosition.target
+    ) {
+      setMode('selectDestination');
+    }
+  }, [activeTab, isLevelUpModalVisible, userPosition.target]);
 
   const displayLocation = isTraveling
     ? userPosition.target?.name
@@ -168,6 +190,141 @@ export function Dashboard({
     );
   }
 
+  /**
+   * Handles confirming and setting a new destination, preserving current
+   * alert behaviors when already traveling.
+   *
+   * planetName: Target planet name to set as destination.
+   * Returns: void
+   */
+  function handleSetDestination(planetName: string) {
+    if (isTraveling) {
+      Alert.alert(
+        'Change Destination',
+        'You are currently traveling. Changing your destination will reset your progress toward the current destination. Are you sure you want to continue?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Change Destination',
+            style: 'destructive',
+            onPress: () => {
+              setDestination(planetName);
+              setMode('default');
+            },
+          },
+        ],
+      );
+    } else {
+      Alert.alert('Set Destination', `Set ${planetName} as your destination?`, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Set Destination',
+          onPress: () => {
+            setDestination(planetName);
+            setMode('default');
+          },
+        },
+      ]);
+    }
+  }
+
+  // Inline Add Habit flow
+  if (mode === 'addHabit') {
+    const isFormValid = newTitle.trim().length > 0;
+    return (
+      <GlassView style={styles.container} {...glassViewProps}>
+        <View style={styles.flowHeader}>
+          <TouchableOpacity onPress={() => setMode('default')}>
+            <Text style={styles.flowHeaderButton}>Cancel</Text>
+          </TouchableOpacity>
+          <Text style={styles.flowHeaderTitle}>New Habit</Text>
+          <TouchableOpacity
+            disabled={!isFormValid}
+            onPress={() => {
+              if (!isFormValid) return;
+              addHabit({
+                title: newTitle.trim(),
+                description: newDescription.trim() || undefined,
+                timerLength: newTimer > 0 ? newTimer : undefined,
+              });
+              setNewTitle('');
+              setNewDescription('');
+              setNewTimer(0);
+              setMode('default');
+            }}
+          >
+            <Text
+              style={[
+                styles.flowHeaderButton,
+                styles.flowHeaderPrimary,
+                !isFormValid && styles.flowHeaderDisabled,
+              ]}
+            >
+              Create
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.flowContent}>
+          <TextInput
+            style={styles.onboardInput}
+            placeholder="Habit Title (e.g., Morning Run)"
+            placeholderTextColor="rgba(255,255,255,0.6)"
+            value={newTitle}
+            onChangeText={setNewTitle}
+          />
+
+          <TextInput
+            style={styles.onboardInput}
+            placeholder="Description (optional)"
+            placeholderTextColor="rgba(255,255,255,0.6)"
+            value={newDescription}
+            onChangeText={setNewDescription}
+          />
+
+          <View style={styles.labelRow}>
+            <Text style={styles.labelText}>Timer</Text>
+            <Text style={styles.subLabelText}>(optional)</Text>
+          </View>
+          <TimerSelection onTimerChange={setNewTimer} initialTimer={newTimer} />
+        </View>
+      </GlassView>
+    );
+  }
+
+  // Inline Select Destination flow
+  if (mode === 'selectDestination') {
+    return (
+      <GlassView style={styles.container} {...glassViewProps}>
+        <View style={styles.flowHeader}>
+          <TouchableOpacity onPress={() => setMode('default')}>
+            <Text style={styles.flowHeaderButton}>Cancel</Text>
+          </TouchableOpacity>
+          <Text style={styles.flowHeaderTitle}>Select Planet</Text>
+          {/* Spacer to balance layout */}
+          <Text style={[styles.flowHeaderButton, { opacity: 0 }]}>Cancel</Text>
+        </View>
+        <ScrollView
+          style={styles.flowScroll}
+          contentContainerStyle={styles.flowScrollContent}
+        >
+          {visiblePlanets.map(
+            ({ planet: body, distance, disabledReason, isVisited }) => (
+              <PlanetListItem
+                key={body.name}
+                planet={body}
+                distance={distance}
+                disabledReason={disabledReason}
+                isVisited={isVisited}
+                onPress={() => handleSetDestination(body.name)}
+              />
+            ),
+          )}
+        </ScrollView>
+      </GlassView>
+    );
+  }
+
   const renderProgressItem = (
     left: string,
     right: string,
@@ -202,20 +359,14 @@ export function Dashboard({
                 En route to
               </Text>
             )}
-            {onPressPlanetTitle ? (
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={onPressPlanetTitle}
-              >
-                <Text style={[styles.planetTitle, { color: bodyHex }]}>
-                  {planet.name}
-                </Text>
-              </TouchableOpacity>
-            ) : (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setMode('selectDestination')}
+            >
               <Text style={[styles.planetTitle, { color: bodyHex }]}>
                 {planet.name}
               </Text>
-            )}
+            </TouchableOpacity>
             {!isTraveling && userPosition.target && fuelKm > 0 ? (
               <Text style={[styles.statusText, { color: bodyHex }]}>
                 Open the map tab to launch to {userPosition.target.name}
@@ -273,11 +424,9 @@ export function Dashboard({
       </View>
 
       <View style={styles.habitsHeaderRow}>
-        {onPressNewHabit ? (
-          <TouchableOpacity onPress={onPressNewHabit}>
-            <Text style={styles.newHabitText}>+ New Habit</Text>
-          </TouchableOpacity>
-        ) : null}
+        <TouchableOpacity onPress={() => setMode('addHabit')}>
+          <Text style={styles.newHabitText}>+ New Habit</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -626,6 +775,56 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.xsmall,
     color: colors.white,
+  },
+  // Inline flows (Add Habit, Select Destination)
+  flowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  flowHeaderButton: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.medium,
+    color: colors.primaryText,
+  },
+  flowHeaderPrimary: {
+    fontFamily: fonts.semiBold,
+  },
+  flowHeaderDisabled: {
+    color: colors.grey,
+  },
+  flowHeaderTitle: {
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.large,
+    color: colors.white,
+    textAlign: 'center',
+  },
+  flowContent: {
+    paddingTop: 4,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+    marginBottom: 8,
+  },
+  labelText: {
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.large,
+    color: colors.white,
+  },
+  subLabelText: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.medium,
+    color: 'rgba(255,255,255,0.7)',
+  },
+  flowScroll: {
+    maxHeight: 360,
+  },
+  flowScrollContent: {
+    paddingBottom: 8,
   },
 });
 

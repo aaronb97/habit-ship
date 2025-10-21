@@ -1,5 +1,5 @@
-import { View, StyleSheet, Animated } from 'react-native';
-import { useState, useRef, useEffect } from 'react';
+import { View, StyleSheet, Animated, KeyboardAvoidingView } from 'react-native';
+import { useRef, useEffect } from 'react';
 import { Home } from './screens/Home';
 import { SolarMap } from './screens/SolarMap';
 import { Dev } from './screens/Dev';
@@ -8,9 +8,6 @@ import { useStore } from '../utils/store';
 import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation';
 import { SolarSystemMap } from '../components/SolarSystemMap';
 import { Dashboard } from '../components/Dashboard';
-import { CreateHabitModal } from '../components/CreateHabitModal';
-import { PlanetSelectionModal } from '../components/PlanetSelectionModal';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 const Tab = createNativeBottomTabNavigator<TabParamList>();
 
@@ -29,13 +26,8 @@ export function TabNavigator() {
   const homeNeedsSelection = useStore((s) => s.justLanded);
   const activeTab = useStore((s) => s.activeTab);
   const setActiveTab = useStore((s) => s.setActiveTab);
-  const addHabit = useStore((s) => s.addHabit);
-  const userPosition = useStore((s) => s.userPosition);
-  const isLevelUpModalVisible = useStore((s) => s.isLevelUpModalVisible);
+  // Inline flows now manage destination prompts; no need to read userPosition or level-up modal here.
   const isMapFocused = activeTab === 'MapTab';
-
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showPlanetModal, setShowPlanetModal] = useState(false);
 
   const fadeOpacityRef = useRef<Animated.Value>(
     new Animated.Value(activeTab === 'HomeTab' ? 1 : 0),
@@ -50,20 +42,7 @@ export function TabNavigator() {
     }).start();
   }, [activeTab, fadeOpacity]);
 
-  /**
-   * Handles creating a new habit from the persistent overlay.
-   *
-   * habit: New habit payload including title, optional description and timerLength.
-   * Returns: void
-   */
-  const handleCreate = (habit: {
-    title: string;
-    description: string;
-    timerLength?: number;
-  }) => {
-    addHabit(habit);
-    setShowCreateModal(false);
-  };
+  // Inline flows are handled by Dashboard now.
 
   return (
     <View style={styles.container}>
@@ -116,33 +95,20 @@ export function TabNavigator() {
       </Tab.Navigator>
 
       {/* Persistent overlay hosting Dashboard and related modals */}
-      <View style={styles.panelOverlay} pointerEvents="box-none">
+      <KeyboardAvoidingView
+        style={styles.panelOverlay}
+        keyboardVerticalOffset={-100}
+        pointerEvents="box-none"
+        behavior="padding"
+      >
         <Animated.View
           pointerEvents={activeTab === 'HomeTab' ? 'auto' : 'none'}
           style={{ opacity: fadeOpacity }}
         >
-          <SafeAreaView edges={['left', 'right', 'bottom']}>
-            <Dashboard
-              onPressPlanetTitle={() => setShowPlanetModal(true)}
-              onPressNewHabit={() => setShowCreateModal(true)}
-            />
-          </SafeAreaView>
+          <Dashboard />
         </Animated.View>
-        {/* </View> */}
-        <CreateHabitModal
-          visible={activeTab === 'HomeTab' && showCreateModal}
-          onCreate={handleCreate}
-          onClose={() => setShowCreateModal(false)}
-        />
-        <PlanetSelectionModal
-          visible={
-            activeTab === 'HomeTab' &&
-            (showPlanetModal ||
-              (!userPosition.target && !isLevelUpModalVisible))
-          }
-          onClose={() => setShowPlanetModal(false)}
-        />
-      </View>
+        {/* Modals removed: flows are inline within Dashboard */}
+      </KeyboardAvoidingView>
     </View>
   );
 }
