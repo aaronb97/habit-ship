@@ -1,4 +1,4 @@
-import { View, StyleSheet, Animated, KeyboardAvoidingView } from 'react-native';
+import { View, StyleSheet, Animated } from 'react-native';
 import { useRef, useEffect } from 'react';
 import { Home } from './screens/Home';
 import { SolarMap } from './screens/SolarMap';
@@ -8,6 +8,7 @@ import { useStore } from '../utils/store';
 import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation';
 import { SolarSystemMap } from '../components/SolarSystemMap';
 import { Dashboard } from '../components/Dashboard';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
 const Tab = createNativeBottomTabNavigator<TabParamList>();
 
