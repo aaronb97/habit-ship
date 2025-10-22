@@ -1,6 +1,12 @@
 // react compiler is being used, avoid using useCallback or useMemo
 import { useEffect, useRef, useState } from 'react';
-import { View, useWindowDimensions, StyleSheet } from 'react-native';
+import {
+  View,
+  useWindowDimensions,
+  StyleSheet,
+  AppState,
+  AppStateStatus,
+} from 'react-native';
 import { GLView, type ExpoWebGLRenderingContext } from 'expo-gl';
 import { Renderer } from 'expo-three';
 import * as THREE from 'three';
@@ -68,6 +74,8 @@ export function SolarSystemMap({
   const glRef = useRef<ExpoWebGLRenderingContext | null>(null);
   const composerRef = useRef<EffectComposer | null>(null);
   const bodyRegistryRef = useRef<BodyNodesRegistry>(new BodyNodesRegistry());
+  const loopFnRef = useRef<(() => void) | null>(null);
+  const isAppActiveRef = useRef<boolean>(true);
 
   const rocketRef = useRef<Rocket | null>(null);
   const displayUserPosRef = useRef<THREE.Vector3>(new THREE.Vector3());
@@ -598,6 +606,9 @@ export function SolarSystemMap({
 
     // Animation loop
     const renderLoop = () => {
+      if (!isAppActiveRef.current) {
+        return;
+      }
       const { showTrails } = useStore.getState();
 
       // No per-frame spin integration; positions only
@@ -747,9 +758,32 @@ export function SolarSystemMap({
       frameRef.current = requestAnimationFrame(renderLoop);
     };
 
-    // Start the render loop
+    loopFnRef.current = renderLoop;
     frameRef.current = requestAnimationFrame(renderLoop);
   };
+
+  useEffect(() => {
+    const handler = (state: AppStateStatus) => {
+      const isActive = state === 'active';
+      console.log('AppState', state);
+      isAppActiveRef.current = isActive;
+      if (!isActive) {
+        if (frameRef.current) {
+          cancelAnimationFrame(frameRef.current);
+        }
+        frameRef.current = null;
+        return;
+      }
+
+      if (!frameRef.current && loopFnRef.current) {
+        frameRef.current = requestAnimationFrame(loopFnRef.current);
+      }
+    };
+    const sub = AppState.addEventListener('change', handler);
+    return () => {
+      sub.remove();
+    };
+  }, []);
 
   // Resize handling
   useEffect(() => {
