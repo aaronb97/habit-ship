@@ -174,10 +174,12 @@ function FirstHabitStep({
               ref={inputRef}
               placeholder="e.g., Read twenty minutes"
               value={title}
-              onChangeText={setTitle}
               returnKeyType="done"
+              onChangeText={setTitle}
               onSubmitEditing={() => {
-                if (canSubmit) onSubmitHabit(trimmed);
+                if (canSubmit) {
+                  onSubmitHabit(trimmed);
+                }
               }}
             />
           </Animated.View>
@@ -189,7 +191,9 @@ function FirstHabitStep({
                 canSubmit ? styles.onboardOkButtonPrimary : null,
               ]}
               onPress={() => {
-                if (canSubmit) onSubmitHabit(trimmed);
+                if (canSubmit) {
+                  onSubmitHabit(trimmed);
+                }
               }}
             >
               <Text style={styles.onboardOkText}>OK</Text>

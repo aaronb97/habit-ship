@@ -368,7 +368,8 @@ export const useStore = create<Store>()(
       setLevelUpModalVisible: (value) => set({ isLevelUpModalVisible: value }),
       showLevelUp: (info) =>
         set({ isLevelUpModalVisible: true, levelUpInfo: info }),
-      hideLevelUp: () => set({ isLevelUpModalVisible: false, levelUpInfo: undefined }),
+      hideLevelUp: () =>
+        set({ isLevelUpModalVisible: false, levelUpInfo: undefined }),
       setLastLevelUpSeenLevel: (level) => set({ lastLevelUpSeenLevel: level }),
       setActiveTab: (tab) => set({ activeTab: tab }),
       setSkipRocketAnimation: (value) => set({ skipRocketAnimation: value }),

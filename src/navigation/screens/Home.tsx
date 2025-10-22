@@ -10,12 +10,10 @@ import { LevelUpListener } from '../../components/LevelUpListener';
 export function Home() {
   const isFocused = useIsFocused();
 
-  const { editHabit, acknowledgeLandingOnHome } =
-    useStore();
+  const { editHabit, acknowledgeLandingOnHome } = useStore();
 
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const justLanded = useStore((s) => s.justLanded);
-  
 
   const handleEditSave = (
     habitId: HabitId,

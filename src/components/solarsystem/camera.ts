@@ -622,6 +622,7 @@ export class CameraController {
     if (Math.abs(toAbs - fromAbs) <= 1e-6) {
       return;
     }
+
     const vStart = vantageForProgress(fromAbs);
     const vEnd = vantageForProgress(toAbs);
     const lock = opts?.lockSideOnYaw ?? false;
@@ -788,6 +789,7 @@ export class CameraController {
       const t = clamp01(
         (this._nowTs - this.tweenStartTs) / this.tweenDurationMs,
       );
+
       const e = easeInOutCubic(t);
       this.radius = lerp(this.tweenStartRadius, this.tweenEndRadius, e);
       this.pitch = lerp(this.tweenStartPitch, this.tweenEndPitch, e);

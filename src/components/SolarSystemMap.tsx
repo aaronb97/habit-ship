@@ -609,6 +609,7 @@ export function SolarSystemMap({
       if (!isAppActiveRef.current) {
         return;
       }
+
       const { showTrails } = useStore.getState();
 
       // No per-frame spin integration; positions only
@@ -771,6 +772,7 @@ export function SolarSystemMap({
         if (frameRef.current) {
           cancelAnimationFrame(frameRef.current);
         }
+
         frameRef.current = null;
         return;
       }
@@ -779,6 +781,7 @@ export function SolarSystemMap({
         frameRef.current = requestAnimationFrame(loopFnRef.current);
       }
     };
+
     const sub = AppState.addEventListener('change', handler);
     return () => {
       sub.remove();

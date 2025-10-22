@@ -103,7 +103,9 @@ export function LevelUpPanel({
 
     return () => {
       clearTimeout(startTitleTimer);
-      if (listTimer) clearTimeout(listTimer);
+      if (listTimer) {
+        clearTimeout(listTimer);
+      }
     };
   }, [info.prevLevel, info.currLevel, titleOpacity]);
 

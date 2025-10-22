@@ -56,16 +56,19 @@ export function FadingTextList({
   if (opacitiesRef.current.length !== normalized.length) {
     opacitiesRef.current = normalized.map(() => new Animated.Value(0));
   }
+
   const opacities = opacitiesRef.current;
 
   useEffect(() => {
     const animations = opacities.map((o) =>
       Animated.timing(o, { toValue: 1, duration: 400, useNativeDriver: true }),
     );
+
     const stagger = Animated.stagger(intervalMs, animations);
     stagger.start(() => {
       onAllVisible?.();
     });
+
     return () => {
       animations.forEach((a) => a.stop());
     };

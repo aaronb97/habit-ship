@@ -36,6 +36,7 @@ export function TabNavigator() {
   const fadeOpacityRef = useRef<Animated.Value>(
     new Animated.Value(activeTab === 'HomeTab' ? 1 : 0),
   );
+
   const fadeOpacity = fadeOpacityRef.current;
 
   useEffect(() => {

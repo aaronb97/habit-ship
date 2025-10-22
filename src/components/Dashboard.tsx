@@ -70,6 +70,7 @@ export function Dashboard() {
   const [mode, setMode] = useState<
     'default' | 'addHabit' | 'editHabit' | 'selectDestination'
   >('default');
+
   const [canCancelSelection, setCanCancelSelection] = useState<boolean>(true);
 
   // Add Habit state
@@ -215,12 +216,16 @@ export function Dashboard() {
           <TouchableOpacity
             disabled={!isFormValid}
             onPress={() => {
-              if (!isFormValid || !editingHabitId) return;
+              if (!isFormValid || !editingHabitId) {
+                return;
+              }
+
               editHabit(editingHabitId, {
                 title: newTitle.trim(),
                 description: newDescription.trim() || undefined,
                 timerLength: newTimer > 0 ? newTimer : undefined,
               });
+
               setNewTitle('');
               setNewDescription('');
               setNewTimer(0);
@@ -259,7 +264,7 @@ export function Dashboard() {
             <Text style={styles.labelText}>Timer</Text>
             <Text style={styles.subLabelText}>(optional)</Text>
           </View>
-          <TimerSelection onTimerChange={setNewTimer} initialTimer={newTimer} />
+          <TimerSelection initialTimer={newTimer} onTimerChange={setNewTimer} />
         </View>
       </GlassView>
     );
@@ -357,12 +362,16 @@ export function Dashboard() {
           <TouchableOpacity
             disabled={!isFormValid}
             onPress={() => {
-              if (!isFormValid) return;
+              if (!isFormValid) {
+                return;
+              }
+
               addHabit({
                 title: newTitle.trim(),
                 description: newDescription.trim() || undefined,
                 timerLength: newTimer > 0 ? newTimer : undefined,
               });
+
               setNewTitle('');
               setNewDescription('');
               setNewTimer(0);
@@ -400,7 +409,7 @@ export function Dashboard() {
             <Text style={styles.labelText}>Timer</Text>
             <Text style={styles.subLabelText}>(optional)</Text>
           </View>
-          <TimerSelection onTimerChange={setNewTimer} initialTimer={newTimer} />
+          <TimerSelection initialTimer={newTimer} onTimerChange={setNewTimer} />
         </View>
       </GlassView>
     );
@@ -574,7 +583,10 @@ export function Dashboard() {
           onCompleteHabit={completeHabit}
           onLongPressHabit={(id) => {
             const h = habits.find((hh) => hh.id === id);
-            if (!h) return;
+            if (!h) {
+              return;
+            }
+
             setEditingHabitId(id);
             setNewTitle(h.title);
             setNewDescription(h.description ?? '');
@@ -848,4 +860,5 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
 });
+
 export default Dashboard;
