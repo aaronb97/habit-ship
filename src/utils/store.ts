@@ -155,8 +155,6 @@ type Store = {
   ) => void;
 
   removeHabit: (habitId: HabitId) => void;
-  setSwipedHabit: (habitId?: HabitId) => void;
-  resetAllSwipes: () => void;
   addXP: (
     amount: number,
     source: 'habit_completion' | 'planet_completion',
@@ -356,8 +354,6 @@ export const useStore = create<Store>()(
           state.lastUpdateTime = undefined;
         });
       },
-      setSwipedHabit: (habitId) => set({ swipedHabitId: habitId }),
-      resetAllSwipes: () => set({ swipedHabitId: undefined }),
       setShowTrails: (value) => set({ showTrails: value }),
       setShowTextures: (value) => set({ showTextures: value }),
       setShowDebugOverlay: (value) => set({ showDebugOverlay: value }),
@@ -431,7 +427,6 @@ export const useStore = create<Store>()(
               title: 'Morning Meditation',
               description: 'Sample description',
               completions: [],
-              timerLength: 600,
             },
             {
               id: '1' as HabitId,
