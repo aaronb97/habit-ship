@@ -19,7 +19,10 @@ const Tab = createNativeBottomTabNavigator<TabParamList>();
  * Returns: JSX element for the bottom tab navigator with overlays.
  */
 export function TabNavigator() {
-  const isDevelopment = __DEV__;
+  // hiddden dev mode
+  const isDevelopment =
+    useStore((s) => s.habits[0]?.title === 'Dev') || __DEV__;
+
   const hasFuelAndTarget = useStore(
     (s) => s.fuelKm > 0 && !!s.userPosition.target,
   );
