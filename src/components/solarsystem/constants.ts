@@ -90,7 +90,7 @@ export const SUNLIGHT_DECAY = 0.1;
 // Radius and segments of the inverted sphere used as the starfield backdrop.
 export const SKY_SPHERE_RADIUS = 1800;
 export const SKY_SEGMENTS = 48;
-export const SKY_BRIGHTNESS = 2;
+export const SKY_BRIGHTNESS = 8;
 
 // Geometry quality
 // Number of segments used for planet spheres.
