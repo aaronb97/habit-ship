@@ -10,7 +10,12 @@ import {
 } from 'react-native';
 import { GlassView, GlassViewProps } from 'expo-glass-effect';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import { useIsTraveling, useStore, useUserLevel } from '../utils/store';
+import {
+  useIsTraveling,
+  useStore,
+  useUserLevel,
+  type HabitId,
+} from '../utils/store';
 import { cBodies } from '../planets';
 import { ProgressBar } from './ProgressBar';
 import TimerSelection from './TimerSelection';
@@ -46,6 +51,7 @@ export function Dashboard() {
   const isSetupFinished = useStore((s) => s.isSetupFinished);
   const setIsSetupFinished = useStore((s) => s.setIsSetupFinished);
   const addHabit = useStore((s) => s.addHabit);
+  const editHabit = useStore((s) => s.editHabit);
 
   const getCurrentDate = useGetCurrentDate();
   const fuelKm = useStore((s) => s.fuelKm);
@@ -62,7 +68,7 @@ export function Dashboard() {
   const activeTab = useStore((s) => s.activeTab);
 
   const [mode, setMode] = useState<
-    'default' | 'addHabit' | 'selectDestination'
+    'default' | 'addHabit' | 'editHabit' | 'selectDestination'
   >('default');
   const [canCancelSelection, setCanCancelSelection] = useState<boolean>(true);
 
@@ -71,6 +77,9 @@ export function Dashboard() {
   const [newDescription, setNewDescription] = useState('');
   const [newTimer, setNewTimer] = useState(0);
   const titleInputRef = useRef<TextInput | null>(null);
+  const [editingHabitId, setEditingHabitId] = useState<HabitId | undefined>(
+    undefined,
+  );
 
   // Available destinations
   const visiblePlanets = useVisibleLandablePlanets();
@@ -182,6 +191,76 @@ export function Dashboard() {
           onCreateFirstHabit={(title) => addHabit({ title })}
           onComplete={() => setIsSetupFinished(true)}
         />
+      </GlassView>
+    );
+  }
+
+  if (mode === 'editHabit') {
+    const isFormValid = newTitle.trim().length > 0 && !!editingHabitId;
+    return (
+      <GlassView style={styles.container} {...glassViewProps}>
+        <View style={styles.flowHeader}>
+          <TouchableOpacity
+            onPress={() => {
+              setNewTitle('');
+              setNewDescription('');
+              setNewTimer(0);
+              setEditingHabitId(undefined);
+              setMode('default');
+            }}
+          >
+            <Text style={styles.flowHeaderButton}>Cancel</Text>
+          </TouchableOpacity>
+          <Text style={styles.flowHeaderTitle}>Edit Habit</Text>
+          <TouchableOpacity
+            disabled={!isFormValid}
+            onPress={() => {
+              if (!isFormValid || !editingHabitId) return;
+              editHabit(editingHabitId, {
+                title: newTitle.trim(),
+                description: newDescription.trim() || undefined,
+                timerLength: newTimer > 0 ? newTimer : undefined,
+              });
+              setNewTitle('');
+              setNewDescription('');
+              setNewTimer(0);
+              setEditingHabitId(undefined);
+              setMode('default');
+            }}
+          >
+            <Text
+              style={[
+                styles.flowHeaderButton,
+                styles.flowHeaderPrimary,
+                !isFormValid && styles.flowHeaderDisabled,
+              ]}
+            >
+              Save
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.flowContent}>
+          <HSTextInput
+            ref={titleInputRef}
+            autoFocus
+            placeholder="Habit Title (e.g., Morning Run)"
+            value={newTitle}
+            onChangeText={setNewTitle}
+          />
+
+          <HSTextInput
+            placeholder="Description (optional)"
+            value={newDescription}
+            onChangeText={setNewDescription}
+          />
+
+          <View style={styles.labelRow}>
+            <Text style={styles.labelText}>Timer</Text>
+            <Text style={styles.subLabelText}>(optional)</Text>
+          </View>
+          <TimerSelection onTimerChange={setNewTimer} initialTimer={newTimer} />
+        </View>
       </GlassView>
     );
   }
@@ -493,6 +572,15 @@ export function Dashboard() {
           habits={habits}
           onStartTimer={startTimer}
           onCompleteHabit={completeHabit}
+          onLongPressHabit={(id) => {
+            const h = habits.find((hh) => hh.id === id);
+            if (!h) return;
+            setEditingHabitId(id);
+            setNewTitle(h.title);
+            setNewDescription(h.description ?? '');
+            setNewTimer(h.timerLength ?? 0);
+            setMode('editHabit');
+          }}
         />
       </ScrollView>
     </GlassView>

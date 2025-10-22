@@ -12,6 +12,7 @@ export type HabitListProps = {
   onStartTimer: (habitId: HabitId) => void | Promise<boolean>;
   /** Called when the complete button is pressed for a habit. */
   onCompleteHabit: (habitId: HabitId) => void | Promise<void>;
+  onLongPressHabit?: (habitId: HabitId) => void;
 };
 
 /**
@@ -22,7 +23,12 @@ export type HabitListProps = {
  * onStartTimer: Invoked when the timer button is pressed for a habit.
  * onCompleteHabit: Invoked when the complete button is pressed for a habit.
  */
-export function HabitList({ habits, onStartTimer, onCompleteHabit }: HabitListProps) {
+export function HabitList({
+  habits,
+  onStartTimer,
+  onCompleteHabit,
+  onLongPressHabit,
+}: HabitListProps) {
   const getCurrentDate = useGetCurrentDate();
 
   /**
@@ -36,7 +42,9 @@ export function HabitList({ habits, onStartTimer, onCompleteHabit }: HabitListPr
       return false;
     }
 
-    const lastCompletion = new Date(habit.completions[habit.completions.length - 1]!);
+    const lastCompletion = new Date(
+      habit.completions[habit.completions.length - 1]!,
+    );
     const today = getCurrentDate();
     return lastCompletion.toDateString() === today.toDateString();
   };
@@ -48,17 +56,27 @@ export function HabitList({ habits, onStartTimer, onCompleteHabit }: HabitListPr
         const count = h.completions.length;
 
         // Precompute last completion strings if any
-        const last = count > 0 ? new Date(h.completions[count - 1]!) : undefined;
+        const last =
+          count > 0 ? new Date(h.completions[count - 1]!) : undefined;
         const today = getCurrentDate();
-        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const todayStart = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate(),
+        );
         const lastStart = last
           ? new Date(last.getFullYear(), last.getMonth(), last.getDate())
           : undefined;
         const diffDays =
           lastStart !== undefined
-            ? Math.round((todayStart.getTime() - lastStart.getTime()) / 86400000)
+            ? Math.round(
+                (todayStart.getTime() - lastStart.getTime()) / 86400000,
+              )
             : 0;
-        const timeStr = last?.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+        const timeStr = last?.toLocaleTimeString(undefined, {
+          hour: 'numeric',
+          minute: '2-digit',
+        });
         const line1 =
           last === undefined
             ? undefined
@@ -76,14 +94,27 @@ export function HabitList({ habits, onStartTimer, onCompleteHabit }: HabitListPr
               idx < habits.length - 1 ? styles.habitRowDivider : null,
             ]}
           >
-            <View style={styles.habitRowInfo}>
-              <Text style={[styles.habitTitle, completed ? styles.completedHabitTitle : null]}>
+            <TouchableOpacity
+              style={styles.habitRowInfo}
+              onLongPress={
+                onLongPressHabit ? () => onLongPressHabit(h.id) : undefined
+              }
+            >
+              <Text
+                style={[
+                  styles.habitTitle,
+                  completed ? styles.completedHabitTitle : null,
+                ]}
+              >
                 {h.title}
               </Text>
               {line1 ? (
                 <>
                   <Text
-                    style={[styles.habitDescription, completed ? styles.completedHabitTitle : null]}
+                    style={[
+                      styles.habitDescription,
+                      completed ? styles.completedHabitTitle : null,
+                    ]}
                   >
                     {line1}
                   </Text>
@@ -99,7 +130,7 @@ export function HabitList({ habits, onStartTimer, onCompleteHabit }: HabitListPr
                   ) : null}
                 </>
               ) : null}
-            </View>
+            </TouchableOpacity>
 
             <View style={styles.actionsRow}>
               {h.timerLength ? (
@@ -124,14 +155,22 @@ export function HabitList({ habits, onStartTimer, onCompleteHabit }: HabitListPr
  * habit: Habit for which to start the timer.
  * onPress: Invoked when the button is pressed.
  */
-function TimerButton({ habit, onPress }: { habit: Habit; onPress: () => void }) {
+function TimerButton({
+  habit,
+  onPress,
+}: {
+  habit: Habit;
+  onPress: () => void;
+}) {
   return (
     <TouchableOpacity
       style={[styles.actionButton, { backgroundColor: colors.accent }]}
       onPress={onPress}
     >
       <MaterialIcons name="timer" size={20} color={colors.white} />
-      <Text style={styles.actionButtonText}>{`${habit.timerLength! / 60} min`}</Text>
+      <Text
+        style={styles.actionButtonText}
+      >{`${habit.timerLength! / 60} min`}</Text>
     </TouchableOpacity>
   );
 }
