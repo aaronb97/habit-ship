@@ -424,7 +424,7 @@ export const useStore = create<Store>()(
           habits: [
             {
               id: '0' as HabitId,
-              title: 'Morning Meditation',
+              title: 'Dev',
               description: 'Sample description',
               completions: [],
             },
