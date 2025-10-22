@@ -30,6 +30,7 @@ export function HabitList({
   onLongPressHabit,
 }: HabitListProps) {
   const getCurrentDate = useGetCurrentDate();
+  const now = getCurrentDate();
 
   /**
    * Determines whether a habit has been completed today based on its last completion timestamp.
@@ -45,6 +46,7 @@ export function HabitList({
     const lastCompletion = new Date(
       habit.completions[habit.completions.length - 1]!,
     );
+
     const today = getCurrentDate();
     return lastCompletion.toDateString() === today.toDateString();
   };
@@ -53,100 +55,135 @@ export function HabitList({
     <>
       {habits.map((h, idx) => {
         const completed = isCompletedToday(h);
-        const count = h.completions.length;
-
-        // Precompute last completion strings if any
-        const last =
-          count > 0 ? new Date(h.completions[count - 1]!) : undefined;
-        const today = getCurrentDate();
-        const todayStart = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate(),
-        );
-        const lastStart = last
-          ? new Date(last.getFullYear(), last.getMonth(), last.getDate())
-          : undefined;
-        const diffDays =
-          lastStart !== undefined
-            ? Math.round(
-                (todayStart.getTime() - lastStart.getTime()) / 86400000,
-              )
-            : 0;
-        const timeStr = last?.toLocaleTimeString(undefined, {
-          hour: 'numeric',
-          minute: '2-digit',
-        });
-        const line1 =
-          last === undefined
-            ? undefined
-            : diffDays === 0
-              ? `completed today at ${timeStr}`
-              : diffDays === 1
-                ? 'completed yesterday'
-                : `completed ${diffDays} days ago`;
-
+        const line1 = getCompletionText(h, now);
+        const hasDivider = idx < habits.length - 1;
+        const showCount = h.completions.length > 1;
         return (
-          <View
+          <HabitRow
             key={h.id}
-            style={[
-              styles.habitRow,
-              idx < habits.length - 1 ? styles.habitRowDivider : null,
-            ]}
-          >
-            <TouchableOpacity
-              style={styles.habitRowInfo}
-              onLongPress={
-                onLongPressHabit ? () => onLongPressHabit(h.id) : undefined
-              }
-            >
-              <Text
-                style={[
-                  styles.habitTitle,
-                  completed ? styles.completedHabitTitle : null,
-                ]}
-              >
-                {h.title}
-              </Text>
-              {line1 ? (
-                <>
-                  <Text
-                    style={[
-                      styles.habitDescription,
-                      completed ? styles.completedHabitTitle : null,
-                    ]}
-                  >
-                    {line1}
-                  </Text>
-                  {count > 1 ? (
-                    <Text
-                      style={[
-                        styles.habitDescription,
-                        completed ? styles.completedHabitTitle : null,
-                      ]}
-                    >
-                      {`${count} completions`}
-                    </Text>
-                  ) : null}
-                </>
-              ) : null}
-            </TouchableOpacity>
-
-            <View style={styles.actionsRow}>
-              {h.timerLength ? (
-                <TimerButton habit={h} onPress={() => onStartTimer(h.id)} />
-              ) : null}
-
-              <CompleteButton
-                isCompleted={completed}
-                onPress={() => onCompleteHabit(h.id)}
-              />
-            </View>
-          </View>
+            habit={h}
+            completed={completed}
+            line1={line1}
+            showCount={showCount}
+            hasDivider={hasDivider}
+            onStartTimer={onStartTimer}
+            onCompleteHabit={onCompleteHabit}
+            onLongPressHabit={onLongPressHabit}
+          />
         );
       })}
     </>
   );
+}
+
+type HabitMetaTextProps = { completed: boolean; children: React.ReactNode };
+
+function HabitMetaText({ completed, children }: HabitMetaTextProps) {
+  return (
+    <Text
+      style={[
+        styles.habitDescription,
+        completed ? styles.completedHabitTitle : null,
+      ]}
+    >
+      {children}
+    </Text>
+  );
+}
+
+type HabitRowProps = {
+  habit: Habit;
+  completed: boolean;
+  line1?: string;
+  showCount: boolean;
+  hasDivider: boolean;
+  onStartTimer: (habitId: HabitId) => void | Promise<boolean>;
+  onCompleteHabit: (habitId: HabitId) => void | Promise<void>;
+  onLongPressHabit?: (habitId: HabitId) => void;
+};
+
+function HabitRow({
+  habit,
+  completed,
+  line1,
+  showCount,
+  hasDivider,
+  onStartTimer,
+  onCompleteHabit,
+  onLongPressHabit,
+}: HabitRowProps) {
+  return (
+    <View style={[styles.habitRow, hasDivider ? styles.habitRowDivider : null]}>
+      <TouchableOpacity
+        style={styles.habitRowInfo}
+        onLongPress={
+          onLongPressHabit ? () => onLongPressHabit(habit.id) : undefined
+        }
+      >
+        <Text
+          style={[
+            styles.habitTitle,
+            completed ? styles.completedHabitTitle : null,
+          ]}
+        >
+          {habit.title}
+        </Text>
+        {line1 ? (
+          <HabitMetaText completed={completed}>{line1}</HabitMetaText>
+        ) : null}
+        {showCount ? (
+          <HabitMetaText completed={completed}>
+            {`${habit.completions.length} completions`}
+          </HabitMetaText>
+        ) : null}
+      </TouchableOpacity>
+
+      <View style={styles.actionsRow}>
+        {habit.timerLength ? (
+          <TimerButton habit={habit} onPress={() => onStartTimer(habit.id)} />
+        ) : null}
+
+        <CompleteButton
+          isCompleted={completed}
+          onPress={() => onCompleteHabit(habit.id)}
+        />
+      </View>
+    </View>
+  );
+}
+
+function getCompletionText(habit: Habit, now: Date): string | undefined {
+  const count = habit.completions.length;
+  if (count === 0) {
+    return undefined;
+  }
+
+  const last = new Date(habit.completions[count - 1]!);
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const lastStart = new Date(
+    last.getFullYear(),
+    last.getMonth(),
+    last.getDate(),
+  );
+
+  const diffDays = Math.round(
+    (todayStart.getTime() - lastStart.getTime()) / 86400000,
+  );
+
+  if (diffDays === 0) {
+    const timeStr = last.toLocaleTimeString(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+
+    return `completed today at ${timeStr}`;
+  }
+
+  if (diffDays === 1) {
+    return 'completed yesterday';
+  }
+
+  return `completed ${diffDays} days ago`;
 }
 
 /**
