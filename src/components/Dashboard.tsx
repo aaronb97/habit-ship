@@ -168,7 +168,7 @@ export function Dashboard() {
 
   const glassViewProps: GlassViewProps = {
     glassEffectStyle: 'clear',
-    tintColor: 'rgba(0, 0, 0, 0.8)',
+    tintColor: 'rgba(0, 0, 0, 0.3)',
   };
 
   // --- Onboarding flow rendered inside the panel until setup finishes ---
