@@ -6,11 +6,14 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import { useComposedGesture } from '../../components/solarsystem/gestures';
 import type { CameraController } from '../../components/solarsystem/camera';
 import { getController } from '../../components/solarsystem/controllerRegistry';
+import { HSButton } from '../../components/HSButton';
 
 export function SolarMap() {
   const isFocused = useIsFocused();
   const { width, height } = useWindowDimensions();
   const { justLanded, userPosition } = useStore();
+  const fuelKm = useStore((s) => s.fuelKm);
+  const applyFuelToTravel = useStore((s) => s.applyFuelToTravel);
   const shownForLocationRef = useRef<string | null>(null);
   const controllerRef = useRef<CameraController | null>(null);
 
@@ -55,7 +58,38 @@ export function SolarMap() {
   // Transparent gesture surface above the global GL overlay
   return (
     <GestureDetector gesture={gesture}>
-      <View style={styles.container} pointerEvents="auto" />
+      <View style={styles.container} pointerEvents="auto">
+        {(() => {
+          const target = userPosition.target;
+          const initialDistance = userPosition.initialDistance;
+          const distanceTraveled = userPosition.distanceTraveled ?? 0;
+          const previousDistanceTraveled =
+            userPosition.previousDistanceTraveled ?? 0;
+          const hasTarget = !!target && typeof initialDistance === 'number';
+          const hasDelta = distanceTraveled !== previousDistanceTraveled;
+          const isTraveling = hasTarget && distanceTraveled > 0;
+          const label = isTraveling ? 'Boost' : 'Launch';
+          const initDist =
+            typeof initialDistance === 'number' ? initialDistance : 0;
+          const remaining = Math.max(0, initDist - distanceTraveled);
+          const canBoost =
+            hasTarget && fuelKm > 0 && !hasDelta && remaining > 0;
+
+          if (!hasTarget || !canBoost) return null;
+
+          return (
+            <View style={styles.ctaContainer} pointerEvents="box-none">
+              <HSButton
+                onPress={() => {
+                  applyFuelToTravel();
+                }}
+              >
+                {label}
+              </HSButton>
+            </View>
+          );
+        })()}
+      </View>
     </GestureDetector>
   );
 }
@@ -64,5 +98,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'transparent',
+  },
+  ctaContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 120,
+    alignItems: 'center',
   },
 });
