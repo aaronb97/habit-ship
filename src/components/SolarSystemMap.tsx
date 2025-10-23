@@ -24,7 +24,7 @@ import { useDebugValues } from '../hooks/useDebugValues';
 // Modularized helpers/builders
 import { toVec3 } from './solarsystem/helpers';
 import { type MappedMaterial } from './solarsystem/builders';
-import { loadBodyTextures } from './solarsystem/textures';
+import { loadBodyTextures, loadRingTextures } from './solarsystem/textures';
 import { createSky } from './solarsystem/sky';
 import {
   CameraController,
@@ -521,6 +521,9 @@ export function SolarSystemMap({
     const texturesByName = showTextures
       ? await loadBodyTextures(PLANETS.map((p) => p.name))
       : {};
+    const ringTexturesByName = showTextures
+      ? await loadRingTextures(PLANETS.map((p) => p.name))
+      : {};
 
     const camera = new THREE.PerspectiveCamera(
       CAMERA_FOV,
@@ -615,6 +618,7 @@ export function SolarSystemMap({
 
     PLANETS.forEach((p) => {
       const texture = showTextures ? texturesByName[p.name] : undefined;
+      const ringTexture = showTextures ? ringTexturesByName[p.name] : undefined;
       const node = new CelestialBodyNode({
         body: p,
         scene,
@@ -622,6 +626,7 @@ export function SolarSystemMap({
         composer,
         resolution,
         texture,
+        ringTexture,
         initialTrailsEnabled: useStore.getState().showTrails,
       });
 
@@ -731,8 +736,8 @@ export function SolarSystemMap({
         if (glCtx) {
           const unlockedBodiesNow = getUnlockedBodies();
           const visitedBodiesNow = getVisitedBodies();
-          const startingLocationNow = useStore.getState().userPosition
-            .startingLocation;
+          const startingLocationNow =
+            useStore.getState().userPosition.startingLocation;
           const targetNameNow = useStore.getState().userPosition.target?.name;
           bodyRegistryRef.current.forEach((node) =>
             node.update({

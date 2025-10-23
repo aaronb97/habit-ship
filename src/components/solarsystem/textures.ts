@@ -26,6 +26,11 @@ const BODY_TEXTURE_REQUIRE: Record<string, number> = {
   Triton: require('../../../assets/cbodies/triton.png'),
 };
 
+// Optional auxiliary textures keyed by body name (e.g., rings)
+const RING_TEXTURE_REQUIRE: Record<string, number> = {
+  Saturn: require('../../../assets/cbodies/saturn_rings.png'),
+};
+
 export async function loadBodyTextures(
   names: string[],
 ): Promise<Record<string, THREE.Texture>> {
@@ -47,6 +52,32 @@ export async function loadBodyTextures(
       textures[name] = tex;
     } catch (e) {
       console.warn(`[textures] Failed to load texture for ${name}`, e);
+    }
+  }
+
+  return textures;
+}
+
+export async function loadRingTextures(
+  names: string[],
+): Promise<Record<string, THREE.Texture>> {
+  const textures: Record<string, THREE.Texture> = {};
+  const loader = new TextureLoader();
+
+  for (const name of names) {
+    const req = RING_TEXTURE_REQUIRE[name];
+    if (!req) continue;
+    try {
+      const asset = Asset.fromModule(req);
+      await asset.downloadAsync();
+      const tex = await loader.loadAsync(asset.localUri ?? asset.uri);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = TEXTURE_ANISOTROPY;
+      tex.wrapS = THREE.ClampToEdgeWrapping;
+      tex.wrapT = THREE.ClampToEdgeWrapping;
+      textures[name] = tex;
+    } catch (e) {
+      console.warn(`[textures] Failed to load ring texture for ${name}`, e);
     }
   }
 

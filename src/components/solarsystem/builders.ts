@@ -6,6 +6,7 @@ import {
   TRAIL_EASE_EXPONENT,
   TRAIL_NEAR_BODY_FADE_EXPONENT,
 } from './constants';
+import { CBody } from '../../planets';
 
 export type MappedMaterial =
   | THREE.MeshBasicMaterial
@@ -17,11 +18,11 @@ export type PlanetMeshUserData = {
 };
 
 export function createPlanetMesh(
-  name: string,
-  color: number,
+  body: CBody,
   radius: number,
   texture?: THREE.Texture,
 ): THREE.Mesh {
+  const { name, color, axialTiltDeg } = body;
   const geom = new THREE.SphereGeometry(
     radius,
     SPHERE_SEGMENTS,
@@ -49,7 +50,39 @@ export function createPlanetMesh(
   const mesh = new THREE.Mesh(geom, mat);
   mesh.name = name;
   mesh.rotation.x = PLANET_MESH_X_ROTATION;
+  if (axialTiltDeg) {
+    mesh.rotation.z += THREE.MathUtils.degToRad(axialTiltDeg);
+  }
   return mesh;
+}
+
+/**
+ * Create a textured ring mesh sized relative to a planet's visual radius.
+ * @param planetRadius Visual radius of the planet (scene units)
+ * @param texture The ring texture with transparency (e.g., saturn_rings.png)
+ */
+export function createSaturnRings(
+  planetRadius: number,
+  texture: THREE.Texture,
+): THREE.Mesh {
+  // Approximate inner/outer radii of Saturn's main rings
+  const inner = planetRadius * 1.2;
+  const outer = planetRadius * 2.3;
+
+  const geom = new THREE.RingGeometry(inner, outer, 64, 1);
+  const mat = new THREE.MeshBasicMaterial({
+    map: texture,
+    transparent: true,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+    alphaTest: 0.3,
+  });
+
+  const ring = new THREE.Mesh(geom, mat);
+  ring.rotation.x = Math.PI / 2;
+  ring.name = 'SaturnRings';
+  // No local rotation: inherits parent's equatorial tilt/orientation
+  return ring;
 }
 
 export function createTrailLine(

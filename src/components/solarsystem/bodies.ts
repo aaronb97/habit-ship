@@ -6,6 +6,7 @@ import {
   createPlanetMesh,
   createTrailLine,
   type MappedMaterial,
+  createSaturnRings,
 } from './builders';
 import {
   CBODY_RADIUS_MULTIPLIER,
@@ -57,6 +58,7 @@ export class CelestialBodyNode {
     composer: EffectComposer;
     resolution: THREE.Vector2;
     texture?: THREE.Texture;
+    ringTexture?: THREE.Texture;
     hasOutline?: boolean; // default true for Planet/Moon, false for Star
     initialTrailsEnabled?: boolean;
   }) {
@@ -75,12 +77,16 @@ export class CelestialBodyNode {
     this.visualRadiusBase = CBODY_RADIUS_MULTIPLIER * clampedRatio;
 
     // Build mesh (sphere for all c-bodies; Sun uses basic material inside builder)
-    this.mesh = createPlanetMesh(
-      body.name,
-      body.color,
-      this.visualRadiusBase,
-      texture,
-    );
+    this.mesh = createPlanetMesh(body, this.visualRadiusBase, texture);
+
+    // Optional: attach rings for Saturn if a ring texture is provided
+    let ringMesh: THREE.Mesh | undefined;
+    if (body.name === 'Saturn' && params.ringTexture) {
+      try {
+        ringMesh = createSaturnRings(this.visualRadiusBase, params.ringTexture);
+        this.mesh.add(ringMesh);
+      } catch {}
+    }
 
     // Orientation: align equator horizontally, then apply axial tilt
     this.mesh.rotation.x = PLANET_MESH_X_ROTATION;
@@ -340,6 +346,18 @@ export class CelestialBodyNode {
 
     // Remove mesh from scene and dispose resources
     this.scene.remove(this.mesh);
+    // Dispose child meshes we created explicitly (e.g., rings)
+    try {
+      const child = this.mesh.getObjectByName('SaturnRings');
+      if (child && child instanceof THREE.Mesh) {
+        const cm = child.material as MappedMaterial;
+        if (cm.map) {
+          cm.map.dispose();
+        }
+        child.geometry.dispose();
+        (child.material as THREE.Material).dispose();
+      }
+    } catch {}
     this.mesh.geometry.dispose();
     if (Array.isArray(this.mesh.material)) {
       this.mesh.material.forEach((m) => {
