@@ -50,9 +50,6 @@ export function createPlanetMesh(
   const mesh = new THREE.Mesh(geom, mat);
   mesh.name = name;
   mesh.rotation.x = PLANET_MESH_X_ROTATION;
-  if (axialTiltDeg) {
-    mesh.rotation.z += THREE.MathUtils.degToRad(axialTiltDeg);
-  }
   return mesh;
 }
 

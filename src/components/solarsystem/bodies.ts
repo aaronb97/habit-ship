@@ -88,11 +88,11 @@ export class CelestialBodyNode {
       } catch {}
     }
 
-    // Orientation: align equator horizontally, then apply axial tilt
+    // Orientation: align equator horizontally, then apply axial tilt about X
     this.mesh.rotation.x = PLANET_MESH_X_ROTATION;
     const tiltDeg = body.axialTiltDeg ?? 0;
     if (tiltDeg !== 0) {
-      this.mesh.rotation.z += THREE.MathUtils.degToRad(tiltDeg);
+      this.mesh.rotation.x += THREE.MathUtils.degToRad(tiltDeg);
     }
 
     // Randomize static spin phase around local Y to avoid identical texture seams
