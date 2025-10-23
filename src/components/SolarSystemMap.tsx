@@ -53,6 +53,7 @@ import {
 } from './solarsystem/constants';
 import { DebugOverlay } from './DebugOverlay';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { getSkinById } from '../utils/skins';
 
 // [moved] Helpers moved to './solarsystem/helpers'.
 
@@ -87,6 +88,7 @@ export function SolarSystemMap({
   const userPosState = useStore((s) => s.userPosition);
 
   const rocketColorFromStore = useStore((s) => s.rocketColor);
+  const selectedSkinId = useStore((s) => s.selectedSkinId);
   const activeTabName = useStore((s) => s.activeTab);
   const interactiveEffective = interactive ?? activeTabName === 'MapTab';
   const syncTravelVisuals = useStore((s) => s.syncTravelVisuals);
@@ -115,7 +117,47 @@ export function SolarSystemMap({
     };
   }, []);
 
+  // Apply runtime color updates to the rocket if already created
+  useEffect(() => {
+    const rocket = rocketRef.current;
+    if (rocket) {
+      try {
+        rocket.setColor(rocketColorFromStore);
+      } catch {
+        // ignore
+      }
+    }
+  }, [rocketColorFromStore]);
+
   // [debug publishing provided by useDebugValues hook]
+
+  // Apply selected skin texture to the rocket hull
+  useEffect(() => {
+    let canceled = false;
+    const apply = async () => {
+      const rocket = rocketRef.current;
+      if (!rocket) return;
+      if (!selectedSkinId) {
+        rocket.setBodyTexture(null);
+        return;
+      }
+
+      try {
+        const texMap = await loadBodyTextures([selectedSkinId]);
+        if (canceled) return;
+        const tex = texMap[selectedSkinId] ?? null;
+        const skin = getSkinById(selectedSkinId);
+        rocket.setBodyTexture(tex, skin?.color);
+      } catch {
+        // ignore
+      }
+    };
+
+    void apply();
+    return () => {
+      canceled = true;
+    };
+  }, [selectedSkinId]);
 
   // Determine which planet systems are relevant for rendering moons
   const getRelevantPlanetSystems = (): Set<string> => {
@@ -566,6 +608,21 @@ export function SolarSystemMap({
       // Hide rocket until a target is set
       const hasTarget = !!useStore.getState().userPosition.target;
       rocket.setVisible(hasTarget);
+
+      // Apply any persisted selected skin immediately on creation
+      try {
+        const persistedSkinId = useStore.getState().selectedSkinId;
+        if (persistedSkinId) {
+          const texMap = await loadBodyTextures([persistedSkinId]);
+          const tex = texMap[persistedSkinId] ?? null;
+          const skin = getSkinById(persistedSkinId);
+          rocket.setBodyTexture(tex, skin?.color);
+        } else {
+          rocket.setBodyTexture(null);
+        }
+      } catch {
+        // ignore
+      }
     } catch (e) {
       console.warn('[SolarSystemMap] Failed to create Rocket, skipping model');
       console.warn(e);

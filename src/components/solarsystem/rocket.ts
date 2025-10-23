@@ -62,11 +62,15 @@ type CreateArgs = {
 
 export class Rocket {
   public readonly group: THREE.Group;
+  private readonly hull: THREE.Group;
   private readonly exhaustGroup: THREE.Group;
   private outlinePass?: OutlinePass;
   private spinAngle = 0;
   private outlineGlobalEnabled = true;
   private unsubOutlines?: () => void;
+  private baseColor: number;
+  private currentTexture?: THREE.Texture | null;
+  private uvsApplied = false;
 
   // exhaust sprites
   private sprites: THREE.Sprite[] = [];
@@ -75,12 +79,16 @@ export class Rocket {
 
   private constructor(
     group: THREE.Group,
+    hull: THREE.Group,
     exhaustGroup: THREE.Group,
-    outlinePass?: OutlinePass,
+    outlinePass: OutlinePass | undefined,
+    baseColor: number,
   ) {
     this.group = group;
+    this.hull = hull;
     this.exhaustGroup = exhaustGroup;
     this.outlinePass = outlinePass;
+    this.baseColor = baseColor;
     this.outlineGlobalEnabled = Boolean(
       useStore.getState().outlinesRocketEnabled,
     );
@@ -102,6 +110,79 @@ export class Rocket {
 
       this.unsubOutlines = unsub;
     }
+  }
+
+  private ensureCylindricalUVsApplied() {
+    if (this.uvsApplied) return;
+
+    // Compute global bounds over all Body meshes to normalize V consistently
+    const bounds = { min: new THREE.Vector3(+Infinity, +Infinity, +Infinity), max: new THREE.Vector3(-Infinity, -Infinity, -Infinity) };
+    const bodyMeshes: THREE.Mesh[] = [];
+    // Make sure world matrices are up-to-date
+    this.hull.updateWorldMatrix(true, true);
+    this.hull.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const name = child.name || '';
+        if (name.includes('Body')) {
+          bodyMeshes.push(child);
+          const geom = child.geometry as THREE.BufferGeometry;
+          const pos = geom.attributes.position as THREE.BufferAttribute;
+          const arr = pos.array as ArrayLike<number>;
+          for (let i = 0; i < pos.count; i++) {
+            const lx = arr[i * 3 + 0]!;
+            const ly = arr[i * 3 + 1]!;
+            const lz = arr[i * 3 + 2]!;
+            const wp = new THREE.Vector3(lx, ly, lz).applyMatrix4(child.matrixWorld);
+            if (wp.x < bounds.min.x) bounds.min.x = wp.x;
+            if (wp.y < bounds.min.y) bounds.min.y = wp.y;
+            if (wp.z < bounds.min.z) bounds.min.z = wp.z;
+            if (wp.x > bounds.max.x) bounds.max.x = wp.x;
+            if (wp.y > bounds.max.y) bounds.max.y = wp.y;
+            if (wp.z > bounds.max.z) bounds.max.z = wp.z;
+          }
+        }
+      }
+    });
+
+    // Choose height axis as the largest extent
+    const extents = new THREE.Vector3().subVectors(bounds.max, bounds.min);
+    let heightAxis = 1; // y by default
+    if (extents.x >= extents.y && extents.x >= extents.z) heightAxis = 0;
+    else if (extents.z >= extents.y && extents.z >= extents.x) heightAxis = 2;
+
+    const radialA = (heightAxis + 1) % 3;
+    const radialB = (heightAxis + 2) % 3;
+    const minH = [bounds.min.x, bounds.min.y, bounds.min.z][heightAxis]!;
+    const rangeH = Math.max(1e-6, [extents.x, extents.y, extents.z][heightAxis]!);
+
+    // Apply cylindrical UVs per body mesh
+    for (const mesh of bodyMeshes) {
+      const geom = mesh.geometry as THREE.BufferGeometry;
+      const pos = geom.attributes.position as THREE.BufferAttribute;
+      const arr = pos.array as ArrayLike<number>;
+      const uvs = new Float32Array(pos.count * 2);
+      for (let i = 0; i < pos.count; i++) {
+        const lx = arr[i * 3 + 0]!;
+        const ly = arr[i * 3 + 1]!;
+        const lz = arr[i * 3 + 2]!;
+        const wp = new THREE.Vector3(lx, ly, lz).applyMatrix4(mesh.matrixWorld);
+        const comp = [wp.x, wp.y, wp.z] as const;
+        const ra = comp[radialA]!;
+        const rb = comp[radialB]!;
+        const h = comp[heightAxis]!;
+        const theta = Math.atan2(rb, ra);
+        let u = theta / (Math.PI * 2) + 0.5;
+        if (u < 0) u += 1; // wrap
+        const v = (h - minH) / rangeH;
+        uvs[i * 2 + 0] = u;
+        uvs[i * 2 + 1] = v;
+      }
+      const uvAttr = new THREE.BufferAttribute(uvs, 2);
+      geom.setAttribute('uv', uvAttr);
+      uvAttr.needsUpdate = true;
+    }
+
+    this.uvsApplied = true;
   }
 
   static async create({
@@ -151,7 +232,7 @@ export class Rocket {
     outline.enabled = Boolean(useStore.getState().outlinesRocketEnabled);
     composer.addPass(outline);
 
-    return new Rocket(root, exhaust, outline);
+    return new Rocket(root, obj, exhaust, outline, color);
   }
 
   setResolution(v: THREE.Vector2) {
@@ -164,6 +245,69 @@ export class Rocket {
     this.group.visible = visible;
     if (this.outlinePass) {
       this.outlinePass.enabled = this.outlineGlobalEnabled && visible;
+    }
+  }
+
+  setColor(color: number) {
+    // Re-apply materials on hull meshes
+    this.baseColor = color;
+    // If no texture is set, recolor the hull materials; otherwise only update outline
+    if (!this.currentTexture) {
+      applyRocketMaterials(this.hull, color);
+    }
+    if (this.outlinePass) {
+      try {
+        this.outlinePass.visibleEdgeColor.set(color);
+        this.outlinePass.hiddenEdgeColor.set(color);
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  setBodyTexture(texture: THREE.Texture | null, accentColor?: number) {
+    // Dispose previous texture (if any) and clear maps when null
+    const prev = this.currentTexture;
+    this.currentTexture = texture;
+
+    // Ensure we have consistent UVs across the hull parts
+    this.ensureCylindricalUVsApplied();
+
+    this.hull.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const name = child.name || '';
+        if (name.includes('Body')) {
+          const mat = child.material as THREE.MeshStandardMaterial;
+          if (texture) {
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.ClampToEdgeWrapping;
+            texture.needsUpdate = true;
+            mat.map = texture;
+            mat.color.set(0xffffff);
+          } else {
+            mat.map = null;
+            mat.color.set(this.baseColor);
+          }
+          mat.needsUpdate = true;
+        } else {
+          // Non-body parts inherit accent color while a texture is active, otherwise base color
+          const mat = child.material as THREE.MeshStandardMaterial;
+          if (texture) {
+            mat.color.set(
+              typeof accentColor === 'number' ? accentColor : this.baseColor,
+            );
+          } else {
+            mat.color.set(this.baseColor);
+          }
+          mat.needsUpdate = true;
+        }
+      }
+    });
+
+    if (prev && prev !== texture) {
+      try {
+        prev.dispose();
+      } catch {}
     }
   }
 

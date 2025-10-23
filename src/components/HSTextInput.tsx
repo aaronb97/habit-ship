@@ -13,6 +13,7 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontFamily: fonts.regular,
     fontSize: fontSizes.medium,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
   },
 });
 

@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { advanceTime, useGetCurrentDate } from '../../utils/time';
 import { cBodies } from '../../planets';
 import { getXPToNextLevel } from '../../utils/experience';
+import { ALL_SKIN_IDS } from '../../utils/skins';
 
 export function Dev() {
   const store = useStore();
@@ -128,6 +129,15 @@ export function Dev() {
             <Switch
               value={!!store.showDebugOverlay}
               onValueChange={(v) => store.setShowDebugOverlay(v)}
+            />
+          </View>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Unlock All Skins</Text>
+            <Switch
+              value={store.unlockedSkins.length === ALL_SKIN_IDS.length}
+              onValueChange={(v) =>
+                v ? store.unlockAllSkins() : store.lockSkinsToDefault()
+              }
             />
           </View>
         </View>

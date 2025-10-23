@@ -10,6 +10,7 @@ import { getCurrentTime, getCurrentDate, setTimeOffsetProvider } from './time';
 import { Coordinates, UserPosition, XPGain } from '../types';
 import { useShallow } from 'zustand/shallow';
 import { calculateLevel, getDailyDistanceForLevel } from './experience';
+import { hasSkinForBody, getSkinById, ALL_SKIN_IDS } from './skins';
 
 // =================================================================
 // TYPES
@@ -17,7 +18,7 @@ import { calculateLevel, getDailyDistanceForLevel } from './experience';
 
 export type HabitId = string & { __habitId: true };
 
-export type TabName = 'HomeTab' | 'MapTab' | 'DevTab';
+export type TabName = 'HomeTab' | 'MapTab' | 'ProfileTab' | 'DevTab';
 
 /**
  * Structured information to present when a user levels up.
@@ -77,6 +78,10 @@ type Store = {
   habits: Habit[];
   userPosition: UserPosition;
   completedPlanets: string[];
+  // Skins
+  unlockedSkins: string[]; // skin ids
+  unseenUnlockedSkins: string[]; // newly unlocked since last Profile view
+  selectedSkinId?: string; // currently applied skin id
   totalXP: number;
   xpHistory: XPGain[];
   idCount: number;
@@ -113,6 +118,7 @@ type Store = {
 
   // Rocket appearance
   rocketColor: number;
+  setRocketColor: (color: number) => void;
 
   // Animation/landing flow flags
   // True when user has reached target distance but landing should be finalized after the map animation
@@ -190,6 +196,11 @@ type Store = {
    */
   setLastLevelUpSeenLevel: (level: number) => void;
   setActiveTab: (tab: TabName) => void;
+  // Skins actions
+  setSelectedSkinId: (skinId: string) => void;
+  markSkinsSeen: () => void;
+  unlockAllSkins: () => void;
+  lockSkinsToDefault: () => void;
 
   // Tilt-shift setters
   setTiltShiftEnabled: (value: boolean) => void;
@@ -231,6 +242,9 @@ const initialData = {
     previousDistanceTraveled: 0,
   },
   completedPlanets: ['Earth'],
+  unlockedSkins: ['Earth'],
+  unseenUnlockedSkins: [],
+  selectedSkinId: undefined,
   totalXP: 0,
   xpHistory: [],
   idCount: 5,
@@ -277,6 +291,7 @@ export const useStore = create<Store>()(
     immer((set, get) => ({
       ...initialData,
       activeTab: 'HomeTab' as TabName,
+      setRocketColor: (color) => set({ rocketColor: color }),
       setIsSetupFinished: (value) => set({ isSetupFinished: value }),
       addHabit: (habit) => {
         set((state) => {
@@ -368,6 +383,31 @@ export const useStore = create<Store>()(
         set({ isLevelUpModalVisible: false, levelUpInfo: undefined }),
       setLastLevelUpSeenLevel: (level) => set({ lastLevelUpSeenLevel: level }),
       setActiveTab: (tab) => set({ activeTab: tab }),
+      // Skins
+      setSelectedSkinId: (skinId) => {
+        set((state) => {
+          state.selectedSkinId = skinId;
+          const skin = getSkinById(skinId);
+          if (skin) {
+            state.rocketColor = skin.color;
+          }
+        });
+      },
+      markSkinsSeen: () => set({ unseenUnlockedSkins: [] }),
+      unlockAllSkins: () =>
+        set((state) => {
+          state.unlockedSkins = [...ALL_SKIN_IDS];
+          state.unseenUnlockedSkins = [];
+          // If a selected skin is not in unlocked (shouldn't happen after unlock), keep it
+        }),
+      lockSkinsToDefault: () =>
+        set((state) => {
+          state.unlockedSkins = ['Earth'];
+          state.unseenUnlockedSkins = [];
+          if (state.selectedSkinId && state.selectedSkinId !== 'Earth') {
+            state.selectedSkinId = undefined;
+          }
+        }),
       setSkipRocketAnimation: (value) => set({ skipRocketAnimation: value }),
       setShowJourneyRemaining: (value) => set({ showJourneyRemaining: value }),
       setShowFuelCapacity: (value) => set({ showFuelCapacity: value }),
@@ -694,6 +734,18 @@ export const useStore = create<Store>()(
             nextState.completedPlanets.push(destinationName);
           }
 
+          // Unlock a skin if this body has a dedicated image and wasn't unlocked yet
+          if (hasSkinForBody(destinationName)) {
+            const id = destinationName;
+            if (!nextState.unlockedSkins.includes(id)) {
+              nextState.unlockedSkins.push(id);
+              // Mark as unseen so Profile tab can badge; ignore 'Earth' default
+              if (id !== 'Earth') {
+                nextState.unseenUnlockedSkins.push(id);
+              }
+            }
+          }
+
           nextState.pendingLanding = false;
           nextState.justLanded = true;
         });
@@ -723,7 +775,7 @@ export const useStore = create<Store>()(
     {
       name: 'space-explorer-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 11,
+      version: 12,
       migrate: (persistedState, _version) => {
         const s = (persistedState || {}) as Partial<Store> & {
           // For backwards compatibility with older persisted shapes
@@ -833,6 +885,35 @@ export const useStore = create<Store>()(
 
         if ((s as Partial<Store>).skipRocketAnimation === undefined) {
           (s as Partial<Store>).skipRocketAnimation = false;
+        }
+
+        // New in v12: skins state
+        if ((s as Partial<Store>).unlockedSkins === undefined) {
+          (s as Partial<Store>).unlockedSkins = ['Earth'];
+        }
+
+        if ((s as Partial<Store>).unseenUnlockedSkins === undefined) {
+          (s as Partial<Store>).unseenUnlockedSkins = [];
+        }
+
+        // Leave selectedSkinId undefined by default in v12
+        // Also: if migrating from a previous version that temporarily set Earth by default, clear it
+        if (
+          (_version as number) < 12 &&
+          (s as Partial<Store>).selectedSkinId === 'Earth'
+        ) {
+          (s as Partial<Store>).selectedSkinId = undefined;
+        }
+
+        // If a selected skin exists and we can derive a color, align rocketColor once
+        if (
+          (s as Partial<Store>).selectedSkinId &&
+          (s as Partial<Store>).rocketColor === undefined
+        ) {
+          const skin = getSkinById((s as Partial<Store>).selectedSkinId as string);
+          if (skin?.color !== undefined) {
+            (s as Partial<Store>).rocketColor = skin.color;
+          }
         }
 
         return s as Store;

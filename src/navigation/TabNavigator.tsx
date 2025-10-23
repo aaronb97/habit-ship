@@ -1,7 +1,8 @@
-import { View, StyleSheet, Animated } from 'react-native';
-import { useRef, useEffect } from 'react';
+import { View, StyleSheet, Animated, ImageSourcePropType } from 'react-native';
+import { useRef, useEffect, useState } from 'react';
 import { Home } from './screens/Home';
 import { SolarMap } from './screens/SolarMap';
+import { Profile } from './screens/Profile';
 import { Dev } from './screens/Dev';
 import { colors } from '../styles/theme';
 import { useStore } from '../utils/store';
@@ -9,6 +10,7 @@ import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation';
 import { SolarSystemMap } from '../components/SolarSystemMap';
 import { Dashboard } from '../components/Dashboard';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { AntDesign, Ionicons } from '@expo/vector-icons';
 
 const Tab = createNativeBottomTabNavigator<TabParamList>();
 
@@ -30,6 +32,7 @@ export function TabNavigator() {
   const homeNeedsSelection = useStore((s) => s.justLanded);
   const activeTab = useStore((s) => s.activeTab);
   const setActiveTab = useStore((s) => s.setActiveTab);
+  const unseenSkins = useStore((s) => s.unseenUnlockedSkins);
   // Inline flows now manage destination prompts; no need to read userPosition or level-up modal here.
   const isMapFocused = activeTab === 'MapTab';
 
@@ -38,6 +41,27 @@ export function TabNavigator() {
   );
 
   const fadeOpacity = fadeOpacityRef.current;
+
+  const [imageSources, setImageSources] = useState<
+    Record<string, ImageSourcePropType>
+  >({});
+
+  useEffect(() => {
+    void AntDesign.getImageSource('dashboard', 24, 'inherit').then((source) => {
+      if (!source) return;
+      setImageSources((prev) => ({ ...prev, dashboard: source }));
+    });
+    void Ionicons.getImageSource('rocket-outline', 24, 'inherit').then(
+      (source) => {
+        if (!source) return;
+        setImageSources((prev) => ({ ...prev, map: source }));
+      },
+    );
+    void AntDesign.getImageSource('setting', 24, 'inherit').then((source) => {
+      if (!source) return;
+      setImageSources((prev) => ({ ...prev, dev: source }));
+    });
+  }, []);
 
   useEffect(() => {
     Animated.timing(fadeOpacity, {
@@ -64,9 +88,11 @@ export function TabNavigator() {
           name="HomeTab"
           component={Home}
           options={{
-            title: 'Home',
+            title: '',
             tabBarBadge: homeNeedsSelection ? ' ' : undefined,
-            tabBarIcon: () => ({ sfSymbol: 'house' }),
+            ...(imageSources.dashboard && {
+              tabBarIcon: () => imageSources.dashboard!,
+            }),
           }}
           listeners={{
             focus: () => setActiveTab('HomeTab'),
@@ -76,12 +102,28 @@ export function TabNavigator() {
           name="MapTab"
           component={SolarMap}
           options={{
-            title: 'Map',
+            title: '',
             tabBarBadge: hasFuelAndTarget ? ' ' : undefined,
-            tabBarIcon: () => ({ sfSymbol: 'map' }),
+            ...(imageSources.map && {
+              tabBarIcon: () => imageSources.map!,
+            }),
           }}
           listeners={{
             focus: () => setActiveTab('MapTab'),
+          }}
+        />
+        <Tab.Screen
+          name="ProfileTab"
+          component={Profile}
+          options={{
+            title: '',
+            tabBarBadge: unseenSkins.length > 0 ? ' ' : undefined,
+            tabBarIcon: () => ({ sfSymbol: 'person.crop.circle' }),
+          }}
+          listeners={{
+            focus: () => {
+              setActiveTab('ProfileTab');
+            },
           }}
         />
         {isDevelopment && (
@@ -89,7 +131,7 @@ export function TabNavigator() {
             name="DevTab"
             component={Dev}
             options={{
-              title: 'Dev',
+              title: '',
               tabBarIcon: () => ({ sfSymbol: 'gear' }),
             }}
             listeners={{
@@ -121,6 +163,7 @@ export function TabNavigator() {
 export type TabParamList = {
   HomeTab: undefined;
   MapTab: undefined;
+  ProfileTab: undefined;
   DevTab: undefined;
 };
 
