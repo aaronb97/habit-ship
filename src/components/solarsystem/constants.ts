@@ -31,7 +31,7 @@ export const ORBIT_OFFSET_MULTIPLIER = 30;
 // Max elevation angle away from the orbital plane (~63 degrees).
 export const MAX_PITCH_RAD = 1.1;
 // Default camera radius (zoom) from the orbit center (user position).
-export const ORBIT_INITIAL_RADIUS = 0.2;
+export const ORBIT_INITIAL_RADIUS = 0.1;
 // Default yaw angle at start.
 export const ORBIT_INITIAL_YAW = 2;
 // Initial height as a fraction of the radius; pitch starts at asin of this value.
@@ -49,7 +49,7 @@ export const YAW_SIDE_ON_DISTANCE_CUTOFF = 0.3;
 
 // Gesture settings
 // Min/max zoom radius for pinch gesture.
-export const ZOOM_MIN_RADIUS = 0.1;
+export const ZOOM_MIN_RADIUS = 0.05;
 export const ZOOM_MAX_RADIUS = 20000;
 // Drag across full screen width rotates yaw by 360°, across height rotates pitch by 180°.
 export const PAN_YAW_ROTATION_PER_FULL_DRAG = 2 * Math.PI;
@@ -75,7 +75,7 @@ export const RENDERER_PIXEL_RATIO = 1;
 export const GL_MSAA_SAMPLES = 0;
 // Camera projection parameters.
 export const CAMERA_FOV = 60;
-export const CAMERA_NEAR = 0.05;
+export const CAMERA_NEAR = 0.01;
 export const CAMERA_FAR = 20000;
 
 // Lighting

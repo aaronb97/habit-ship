@@ -1,15 +1,8 @@
 import { useState, useRef } from 'react';
-import {
-  Animated,
-  View,
-  TouchableOpacity,
-  TextInput,
-  Text,
-  StyleSheet,
-} from 'react-native';
+import { Animated, View, TextInput, StyleSheet } from 'react-native';
 import { FadingTextList } from './FadingTextList';
-import { colors, fonts, fontSizes } from '../styles/theme';
 import { HSTextInput } from './HSTextInput';
+import { HSButton } from './HSButton';
 
 // Delay used in onboarding for the OK button fade-in after lines appear
 const ONBOARDING_OK_DELAY_MS = 2000;
@@ -18,18 +11,6 @@ const styles = StyleSheet.create({
   onboardOkButton: {
     marginTop: 16,
     alignSelf: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  onboardOkButtonPrimary: {
-    backgroundColor: colors.primary,
-  },
-  onboardOkText: {
-    fontFamily: fonts.semiBold,
-    fontSize: fontSizes.medium,
-    color: colors.white,
   },
 });
 
@@ -99,12 +80,9 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
     <View style={{ width: '100%' }}>
       <FadingTextList lines={lines} onAllVisible={animateOk} />
       <Animated.View style={{ opacity: okOpacity }}>
-        <TouchableOpacity
-          style={[styles.onboardOkButton, styles.onboardOkButtonPrimary]}
-          onPress={onNext}
-        >
-          <Text style={styles.onboardOkText}>OK</Text>
-        </TouchableOpacity>
+        <HSButton onPress={onNext} style={styles.onboardOkButton}>
+          OK
+        </HSButton>
       </Animated.View>
     </View>
   );
@@ -184,20 +162,17 @@ function FirstHabitStep({
             />
           </Animated.View>
           <Animated.View style={{ opacity: okOpacity }}>
-            <TouchableOpacity
+            <HSButton
               disabled={!canSubmit}
-              style={[
-                styles.onboardOkButton,
-                canSubmit ? styles.onboardOkButtonPrimary : null,
-              ]}
+              style={styles.onboardOkButton}
               onPress={() => {
                 if (canSubmit) {
                   onSubmitHabit(trimmed);
                 }
               }}
             >
-              <Text style={styles.onboardOkText}>OK</Text>
-            </TouchableOpacity>
+              OK
+            </HSButton>
           </Animated.View>
         </>
       ) : null}
@@ -233,12 +208,9 @@ function MoonStep({ onDone }: { onDone: () => void }) {
     <View style={{ width: '100%' }}>
       <FadingTextList lines={lines} onAllVisible={animateOk} />
       <Animated.View style={{ opacity: okOpacity }}>
-        <TouchableOpacity
-          style={[styles.onboardOkButton, styles.onboardOkButtonPrimary]}
-          onPress={onDone}
-        >
-          <Text style={styles.onboardOkText}>OK</Text>
-        </TouchableOpacity>
+        <HSButton style={styles.onboardOkButton} onPress={onDone}>
+          OK
+        </HSButton>
       </Animated.View>
     </View>
   );

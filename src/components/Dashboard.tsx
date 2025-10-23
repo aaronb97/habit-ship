@@ -517,24 +517,26 @@ export function Dashboard() {
               </Text>
             ) : null}
           </View>
-
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => setShowJourneyRemaining(!showJourneyRemaining)}
-          >
-            {renderProgressItem(
-              showJourneyRemaining ? 'Distance Remaining' : 'Journey Progress',
-              showJourneyRemaining
-                ? `${distanceRemaining.toLocaleString(undefined, {
-                    maximumFractionDigits: 0,
-                  })} km`
-                : `${(distancePercentage * 100).toFixed(1)}%`,
-              distancePercentage,
-              colors.primary,
-            )}
-          </TouchableOpacity>
         </View>
       )}
+
+      <View style={styles.levelSection}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => setShowJourneyRemaining(!showJourneyRemaining)}
+        >
+          {renderProgressItem(
+            showJourneyRemaining ? 'Distance Remaining' : 'Journey Progress',
+            showJourneyRemaining
+              ? `${distanceRemaining.toLocaleString(undefined, {
+                  maximumFractionDigits: 0,
+                })} km`
+              : `${(distancePercentage * 100).toFixed(1)}%`,
+            distancePercentage,
+            colors.primary,
+          )}
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.levelSection}>
         {renderProgressItem(
@@ -635,9 +637,14 @@ const styles = StyleSheet.create({
   },
   journeySection: {
     marginBottom: 12,
+    flexDirection: 'column',
+    alignItems: 'center',
   },
   planetInfoContainer: {
     marginBottom: 12,
+    borderRadius: 16,
+    padding: 8,
+    backgroundColor: 'rgba(0,0,0,0.1)',
   },
   statusText: {
     fontFamily: fonts.medium,

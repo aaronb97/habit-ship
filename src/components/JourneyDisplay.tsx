@@ -110,6 +110,8 @@ const styles = StyleSheet.create({
   },
   planetInfoContainer: {
     marginBottom: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,1)',
   },
   planetTitle: {
     fontFamily: fonts.bold,

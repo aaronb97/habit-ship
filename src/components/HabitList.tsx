@@ -4,6 +4,7 @@ import { colors, fonts, fontSizes } from '../styles/theme';
 import { Habit, HabitId } from '../utils/store';
 import { useGetCurrentDate } from '../utils/time';
 import { MaterialIcons } from '@expo/vector-icons';
+import { HSButton } from './HSButton';
 
 export type HabitListProps = {
   /** List of habits to render. */
@@ -226,17 +227,14 @@ function CompleteButton({
   isCompleted: boolean;
 }) {
   return (
-    <TouchableOpacity
+    <HSButton
       disabled={isCompleted}
-      style={[
-        styles.actionButton,
-        { backgroundColor: isCompleted ? colors.darkGray : colors.primary },
-      ]}
+      style={[styles.actionButton]}
       onPress={onPress}
     >
       <MaterialIcons name="check" size={20} color={colors.white} />
       {isCompleted ? <Text style={styles.actionButtonText}>Done</Text> : null}
-    </TouchableOpacity>
+    </HSButton>
   );
 }
 
@@ -278,12 +276,11 @@ const styles = StyleSheet.create({
   actionButton: {
     paddingHorizontal: 8,
     paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     height: 40,
+    borderColor: 'rgba(255,255,255,0.5)',
   },
   actionButtonText: {
     fontFamily: fonts.semiBold,
