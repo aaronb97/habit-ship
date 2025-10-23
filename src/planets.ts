@@ -183,8 +183,8 @@ export abstract class CBody {
   public minLevel?: number;
   public xpReward?: number;
   public isLandable: boolean;
-  // Visual/physical attributes for rendering
-  public axialTiltDeg?: number; // degrees (positive tilts toward +Z around local Z)
+  public axialTiltDeg?: number;
+  public alwaysRenderIfDiscovered?: boolean;
 
   constructor(opts: {
     name: string;
@@ -195,6 +195,7 @@ export abstract class CBody {
     xpReward?: number;
     isLandable?: boolean;
     axialTiltDeg?: number;
+    alwaysRenderIfDiscovered?: boolean;
   }) {
     this.name = opts.name;
     this.description = opts.description;
@@ -204,6 +205,7 @@ export abstract class CBody {
     this.xpReward = opts.xpReward;
     this.isLandable = opts.isLandable ?? false;
     this.axialTiltDeg = opts.axialTiltDeg;
+    this.alwaysRenderIfDiscovered = opts.alwaysRenderIfDiscovered;
   }
 
   abstract getPosition(date?: Date): Coordinates;
@@ -229,6 +231,7 @@ interface PlanetOptions extends BaseCBodyOptions {
   xpReward?: number;
   isLandable?: boolean;
   axialTiltDeg?: number;
+  alwaysRenderIfDiscovered?: boolean;
 }
 
 interface MoonOptions extends BaseCBodyOptions {
@@ -245,6 +248,7 @@ interface MoonOptions extends BaseCBodyOptions {
 interface StarOptions extends BaseCBodyOptions {
   color?: number;
   position: Coordinates;
+  alwaysRenderIfDiscovered?: boolean;
 }
 
 export class Planet extends CBody {
@@ -261,6 +265,7 @@ export class Planet extends CBody {
       xpReward: options.xpReward,
       isLandable: options.isLandable ?? options.minLevel !== undefined,
       axialTiltDeg: options.axialTiltDeg,
+      alwaysRenderIfDiscovered: options.alwaysRenderIfDiscovered,
     });
 
     this.orbitalPeriodDays = options.orbitalPeriodDays;
@@ -362,6 +367,7 @@ export class Star extends CBody {
       description: options.description,
       color: options.color ?? 0xfff700,
       radiusKm: options.radiusKm,
+      alwaysRenderIfDiscovered: options.alwaysRenderIfDiscovered,
     });
 
     this.position = options.position;
@@ -377,6 +383,7 @@ export const sun = new Star({
   description: 'The star at the center of our solar system',
   position: [0, 0, 0],
   radiusKm: 696340,
+  alwaysRenderIfDiscovered: true,
 });
 // ----------------------------------------
 // Heliocentric Keplerian elements (J2000)
@@ -464,6 +471,33 @@ const HELIO = {
     longNode: 110.30347,
     LDot: 145.20780515,
   },
+  Ceres: {
+    a: 2.767,
+    e: 0.0758,
+    i: 10.593,
+    L: 95.989,
+    longPeri: 73.597,
+    longNode: 80.305,
+    LDot: 7828.0,
+  },
+  Eris: {
+    a: 67.7,
+    e: 0.44,
+    i: 44.04,
+    L: 205.0,
+    longPeri: 151.0,
+    longNode: 36.0,
+    LDot: 3.0,
+  },
+  Sedna: {
+    a: 518,
+    e: 0.85,
+    i: 11.93,
+    L: 96.0,
+    longPeri: 95.3,
+    longNode: 144.0,
+    LDot: 3.16,
+  },
 } satisfies Record<string, KeplerianElements>;
 
 export type HelioName = keyof typeof HELIO;
@@ -477,6 +511,7 @@ export const earth = new Planet({
   kepler: HELIO.Earth,
   minLevel: 1,
   axialTiltDeg: 23.44,
+  alwaysRenderIfDiscovered: true,
 });
 export const moon = new Moon({
   name: 'The Moon',
@@ -509,6 +544,7 @@ export const mercury = new Planet({
   minLevel: 2,
   xpReward: 500,
   axialTiltDeg: 0.03,
+  alwaysRenderIfDiscovered: true,
 });
 export const venus = new Planet({
   name: 'Venus',
@@ -520,6 +556,7 @@ export const venus = new Planet({
   minLevel: 2,
   xpReward: 750,
   axialTiltDeg: 177.36,
+  alwaysRenderIfDiscovered: true,
 });
 export const mars = new Planet({
   name: 'Mars',
@@ -531,6 +568,7 @@ export const mars = new Planet({
   minLevel: 5,
   xpReward: 1000,
   axialTiltDeg: 25.19,
+  alwaysRenderIfDiscovered: true,
 });
 export const jupiter = new Planet({
   name: 'Jupiter',
@@ -542,6 +580,7 @@ export const jupiter = new Planet({
   minLevel: 8,
   isLandable: false,
   axialTiltDeg: 3.13,
+  alwaysRenderIfDiscovered: true,
 });
 export const saturn = new Planet({
   name: 'Saturn',
@@ -553,6 +592,7 @@ export const saturn = new Planet({
   minLevel: 11,
   isLandable: false,
   axialTiltDeg: 26.73,
+  alwaysRenderIfDiscovered: true,
 });
 export const uranus = new Planet({
   name: 'Uranus',
@@ -564,6 +604,7 @@ export const uranus = new Planet({
   minLevel: 15,
   isLandable: false,
   axialTiltDeg: 97.77, // severe tilt
+  alwaysRenderIfDiscovered: true,
 });
 export const neptune = new Planet({
   name: 'Neptune',
@@ -575,6 +616,7 @@ export const neptune = new Planet({
   minLevel: 17,
   isLandable: false,
   axialTiltDeg: 28.32,
+  alwaysRenderIfDiscovered: true,
 });
 export const pluto = new Planet({
   name: 'Pluto',
@@ -586,6 +628,36 @@ export const pluto = new Planet({
   minLevel: 20,
   xpReward: 1000,
   axialTiltDeg: 119.6,
+});
+export const ceres = new Planet({
+  name: 'Ceres',
+  description: 'Dwarf planet in the asteroid belt',
+  color: 0x9ca3af,
+  radiusKm: 473,
+  orbitalPeriodDays: 1680,
+  kepler: HELIO.Ceres,
+  minLevel: 6,
+  xpReward: 600,
+});
+export const eris = new Planet({
+  name: 'Eris',
+  description: 'Distant dwarf planet beyond Pluto',
+  color: 0xdedede,
+  radiusKm: 1163,
+  orbitalPeriodDays: 203830,
+  kepler: HELIO.Eris,
+  minLevel: 25,
+  xpReward: 1500,
+});
+export const sedna = new Planet({
+  name: 'Sedna',
+  description: 'Distant trans-Neptunian object',
+  color: 0x8b0000,
+  radiusKm: 500,
+  orbitalPeriodDays: 4200000,
+  kepler: HELIO.Sedna,
+  minLevel: 30,
+  xpReward: 2000,
 });
 export const charon = new Moon({
   name: 'Charon',
@@ -1005,6 +1077,9 @@ export const cBodies: CBody[] = [
   uranus,
   neptune,
   pluto,
+  ceres,
+  eris,
+  sedna,
   // Pluto system
   charon,
   // Martian moons

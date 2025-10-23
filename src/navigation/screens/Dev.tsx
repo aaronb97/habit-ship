@@ -44,6 +44,17 @@ export function Dev() {
     }
   };
 
+  const handleLevelUpBy = (levels: number) => {
+    let { totalXP } = useStore.getState();
+    const { addXP } = useStore.getState();
+    for (let i = 0; i < levels; i++) {
+      const xpNeeded = getXPToNextLevel(totalXP);
+      if (xpNeeded <= 0) break;
+      addXP(xpNeeded, 'habit_completion');
+      totalXP += xpNeeded;
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -61,6 +72,24 @@ export function Dev() {
           </TouchableOpacity>
           <TouchableOpacity style={styles.button} onPress={handleLevelUpOnce}>
             <Text style={styles.buttonText}>Level +1</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => handleLevelUpBy(5)}
+          >
+            <Text style={styles.buttonText}>Level +5</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => handleLevelUpBy(10)}
+          >
+            <Text style={styles.buttonText}>Level +10</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => handleLevelUpBy(20)}
+          >
+            <Text style={styles.buttonText}>Level +20</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.button, styles.dangerButton]}

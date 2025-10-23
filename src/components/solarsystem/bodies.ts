@@ -29,6 +29,9 @@ export type BodyNodeUpdateOpts = {
   relevantSystems: Set<string>;
   showTrails: boolean;
   unlockedBodies: Set<string>;
+  visitedBodies: Set<string>;
+  startingLocation: string;
+  targetName?: string;
 };
 
 export class CelestialBodyNode {
@@ -223,7 +226,14 @@ export class CelestialBodyNode {
       this.mesh.visible = allowed;
       this.setTrailsEnabled(opts.showTrails && allowed);
     } else if (this.body instanceof Planet) {
-      const allowed = opts.unlockedBodies.has(this.body.name);
+      const always = Boolean(this.body.alwaysRenderIfDiscovered);
+      const isVisited = opts.visitedBodies.has(this.body.name);
+      const isStart = this.body.name === opts.startingLocation;
+      const isTarget = this.body.name === opts.targetName;
+      const isUnlocked = opts.unlockedBodies.has(this.body.name);
+      const allowed = always
+        ? isUnlocked || isVisited || isStart || isTarget
+        : isVisited || isStart || isTarget;
       this.mesh.visible = allowed;
       this.setTrailsEnabled(opts.showTrails && allowed);
     } else {

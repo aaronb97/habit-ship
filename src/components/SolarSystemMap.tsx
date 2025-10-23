@@ -178,6 +178,11 @@ export function SolarSystemMap({
     return set;
   };
 
+  const getVisitedBodies = (): Set<string> => {
+    const completed = useStore.getState().completedPlanets;
+    return new Set<string>(completed);
+  };
+
   // Animation durations imported from constants
 
   // Helpers (imported from camera module)
@@ -597,6 +602,10 @@ export function SolarSystemMap({
 
     const relevantSystems = getRelevantPlanetSystems();
     const unlockedBodies = getUnlockedBodies();
+    const visitedBodies = getVisitedBodies();
+    const startName = useStore.getState().userPosition.startingLocation;
+    const targetName = useStore.getState().userPosition.target?.name;
+    const showTrailsInit = useStore.getState().showTrails;
 
     // Create body nodes with encapsulated mesh/trail/outline behavior
     const resolution = new THREE.Vector2(
@@ -618,9 +627,20 @@ export function SolarSystemMap({
 
       // Set initial visibility to reduce flicker before first update()
       if (p instanceof Moon) {
-        node.setVisible(relevantSystems.has(p.orbits));
+        const allowed = relevantSystems.has(p.orbits);
+        node.setVisible(allowed);
+        node.setTrailsEnabled(showTrailsInit && allowed);
       } else if (p instanceof Planet) {
-        node.setVisible(unlockedBodies.has(p.name));
+        const always = Boolean(p.alwaysRenderIfDiscovered);
+        const isVisited = visitedBodies.has(p.name);
+        const isStart = p.name === startName;
+        const isTarget = p.name === targetName;
+        const isUnlocked = unlockedBodies.has(p.name);
+        const allowed = always
+          ? isUnlocked || isVisited || isStart || isTarget
+          : isVisited || isStart || isTarget;
+        node.setVisible(allowed);
+        node.setTrailsEnabled(showTrailsInit && allowed);
       }
 
       bodyRegistryRef.current.add(node);
@@ -710,12 +730,19 @@ export function SolarSystemMap({
         const glCtx = glRef.current;
         if (glCtx) {
           const unlockedBodiesNow = getUnlockedBodies();
+          const visitedBodiesNow = getVisitedBodies();
+          const startingLocationNow = useStore.getState().userPosition
+            .startingLocation;
+          const targetNameNow = useStore.getState().userPosition.target?.name;
           bodyRegistryRef.current.forEach((node) =>
             node.update({
               glHeight: glCtx.drawingBufferHeight,
               relevantSystems: relevantSystemsNow,
               showTrails,
               unlockedBodies: unlockedBodiesNow,
+              visitedBodies: visitedBodiesNow,
+              startingLocation: startingLocationNow,
+              targetName: targetNameNow,
             }),
           );
         }
