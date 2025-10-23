@@ -22,7 +22,7 @@ export function createPlanetMesh(
   radius: number,
   texture?: THREE.Texture,
 ): THREE.Mesh {
-  const { name, color, axialTiltDeg } = body;
+  const { name, color } = body;
   const geom = new THREE.SphereGeometry(
     radius,
     SPHERE_SEGMENTS,
