@@ -201,15 +201,12 @@ function TimerButton({
   onPress: () => void;
 }) {
   return (
-    <TouchableOpacity
-      style={[styles.actionButton, { backgroundColor: colors.accent }]}
-      onPress={onPress}
-    >
+    <HSButton style={[styles.actionButton]} onPress={onPress}>
       <MaterialIcons name="timer" size={20} color={colors.white} />
       <Text
         style={styles.actionButtonText}
       >{`${habit.timerLength! / 60} min`}</Text>
-    </TouchableOpacity>
+    </HSButton>
   );
 }
 
@@ -265,7 +262,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   completedHabitTitle: {
-    color: colors.primaryText,
+    color: colors.grey,
   },
   habitDescription: {
     fontFamily: fonts.regular,
