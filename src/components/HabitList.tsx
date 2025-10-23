@@ -274,7 +274,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.small,
     color: colors.white,
     opacity: 0.8,
-    marginTop: 2,
   },
   actionButton: {
     paddingHorizontal: 8,
