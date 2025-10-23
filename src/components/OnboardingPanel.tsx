@@ -201,7 +201,7 @@ function MoonStep({ onDone }: { onDone: () => void }) {
     'The Solar System awaits you!',
     'You will be amazed by what you can accomplish with persistent effort.',
     "Don't worry; we're starting you off easy with The Moon.",
-    'Complete your first habit to fuel your launch, then open the Map tab to begin your journey.',
+    'Complete your first habit to fuel your launch, then open the Rocket tab to begin your journey.',
   ];
 
   return (

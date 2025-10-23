@@ -100,7 +100,7 @@ export function SolarSystemMap({
   const fuelKm = useStore((s) => s.fuelKm);
   const skipRocketAnimation = useStore((s) => s.skipRocketAnimation);
 
-  // Focus replaced by explicit interactive flag from parent (Map tab focus)
+  // Focus replaced by explicit interactive flag from parent (Rocket tab focus)
   const isInteractiveRef = useRef<boolean>(interactiveEffective);
   useEffect(() => {
     isInteractiveRef.current = interactiveEffective;

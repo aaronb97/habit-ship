@@ -513,7 +513,7 @@ export function Dashboard() {
             </TouchableOpacity>
             {!isTraveling && userPosition.target && fuelKm > 0 ? (
               <Text style={[styles.statusText, { color: bodyHex }]}>
-                Open the map tab to launch to {userPosition.target.name}
+                Open the rocket tab to launch to {userPosition.target.name}
               </Text>
             ) : null}
           </View>

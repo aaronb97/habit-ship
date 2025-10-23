@@ -653,7 +653,7 @@ export const useStore = create<Store>()(
        * - If landing occurs, leftover fuel is preserved (fuel - remaining).
        * - If not landing, all fuel is spent.
        * - This updates distanceTraveled but leaves previousDistanceTraveled unchanged,
-       *   so the map tab can animate the delta.
+       *   so the rocket tab can animate the delta.
        */
       applyFuelToTravel: () => {
         set((state) => {
@@ -910,7 +910,9 @@ export const useStore = create<Store>()(
           (s as Partial<Store>).selectedSkinId &&
           (s as Partial<Store>).rocketColor === undefined
         ) {
-          const skin = getSkinById((s as Partial<Store>).selectedSkinId as string);
+          const skin = getSkinById(
+            (s as Partial<Store>).selectedSkinId as string,
+          );
           if (skin?.color !== undefined) {
             (s as Partial<Store>).rocketColor = skin.color;
           }
