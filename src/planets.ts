@@ -185,6 +185,7 @@ export abstract class CBody {
   public isLandable: boolean;
   public axialTiltDeg?: number;
   public alwaysRenderIfDiscovered?: boolean;
+  public rotationPeriodHours?: number;
 
   constructor(opts: {
     name: string;
@@ -196,6 +197,7 @@ export abstract class CBody {
     isLandable?: boolean;
     axialTiltDeg?: number;
     alwaysRenderIfDiscovered?: boolean;
+    rotationPeriodHours?: number;
   }) {
     this.name = opts.name;
     this.description = opts.description;
@@ -206,6 +208,7 @@ export abstract class CBody {
     this.isLandable = opts.isLandable ?? false;
     this.axialTiltDeg = opts.axialTiltDeg;
     this.alwaysRenderIfDiscovered = opts.alwaysRenderIfDiscovered;
+    this.rotationPeriodHours = opts.rotationPeriodHours;
   }
 
   abstract getPosition(date?: Date): Coordinates;
@@ -232,6 +235,7 @@ interface PlanetOptions extends BaseCBodyOptions {
   isLandable?: boolean;
   axialTiltDeg?: number;
   alwaysRenderIfDiscovered?: boolean;
+  rotationPeriodHours?: number;
 }
 
 interface MoonOptions extends BaseCBodyOptions {
@@ -243,12 +247,14 @@ interface MoonOptions extends BaseCBodyOptions {
   minLevel: number; // moons are always landable
   xpReward?: number;
   axialTiltDeg?: number;
+  rotationPeriodHours?: number;
 }
 
 interface StarOptions extends BaseCBodyOptions {
   color?: number;
   position: Coordinates;
   alwaysRenderIfDiscovered?: boolean;
+  rotationPeriodHours?: number;
 }
 
 export class Planet extends CBody {
@@ -266,6 +272,7 @@ export class Planet extends CBody {
       isLandable: options.isLandable ?? options.minLevel !== undefined,
       axialTiltDeg: options.axialTiltDeg,
       alwaysRenderIfDiscovered: options.alwaysRenderIfDiscovered,
+      rotationPeriodHours: options.rotationPeriodHours,
     });
 
     this.orbitalPeriodDays = options.orbitalPeriodDays;
@@ -300,6 +307,7 @@ export class Moon extends CBody {
       xpReward: options.xpReward,
       isLandable: true,
       axialTiltDeg: options.axialTiltDeg,
+      rotationPeriodHours: options.rotationPeriodHours,
     });
 
     this.orbitalPeriodDays = options.orbitalPeriodDays;
@@ -368,6 +376,7 @@ export class Star extends CBody {
       color: options.color ?? 0xfff700,
       radiusKm: options.radiusKm,
       alwaysRenderIfDiscovered: options.alwaysRenderIfDiscovered,
+      rotationPeriodHours: options.rotationPeriodHours,
     });
 
     this.position = options.position;
@@ -384,6 +393,7 @@ export const sun = new Star({
   position: [0, 0, 0],
   radiusKm: 696340,
   alwaysRenderIfDiscovered: true,
+  rotationPeriodHours: 25 * 24,
 });
 // ----------------------------------------
 // Heliocentric Keplerian elements (J2000)
@@ -511,6 +521,7 @@ export const earth = new Planet({
   kepler: HELIO.Earth,
   minLevel: 1,
   axialTiltDeg: 23.44,
+  rotationPeriodHours: 23.934, // sidereal day
   alwaysRenderIfDiscovered: true,
 });
 export const moon = new Moon({
@@ -544,6 +555,7 @@ export const mercury = new Planet({
   minLevel: 2,
   xpReward: 500,
   axialTiltDeg: 0.03,
+  rotationPeriodHours: 1407.5, // ~58.646 days
   alwaysRenderIfDiscovered: true,
 });
 export const venus = new Planet({
@@ -556,6 +568,7 @@ export const venus = new Planet({
   minLevel: 2,
   xpReward: 750,
   axialTiltDeg: 177.36,
+  rotationPeriodHours: -5832.5, // retrograde ~243 days
   alwaysRenderIfDiscovered: true,
 });
 export const mars = new Planet({
@@ -568,6 +581,7 @@ export const mars = new Planet({
   minLevel: 5,
   xpReward: 1000,
   axialTiltDeg: 25.19,
+  rotationPeriodHours: 24.623,
   alwaysRenderIfDiscovered: true,
 });
 export const jupiter = new Planet({
@@ -580,6 +594,7 @@ export const jupiter = new Planet({
   minLevel: 8,
   isLandable: false,
   axialTiltDeg: 3.13,
+  rotationPeriodHours: 9.925,
   alwaysRenderIfDiscovered: true,
 });
 export const saturn = new Planet({
@@ -592,6 +607,7 @@ export const saturn = new Planet({
   minLevel: 11,
   isLandable: false,
   axialTiltDeg: 26.73,
+  rotationPeriodHours: 10.656,
   alwaysRenderIfDiscovered: true,
 });
 export const uranus = new Planet({
@@ -604,6 +620,7 @@ export const uranus = new Planet({
   minLevel: 15,
   isLandable: false,
   axialTiltDeg: 97.77, // severe tilt
+  rotationPeriodHours: -17.24, // retrograde
   alwaysRenderIfDiscovered: true,
 });
 export const neptune = new Planet({
@@ -616,6 +633,7 @@ export const neptune = new Planet({
   minLevel: 17,
   isLandable: false,
   axialTiltDeg: 28.32,
+  rotationPeriodHours: 16.11,
   alwaysRenderIfDiscovered: true,
 });
 export const pluto = new Planet({
@@ -628,6 +646,7 @@ export const pluto = new Planet({
   minLevel: 20,
   xpReward: 1000,
   axialTiltDeg: 119.6,
+  rotationPeriodHours: -153.3, // ~6.387 days, retrograde
 });
 export const ceres = new Planet({
   name: 'Ceres',
@@ -638,6 +657,7 @@ export const ceres = new Planet({
   kepler: HELIO.Ceres,
   minLevel: 6,
   xpReward: 600,
+  rotationPeriodHours: 9.074,
 });
 export const eris = new Planet({
   name: 'Eris',
@@ -648,6 +668,7 @@ export const eris = new Planet({
   kepler: HELIO.Eris,
   minLevel: 25,
   xpReward: 1500,
+  rotationPeriodHours: 25.9,
 });
 export const sedna = new Planet({
   name: 'Sedna',
@@ -658,6 +679,7 @@ export const sedna = new Planet({
   kepler: HELIO.Sedna,
   minLevel: 30,
   xpReward: 2000,
+  rotationPeriodHours: 10.0,
 });
 export const charon = new Moon({
   name: 'Charon',

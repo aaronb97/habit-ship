@@ -20,10 +20,12 @@ import {
   OUTLINE_MIN_PIXELS_FADE_OUT,
   OUTLINE_MIN_PIXELS_FADE_IN,
   TRAIL_NEAR_BODY_DIAMETERS,
+  ROTATION_SPEED_MULTIPLIER,
 } from './constants';
 import { toVec3, apparentScaleRatio, getTrailForBody } from './helpers';
 import { CBody, Planet, Moon, earth } from '../../planets';
 import { useStore } from '../../utils/store';
+import { getCurrentTime } from '../../utils/time';
 
 export type BodyNodeUpdateOpts = {
   glHeight: number;
@@ -50,6 +52,11 @@ export class CelestialBodyNode {
 
   // Cache visual radius on creation (in scene units before mesh scaling)
   private readonly visualRadiusBase: number;
+
+  // Spin integration
+  private lastSpinUpdateMs: number = getCurrentTime();
+  private spinRadPerMs: number = 0;
+  private readonly spinAxis = new THREE.Vector3(0, 1, 0);
 
   constructor(params: {
     body: CBody;
@@ -98,6 +105,23 @@ export class CelestialBodyNode {
     // Randomize static spin phase around local Y to avoid identical texture seams
     const randomPhase = Math.random() * Math.PI * 2;
     this.mesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), randomPhase);
+
+    // Compute spin speed from rotation period; default moons to tidal locking
+    {
+      let periodHours = body.rotationPeriodHours;
+      if (periodHours === undefined && body instanceof Moon) {
+        periodHours = body.orbitalPeriodDays * 24;
+      }
+
+      if (periodHours && isFinite(periodHours) && periodHours !== 0) {
+        const sign = periodHours > 0 ? 1 : -1;
+        const periodMs = Math.abs(periodHours) * 3600 * 1000;
+        const baseRadPerMs = (2 * Math.PI) / periodMs;
+        this.spinRadPerMs = sign * baseRadPerMs * ROTATION_SPEED_MULTIPLIER;
+      } else {
+        this.spinRadPerMs = 0;
+      }
+    }
 
     // Initial position
     this.mesh.position.copy(toVec3(body.getVisualPosition()));
@@ -221,6 +245,18 @@ export class CelestialBodyNode {
   update(opts: BodyNodeUpdateOpts) {
     if (this.disposed) {
       return;
+    }
+
+    // Apply per-frame spin around local Y (already tilted in constructor)
+    if (this.spinRadPerMs !== 0) {
+      const now = getCurrentTime();
+      const dt = now - this.lastSpinUpdateMs;
+      this.lastSpinUpdateMs = now;
+      const dTheta = this.spinRadPerMs * dt;
+      this.mesh.rotateOnAxis(this.spinAxis, dTheta);
+    } else {
+      // keep timestamp fresh to avoid giant deltas if spin is later enabled
+      this.lastSpinUpdateMs = getCurrentTime();
     }
 
     // Update position to current visual position (accounts for date/time changes)

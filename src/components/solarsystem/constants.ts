@@ -96,6 +96,10 @@ export const SKY_BRIGHTNESS = 8;
 // Number of segments used for planet spheres.
 export const SPHERE_SEGMENTS = 24;
 
+// Planet rotation
+// Multiplier applied to per-body rotation speeds (visual only)
+export const ROTATION_SPEED_MULTIPLIER = 300;
+
 // Material/texture knobs
 // Anisotropic filtering for textures (improves sharpness at glancing angles).
 export const TEXTURE_ANISOTROPY = 4;
