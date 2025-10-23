@@ -764,7 +764,13 @@ export function SolarSystemMap({
           const targetBody =
             PLANETS.find((b) => b.name === targetState?.name) ?? earth;
 
-          const center = displayUserPosRef.current.clone();
+          let center = displayUserPosRef.current.clone();
+          const rocket = rocketRef.current;
+          if (rocket && rocket.group.visible) {
+            try {
+              center = rocket.getOrbitCenter();
+            } catch {}
+          }
           const targetVisual = targetState
             ? toVec3(targetBody.getVisualPosition())
             : center.clone();

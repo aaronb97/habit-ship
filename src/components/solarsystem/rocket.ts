@@ -71,6 +71,7 @@ export class Rocket {
   private baseColor: number;
   private currentTexture?: THREE.Texture | null;
   private uvsApplied = false;
+  private centerOffset: THREE.Vector3 = new THREE.Vector3();
 
   // exhaust sprites
   private sprites: THREE.Sprite[] = [];
@@ -110,6 +111,14 @@ export class Rocket {
 
       this.unsubOutlines = unsub;
     }
+
+    this.hull.updateWorldMatrix(true, true);
+    const box = new THREE.Box3().setFromObject(this.hull);
+    const ctrWorld = new THREE.Vector3();
+    box.getCenter(ctrWorld);
+    this.group.updateWorldMatrix(true, false);
+    const ctrLocal = this.group.worldToLocal(ctrWorld.clone());
+    this.centerOffset.copy(ctrLocal);
   }
 
   private ensureCylindricalUVsApplied() {
@@ -309,6 +318,11 @@ export class Rocket {
         prev.dispose();
       } catch {}
     }
+  }
+
+  getOrbitCenter(): THREE.Vector3 {
+    this.group.updateWorldMatrix(true, false);
+    return this.group.localToWorld(this.centerOffset.clone());
   }
 
   update(
