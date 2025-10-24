@@ -35,6 +35,27 @@ export type Vantage = { yaw: number; pitch: number };
 
 export type CameraStart = CameraState;
 
+/**
+ * Arguments provided to the collision resolver to compute a safe camera radius.
+ * @param center The orbit center in scene space (user/display position).
+ * @param target The aim target in scene space (defines orbit plane).
+ * @param yaw The current yaw (radians) used to place the camera.
+ * @param pitch The current pitch (radians) used to place the camera.
+ * @param radius The current camera radius from center.
+ * @param planeNormalOverride Optional forced orbit plane normal.
+ * @param desiredPos The computed desired camera position for the current frame.
+ * @returns The minimum safe radius to avoid clipping (>= radius).
+ */
+export type CameraCollisionResolver = (args: {
+  center: THREE.Vector3;
+  target: THREE.Vector3;
+  yaw: number;
+  pitch: number;
+  radius: number;
+  planeNormalOverride?: THREE.Vector3;
+  desiredPos: THREE.Vector3;
+}) => number;
+
 export enum CameraPhase {
   Idle = 'Idle',
   AutoRotate = 'AutoRotate',
@@ -241,6 +262,9 @@ export class CameraController {
   private tweenEndRadius = 0;
   private tweenEndPitch = 0;
 
+  // Optional: external callback to adjust radius to avoid geometry clipping
+  private collisionResolver?: CameraCollisionResolver;
+
   // Scripted camera sequence (pre-roll -> hold -> rocket follow)
   private scriptedActive = false;
   private focusAnimStart?: number;
@@ -299,6 +323,15 @@ export class CameraController {
       pitch: this.pitchTarget,
       radius: this.radiusTarget,
     };
+  }
+
+  /**
+   * Set or clear a collision resolver used to push the camera radius outward
+   * when the line from center to camera would intersect scene geometry.
+   * @param resolver Optional resolver; pass undefined to clear.
+   */
+  setCollisionResolver(resolver?: CameraCollisionResolver) {
+    this.collisionResolver = resolver;
   }
 
   /**
@@ -817,6 +850,85 @@ export class CameraController {
       this.yaw += (this.yawTarget - this.yaw) * SMOOTHING_YAW;
       this.pitch += (this.pitchTarget - this.pitch) * SMOOTHING_PITCH;
       this.radius += (this.radiusTarget - this.radius) * SMOOTHING_RADIUS;
+    }
+
+    // If a collision resolver is configured, compute desired position and
+    // allow it to enforce a minimum safe radius before applying the transform.
+    if (this.collisionResolver) {
+      // Recompute the same orbit basis used by updateOrbitCamera to derive desiredPos
+      const sun = new THREE.Vector3(0, 0, 0);
+      const theta = this.yaw;
+      const phi = THREE.MathUtils.clamp(this.pitch, -MAX_PITCH_RAD, MAX_PITCH_RAD);
+
+      const n = new THREE.Vector3();
+      if (planeNormalOverride && planeNormalOverride.lengthSq() >= PLANE_NORMAL_EPS) {
+        n.copy(planeNormalOverride);
+      } else {
+        const a = center.clone().sub(sun);
+        const b = target.clone().sub(sun);
+        n.copy(a.cross(b));
+      }
+
+      if (n.lengthSq() < PLANE_NORMAL_EPS) {
+        const a = center.clone().sub(sun);
+        const helper =
+          Math.abs(a.y) < HELPER_AXIS_THRESHOLD
+            ? new THREE.Vector3(0, 1, 0)
+            : new THREE.Vector3(1, 0, 0);
+
+        n.copy(a.clone().cross(helper));
+        if (n.lengthSq() < PLANE_NORMAL_EPS) {
+          n.set(0, 1, 0);
+        }
+      }
+
+      n.normalize();
+      if (n.dot(ECLIPTIC_UP) > 0) {
+        n.multiplyScalar(-1);
+      }
+
+      let U = target.clone().sub(center).projectOnPlane(n);
+      if (U.lengthSq() < PLANE_NORMAL_EPS) {
+        U = ECLIPTIC_UP.clone().cross(n);
+        if (U.lengthSq() < PLANE_NORMAL_EPS) {
+          const helper =
+            Math.abs(n.y) < HELPER_AXIS_THRESHOLD
+              ? new THREE.Vector3(0, 1, 0)
+              : new THREE.Vector3(1, 0, 0);
+          U = helper.clone().cross(n);
+        }
+      }
+
+      U.normalize();
+      const V = n.clone().cross(U).normalize();
+
+      const rCos = this.radius * Math.cos(phi);
+      const rSin = this.radius * Math.sin(phi);
+      const circleOffset = U.clone()
+        .multiplyScalar(Math.cos(theta) * rCos)
+        .add(V.clone().multiplyScalar(Math.sin(theta) * rCos));
+      const desiredPos = center
+        .clone()
+        .add(n.clone().multiplyScalar(rSin))
+        .add(circleOffset);
+
+      const safeRadius = this.collisionResolver({
+        center,
+        target,
+        yaw: this.yaw,
+        pitch: this.pitch,
+        radius: this.radius,
+        planeNormalOverride,
+        desiredPos,
+      });
+
+      if (safeRadius > this.radius) {
+        this.radius = safeRadius;
+        this.radiusTarget = Math.max(this.radiusTarget, safeRadius);
+        if (this.tweenActive) {
+          this.tweenActive = false;
+        }
+      }
     }
 
     // Apply transform to the camera

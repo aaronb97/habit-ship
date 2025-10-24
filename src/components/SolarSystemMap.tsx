@@ -31,6 +31,7 @@ import {
   clamp01,
   easeInOutCubic,
 } from './solarsystem/camera';
+import type { CameraCollisionResolver } from './solarsystem/camera';
 import { Rocket } from './solarsystem/rocket';
 import { CelestialBodyNode, BodyNodesRegistry } from './solarsystem/bodies';
 import { getRelevantPlanetSystemsFor } from './solarsystem/relevance';
@@ -50,6 +51,8 @@ import {
   CAMERA_MOVE_MS,
   CAMERA_HOLD_MS,
   YAW_SIDE_ON_DISTANCE_CUTOFF,
+  CAMERA_COLLISION_CLEARANCE,
+  ZOOM_MAX_RADIUS,
 } from './solarsystem/constants';
 import { DebugOverlay } from './DebugOverlay';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -535,6 +538,66 @@ export function SolarSystemMap({
     cameraRef.current = camera;
     // Create camera controller and start any pending scripted sequence
     cameraControllerRef.current = new CameraController(camera);
+    // Install collision resolver to prevent camera from entering body geometry
+    {
+      /**
+       * Compute the minimum safe radius to keep the camera outside any visible
+       * planet/moon when the desired camera position would be inside it.
+       * @param center Orbit center in scene units.
+       * @param desiredPos Desired camera position computed for this frame.
+       * @param radius Current camera radius.
+       * @returns Minimum safe radius (>= radius) to avoid clipping.
+       */
+      const resolver: CameraCollisionResolver = ({ center, desiredPos, radius }) => {
+        let safe = radius;
+        const dir = desiredPos.clone().sub(center);
+        const rLen = dir.length();
+        if (rLen <= 1e-9) {
+          return safe;
+        }
+        dir.multiplyScalar(1 / rLen); // normalize
+
+        bodyRegistryRef.current.forEach((node) => {
+          // Only consider planets and moons for collision; ignore stars like the Sun
+          if (!(node.body instanceof Planet || node.body instanceof Moon)) {
+            return;
+          }
+          if (!node.mesh.visible) {
+            return;
+          }
+          const sphereCenter = node.mesh.position;
+          const R = node.getVisualRadius() + CAMERA_COLLISION_CLEARANCE;
+          // If desired position is already safely outside, skip costly solve
+          const distToDesired = desiredPos.distanceTo(sphereCenter);
+          if (distToDesired >= R) {
+            return;
+          }
+
+          // Solve quadratic for intersection along the ray center + t*dir
+          const A = center.clone().sub(sphereCenter);
+          const b = A.dot(dir);
+          const c = A.lengthSq() - R * R;
+          const disc = b * b - c;
+          if (disc < 0) {
+            return; // no intersection
+          }
+
+          const t2 = -b + Math.sqrt(disc); // far intersection distance along dir
+          if (t2 > safe) {
+            safe = t2;
+          }
+        });
+
+        // Clamp to overall maximum zoom
+        if (safe > ZOOM_MAX_RADIUS) {
+          safe = ZOOM_MAX_RADIUS;
+        }
+
+        return safe;
+      };
+
+      cameraControllerRef.current.setCollisionResolver(resolver);
+    }
     // Expose controller to screens for gesture forwarding when overlay is behind
     registerController(cameraControllerRef.current);
     if (pendingScriptedStartRef.current) {

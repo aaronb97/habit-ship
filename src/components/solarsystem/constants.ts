@@ -43,6 +43,10 @@ export const SMOOTHING_YAW = 0.15;
 export const SMOOTHING_PITCH = 0.18;
 export const SMOOTHING_RADIUS = 0.2;
 
+// Minimum extra radial clearance when pushing the camera out to avoid clipping
+// into a planet or moon (scene units).
+export const CAMERA_COLLISION_CLEARANCE = 0.05;
+
 // For very short travels (e.g., Mars -> Phobos), lock camera yaw to side-on during the
 // travel animation to avoid ending up behind the parent body. Units are scene units.
 export const YAW_SIDE_ON_DISTANCE_CUTOFF = 0.3;
