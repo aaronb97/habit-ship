@@ -117,6 +117,9 @@ export function vantageForProgress(p: number): Vantage {
  * Place and orient the camera on an orbit around a center within the plane
  * defined by (sun, center, target). Keeps camera up aligned to the plane normal
  * and looks at the center to stabilize framing.
+ *
+ * When provided, planeNormalOverride forces the orbit plane normal (e.g.,
+ * passing (0,1,0) will align the orbit plane to the scene's XZ plane).
  */
 function updateOrbitCamera(
   camera: THREE.PerspectiveCamera,
@@ -125,6 +128,7 @@ function updateOrbitCamera(
   yaw: number,
   pitch: number,
   radius: number,
+  planeNormalOverride?: THREE.Vector3,
 ) {
   // Positions in scene units
   const sun = new THREE.Vector3(0, 0, 0);
@@ -132,9 +136,14 @@ function updateOrbitCamera(
   const theta = yaw; // orbit angle within the plane
   const phi = THREE.MathUtils.clamp(pitch, -MAX_PITCH_RAD, MAX_PITCH_RAD);
 
-  // Plane normal defined by the three points (sun, user, target)
+  // Plane normal: either forced via override, or defined by the three points (sun, user, target)
   const n = new THREE.Vector3();
-  {
+  if (
+    planeNormalOverride &&
+    planeNormalOverride.lengthSq() >= PLANE_NORMAL_EPS
+  ) {
+    n.copy(planeNormalOverride);
+  } else {
     const a = center.clone().sub(sun);
     const b = target.clone().sub(sun);
     n.copy(a.cross(b));
@@ -735,8 +744,14 @@ export class CameraController {
    * Per-frame update: advances inertia/tweens, updates targets and applies the orbit transform.
    * @param center Scene-space center to orbit around (user/display position).
    * @param target Scene-space target to frame; defines the orbit plane normal.
+   * @param planeNormalOverride Optional forced plane normal. When provided (e.g., (0,1,0)),
+   * aligns the orbit plane accordingly regardless of center/target relationship.
    */
-  tick(center: THREE.Vector3, target: THREE.Vector3) {
+  tick(
+    center: THREE.Vector3,
+    target: THREE.Vector3,
+    planeNormalOverride?: THREE.Vector3,
+  ) {
     this._nowTs = getCurrentTime();
 
     const phase = this.getCameraPhase();
@@ -812,6 +827,7 @@ export class CameraController {
       this.yaw,
       this.pitch,
       this.radius,
+      planeNormalOverride,
     );
   }
 }

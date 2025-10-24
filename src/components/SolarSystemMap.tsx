@@ -774,7 +774,13 @@ export function SolarSystemMap({
             ? toVec3(targetBody.getVisualPosition())
             : center.clone();
 
-          controller.tick(center, targetVisual);
+          // If the target is The Moon, force the orbit plane normal to Y-up (align to XZ plane)
+          const planeOverride =
+            targetState?.name === 'The Moon'
+              ? new THREE.Vector3(0, 0, 1)
+              : undefined;
+
+          controller.tick(center, targetVisual, planeOverride);
         }
       }
 
