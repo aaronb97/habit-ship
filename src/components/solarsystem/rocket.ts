@@ -206,7 +206,11 @@ export class Rocket {
       require('../../../assets/Rocket.obj'),
     );
 
-    await rocketAsset.downloadAsync();
+    try {
+      await rocketAsset.downloadAsync();
+    } catch (err) {
+      console.warn('[rocket] downloadAsync failed for Rocket.obj, using uri fallback', err);
+    }
     const loader = new OBJLoader();
     const uri = rocketAsset.localUri ?? rocketAsset.uri;
     const obj: THREE.Group = await new Promise((resolve, reject) => {

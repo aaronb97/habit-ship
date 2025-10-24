@@ -45,8 +45,13 @@ export async function loadBodyTextures(
 
     try {
       const asset = Asset.fromModule(req);
-      await asset.downloadAsync();
-      const tex = await loader.loadAsync(asset.localUri ?? asset.uri);
+      try {
+        await asset.downloadAsync();
+      } catch (err) {
+        console.warn(`[textures] downloadAsync failed for ${name}, using uri fallback`, err);
+      }
+      const src = asset.localUri ?? asset.uri;
+      const tex = await loader.loadAsync(src);
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = TEXTURE_ANISOTROPY;
       textures[name] = tex;
@@ -69,8 +74,13 @@ export async function loadRingTextures(
     if (!req) continue;
     try {
       const asset = Asset.fromModule(req);
-      await asset.downloadAsync();
-      const tex = await loader.loadAsync(asset.localUri ?? asset.uri);
+      try {
+        await asset.downloadAsync();
+      } catch (err) {
+        console.warn(`[textures] downloadAsync failed for ring ${name}, using uri fallback`, err);
+      }
+      const src = asset.localUri ?? asset.uri;
+      const tex = await loader.loadAsync(src);
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = TEXTURE_ANISOTROPY;
       tex.wrapS = THREE.ClampToEdgeWrapping;

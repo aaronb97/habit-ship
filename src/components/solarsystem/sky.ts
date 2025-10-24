@@ -8,12 +8,15 @@ export async function createSky(): Promise<THREE.Mesh> {
     require('../../../assets/cbodies/space.jpg'),
   );
 
-  await spaceAsset.downloadAsync();
+  try {
+    await spaceAsset.downloadAsync();
+  } catch (err) {
+    console.warn('[sky] downloadAsync failed for space.jpg, using uri fallback', err);
+  }
 
   const loader = new TextureLoader();
-  const spaceTexture = await loader.loadAsync(
-    spaceAsset.localUri ?? spaceAsset.uri,
-  );
+  const src = spaceAsset.localUri ?? spaceAsset.uri;
+  const spaceTexture = await loader.loadAsync(src);
 
   // Ensure correct color space for sRGB textures
   spaceTexture.colorSpace = THREE.SRGBColorSpace;
