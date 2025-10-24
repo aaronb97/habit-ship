@@ -22,6 +22,7 @@ export function Profile() {
   const setSelectedSkinId = useStore((s) => s.setSelectedSkinId);
   const markSkinsSeen = useStore((s) => s.markSkinsSeen);
   const money = useStore((s) => s.money);
+  const username = useStore((s) => s.username);
 
   const allSkins = useMemo(() => Object.values(SKINS), []);
   const visibleSkins = useMemo(
@@ -61,6 +62,10 @@ export function Profile() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.balanceRow}>
+        <Text style={styles.balanceLabel}>Username</Text>
+        <Text style={styles.balanceValue}>{username}</Text>
+      </View>
       <View style={styles.balanceRow}>
         <Text style={styles.balanceLabel}>Space Money</Text>
         <Text style={styles.balanceValue}>{money.toLocaleString()}</Text>

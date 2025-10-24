@@ -15,6 +15,7 @@ import { Coordinates, UserPosition, XPGain } from '../types';
 import { useShallow } from 'zustand/shallow';
 import { calculateLevel, getDailyDistanceForLevel } from './experience';
 import { hasSkinForBody, getSkinById, ALL_SKIN_IDS } from './skins';
+import { generateName } from './generateName';
 
 // =================================================================
 // TYPES
@@ -111,6 +112,8 @@ type Store = {
   showDebugOverlay: boolean;
   outlinesBodiesEnabled: boolean;
   outlinesRocketEnabled: boolean;
+
+  username: string;
 
   skipRocketAnimation: boolean;
 
@@ -303,6 +306,7 @@ const initialData = {
   xpEarnedDate: undefined,
   money: 0,
   lastLandingReward: undefined,
+  username: generateName(),
 } satisfies Partial<Store>;
 
 export const useStore = create<Store>()(
