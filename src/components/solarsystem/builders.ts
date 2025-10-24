@@ -63,8 +63,9 @@ export function createSaturnRings(
   texture: THREE.Texture,
 ): THREE.Mesh {
   // Approximate inner/outer radii of Saturn's main rings
-  const inner = planetRadius * 1.2;
-  const outer = planetRadius * 2.3;
+  const MULT = 1.2;
+  const inner = planetRadius * 1.2 * MULT;
+  const outer = planetRadius * 2.3 * MULT;
 
   const geom = new THREE.RingGeometry(inner, outer, 64, 1);
   const mat = new THREE.MeshBasicMaterial({
