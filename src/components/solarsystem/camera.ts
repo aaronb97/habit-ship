@@ -853,7 +853,8 @@ export class CameraController {
     }
 
     // If a collision resolver is configured, compute desired position and
-    // allow it to enforce a minimum safe radius before applying the transform.
+    // let it enforce a minimum safe radius for this frame (temporary push-out).
+    let appliedRadius = this.radius;
     if (this.collisionResolver) {
       // Recompute the same orbit basis used by updateOrbitCamera to derive desiredPos
       const sun = new THREE.Vector3(0, 0, 0);
@@ -922,12 +923,8 @@ export class CameraController {
         desiredPos,
       });
 
-      if (safeRadius > this.radius) {
-        this.radius = safeRadius;
-        this.radiusTarget = Math.max(this.radiusTarget, safeRadius);
-        if (this.tweenActive) {
-          this.tweenActive = false;
-        }
+      if (safeRadius > appliedRadius) {
+        appliedRadius = safeRadius;
       }
     }
 
@@ -938,7 +935,7 @@ export class CameraController {
       target,
       this.yaw,
       this.pitch,
-      this.radius,
+      appliedRadius,
       planeNormalOverride,
     );
   }
