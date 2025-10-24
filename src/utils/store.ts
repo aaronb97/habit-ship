@@ -37,6 +37,12 @@ export type LevelUpInfo = {
   discoveredBodies: string[];
 };
 
+export type LandingReward = {
+  planetName: string;
+  xp: number;
+  money: number;
+};
+
 export type Habit = {
   id: HabitId;
   title: string;
@@ -88,6 +94,8 @@ type Store = {
   selectedSkinId?: string; // currently applied skin id
   totalXP: number;
   xpHistory: XPGain[];
+  money: number;
+  lastLandingReward?: LandingReward;
   idCount: number;
   activeTimer?: {
     habitId: HabitId;
@@ -169,6 +177,11 @@ type Store = {
     amount: number,
     source: 'habit_completion' | 'planet_completion',
   ) => void;
+  /**
+   * Adds a specified amount of money to the user's balance.
+   * amount: Positive integer amount of money to add.
+   */
+  addMoney: (amount: number) => void;
   quickReset: () => void;
   clearData: () => void;
   setShowTrails: (value: boolean) => void;
@@ -288,6 +301,8 @@ const initialData = {
   fuelEarnedDate: undefined,
   xpEarnedToday: 0,
   xpEarnedDate: undefined,
+  money: 0,
+  lastLandingReward: undefined,
 } satisfies Partial<Store>;
 
 export const useStore = create<Store>()(
@@ -728,14 +743,15 @@ export const useStore = create<Store>()(
 
         const destinationName = target.name;
         const isNewPlanet = !state.completedPlanets.includes(destinationName);
-
-        if (isNewPlanet) {
-          // Award XP for planet completion using per-body configured reward
-          const body = cBodies.find((b) => b.name === destinationName);
-          const reward = body?.xpReward ?? 0;
-          if (reward > 0) {
-            state.addXP(reward, 'planet_completion');
-          }
+        // Determine rewards (XP may only be on first landing)
+        const body = cBodies.find((b) => b.name === destinationName);
+        const xpReward = isNewPlanet ? (body?.xpReward ?? 0) : 0;
+        const moneyReward = isNewPlanet ? (body?.moneyReward ?? 0) : 0;
+        if (xpReward > 0) {
+          state.addXP(xpReward, 'planet_completion');
+        }
+        if (moneyReward > 0) {
+          state.addMoney(moneyReward);
         }
 
         set((nextState) => {
@@ -763,6 +779,17 @@ export const useStore = create<Store>()(
             }
           }
 
+          // Record last landing reward to show in the landing alert
+          if (xpReward > 0 || moneyReward > 0) {
+            nextState.lastLandingReward = {
+              planetName: destinationName,
+              xp: xpReward,
+              money: moneyReward,
+            };
+          } else {
+            nextState.lastLandingReward = undefined;
+          }
+
           nextState.pendingLanding = false;
           nextState.justLanded = true;
         });
@@ -788,155 +815,21 @@ export const useStore = create<Store>()(
           state.totalXP += amount;
         });
       },
+      /**
+       * Adds a specified amount of money to the user's balance.
+       * amount: Positive integer amount to add to the balance.
+       */
+      addMoney: (amount) => {
+        if (amount <= 0) return;
+        set((state) => {
+          state.money += amount;
+        });
+      },
     })),
     {
       name: 'space-explorer-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 12,
-      migrate: (persistedState, _version) => {
-        const s = (persistedState || {}) as Partial<Store> & {
-          // For backwards compatibility with older persisted shapes
-          userLevel?: { level?: number; currentXP?: number; totalXP?: number };
-          outlinesEnabled?: boolean;
-        };
-
-        if (s.rocketColor === undefined) {
-          s.rocketColor = randomColorInt();
-        }
-
-        // Migrate userLevel -> totalXP (preserve existing totalXP if present)
-        if (s.totalXP === undefined) {
-          const prevTotal = s.userLevel?.totalXP;
-          s.totalXP = typeof prevTotal === 'number' ? prevTotal : 0;
-        }
-
-        // Remove legacy key if present
-        (s as Partial<Store> & { userLevel?: unknown }).userLevel = undefined;
-
-        // Remove deprecated flag if present
-        (
-          s as Partial<Store> & { pendingTravelAnimation?: unknown }
-        ).pendingTravelAnimation = undefined;
-
-        if (s.pendingLanding === undefined) {
-          s.pendingLanding = false;
-        }
-
-        if (s.justLanded === undefined) {
-          s.justLanded = false;
-        }
-
-        if (s.showDebugOverlay === undefined) {
-          s.showDebugOverlay = false;
-        }
-
-        if (s.isLevelUpModalVisible === undefined) {
-          s.isLevelUpModalVisible = false;
-        }
-
-        if ((s as Partial<Store>).activeTab === undefined) {
-          (s as Partial<Store>).activeTab = 'HomeTab';
-        }
-
-        // Defaults for tilt-shift controls
-        if (s.tiltShiftEnabled === undefined) {
-          s.tiltShiftEnabled = true;
-        }
-
-        if (s.tiltShiftFocus === undefined) {
-          s.tiltShiftFocus = 0.55;
-        }
-
-        if (s.tiltShiftRange === undefined) {
-          s.tiltShiftRange = 0.18;
-        }
-
-        if (s.tiltShiftFeather === undefined) {
-          s.tiltShiftFeather = 0.22;
-        }
-
-        if (s.tiltShiftBlur === undefined) {
-          s.tiltShiftBlur = 8;
-        }
-
-        const legacy = s.outlinesEnabled;
-        if ((s as Partial<Store>).outlinesBodiesEnabled === undefined) {
-          (s as Partial<Store>).outlinesBodiesEnabled =
-            legacy !== undefined ? Boolean(legacy) : true;
-        }
-
-        if ((s as Partial<Store>).outlinesRocketEnabled === undefined) {
-          (s as Partial<Store>).outlinesRocketEnabled =
-            legacy !== undefined ? Boolean(legacy) : true;
-        }
-
-        // Defaults for fuel system
-        if ((s as Partial<Store>).fuelKm === undefined) {
-          (s as Partial<Store>).fuelKm = 0;
-        }
-
-        if ((s as Partial<Store>).fuelEarnedTodayKm === undefined) {
-          (s as Partial<Store>).fuelEarnedTodayKm = 0;
-        }
-
-        if ((s as Partial<Store>).fuelEarnedDate === undefined) {
-          (s as Partial<Store>).fuelEarnedDate =
-            getCurrentDate().toDateString();
-        }
-
-        if ((s as Partial<Store>).xpEarnedToday === undefined) {
-          (s as Partial<Store>).xpEarnedToday = 0;
-        }
-
-        if ((s as Partial<Store>).xpEarnedDate === undefined) {
-          (s as Partial<Store>).xpEarnedDate = getCurrentDate().toDateString();
-        }
-
-        if ((s as Partial<Store>).showJourneyRemaining === undefined) {
-          (s as Partial<Store>).showJourneyRemaining = false;
-        }
-
-        if ((s as Partial<Store>).showFuelCapacity === undefined) {
-          (s as Partial<Store>).showFuelCapacity = false;
-        }
-
-        if ((s as Partial<Store>).skipRocketAnimation === undefined) {
-          (s as Partial<Store>).skipRocketAnimation = false;
-        }
-
-        // New in v12: skins state
-        if ((s as Partial<Store>).unlockedSkins === undefined) {
-          (s as Partial<Store>).unlockedSkins = ['Earth'];
-        }
-
-        if ((s as Partial<Store>).unseenUnlockedSkins === undefined) {
-          (s as Partial<Store>).unseenUnlockedSkins = [];
-        }
-
-        // Leave selectedSkinId undefined by default in v12
-        // Also: if migrating from a previous version that temporarily set Earth by default, clear it
-        if (
-          (_version as number) < 12 &&
-          (s as Partial<Store>).selectedSkinId === 'Earth'
-        ) {
-          (s as Partial<Store>).selectedSkinId = undefined;
-        }
-
-        // If a selected skin exists and we can derive a color, align rocketColor once
-        if (
-          (s as Partial<Store>).selectedSkinId &&
-          (s as Partial<Store>).rocketColor === undefined
-        ) {
-          const skin = getSkinById(
-            (s as Partial<Store>).selectedSkinId as string,
-          );
-          if (skin?.color !== undefined) {
-            (s as Partial<Store>).rocketColor = skin.color;
-          }
-        }
-
-        return s as Store;
-      },
+      version: 1,
     },
   ),
 );

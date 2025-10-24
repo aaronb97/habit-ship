@@ -13,6 +13,7 @@ export function SolarMap() {
   const { width, height } = useWindowDimensions();
   const { justLanded, userPosition } = useStore();
   const fuelKm = useStore((s) => s.fuelKm);
+  const lastLandingReward = useStore((s) => s.lastLandingReward);
   const applyFuelToTravel = useStore((s) => s.applyFuelToTravel);
   const shownForLocationRef = useRef<string | null>(null);
   const controllerRef = useRef<CameraController | null>(null);
@@ -31,13 +32,20 @@ export function SolarMap() {
       const loc = userPosition.startingLocation;
       if (shownForLocationRef.current !== loc) {
         shownForLocationRef.current = loc;
-        Alert.alert(
-          '🎉 Congratulations!',
-          `You have landed on ${loc}! Open the Home tab to choose your next destination.`,
-        );
+        const xp = lastLandingReward?.xp ?? 0;
+        const money = lastLandingReward?.money ?? 0;
+
+        const alertParts = [
+          `You have landed on ${loc}!`,
+          xp > 0 ? `You have earned ${xp} XP.` : '',
+          money > 0 ? `You have earned ${money} Space Money.` : '',
+          'Open the Home tab to choose your next destination.',
+        ];
+
+        Alert.alert('Congratulations!', alertParts.join('\n'));
       }
     }
-  }, [isFocused, justLanded, userPosition.startingLocation]);
+  }, [isFocused, justLanded, userPosition.startingLocation, lastLandingReward]);
 
   // Reset the local guard when justLanded resets (after visiting Home)
   useEffect(() => {

@@ -182,6 +182,7 @@ export abstract class CBody {
   public radiusKm: number;
   public minLevel?: number;
   public xpReward?: number;
+  public moneyReward?: number;
   public isLandable: boolean;
   public axialTiltDeg?: number;
   public alwaysRenderIfDiscovered?: boolean;
@@ -194,6 +195,7 @@ export abstract class CBody {
     radiusKm: number;
     minLevel?: number;
     xpReward?: number;
+    moneyReward?: number;
     isLandable?: boolean;
     axialTiltDeg?: number;
     alwaysRenderIfDiscovered?: boolean;
@@ -205,6 +207,7 @@ export abstract class CBody {
     this.radiusKm = opts.radiusKm;
     this.minLevel = opts.minLevel;
     this.xpReward = opts.xpReward;
+    this.moneyReward = opts.moneyReward;
     this.isLandable = opts.isLandable ?? false;
     this.axialTiltDeg = opts.axialTiltDeg;
     this.alwaysRenderIfDiscovered = opts.alwaysRenderIfDiscovered;
@@ -232,6 +235,7 @@ interface PlanetOptions extends BaseCBodyOptions {
   kepler: KeplerianElements; // heliocentric elements (required for planets)
   minLevel?: number; // if present, planet is landable
   xpReward?: number;
+  moneyReward?: number;
   isLandable?: boolean;
   axialTiltDeg?: number;
   alwaysRenderIfDiscovered?: boolean;
@@ -246,6 +250,7 @@ interface MoonOptions extends BaseCBodyOptions {
   orbitOffsetMultiplier?: number;
   minLevel: number; // moons are always landable
   xpReward?: number;
+  moneyReward?: number;
   axialTiltDeg?: number;
   rotationPeriodHours?: number;
 }
@@ -269,6 +274,7 @@ export class Planet extends CBody {
       radiusKm: options.radiusKm,
       minLevel: options.minLevel,
       xpReward: options.xpReward,
+      moneyReward: options.moneyReward,
       isLandable: options.isLandable ?? options.minLevel !== undefined,
       axialTiltDeg: options.axialTiltDeg,
       alwaysRenderIfDiscovered: options.alwaysRenderIfDiscovered,
@@ -305,6 +311,7 @@ export class Moon extends CBody {
       radiusKm: options.radiusKm,
       minLevel: options.minLevel,
       xpReward: options.xpReward,
+      moneyReward: options.moneyReward,
       isLandable: true,
       axialTiltDeg: options.axialTiltDeg,
       rotationPeriodHours: options.rotationPeriodHours,
@@ -543,6 +550,7 @@ export const moon = new Moon({
   },
   minLevel: 1,
   xpReward: 100,
+  moneyReward: 10,
   axialTiltDeg: 6.68,
 });
 export const mercury = new Planet({
@@ -554,6 +562,7 @@ export const mercury = new Planet({
   kepler: HELIO.Mercury,
   minLevel: 2,
   xpReward: 500,
+  moneyReward: 50,
   axialTiltDeg: 0.03,
   rotationPeriodHours: 1407.5, // ~58.646 days
   alwaysRenderIfDiscovered: true,
@@ -567,6 +576,7 @@ export const venus = new Planet({
   kepler: HELIO.Venus,
   minLevel: 2,
   xpReward: 750,
+  moneyReward: 75,
   axialTiltDeg: 177.36,
   rotationPeriodHours: -5832.5, // retrograde ~243 days
   alwaysRenderIfDiscovered: true,
@@ -580,6 +590,7 @@ export const mars = new Planet({
   kepler: HELIO.Mars,
   minLevel: 5,
   xpReward: 1000,
+  moneyReward: 100,
   axialTiltDeg: 25.19,
   rotationPeriodHours: 24.623,
   alwaysRenderIfDiscovered: true,
@@ -645,6 +656,7 @@ export const pluto = new Planet({
   kepler: HELIO.Pluto,
   minLevel: 20,
   xpReward: 1000,
+  moneyReward: 1000,
   axialTiltDeg: 119.6,
   rotationPeriodHours: -153.3, // ~6.387 days, retrograde
 });
@@ -657,6 +669,7 @@ export const ceres = new Planet({
   kepler: HELIO.Ceres,
   minLevel: 6,
   xpReward: 600,
+  moneyReward: 60,
   rotationPeriodHours: 9.074,
 });
 export const eris = new Planet({
@@ -668,6 +681,7 @@ export const eris = new Planet({
   kepler: HELIO.Eris,
   minLevel: 25,
   xpReward: 1500,
+  moneyReward: 150,
   rotationPeriodHours: 25.9,
 });
 export const sedna = new Planet({
@@ -679,6 +693,7 @@ export const sedna = new Planet({
   kepler: HELIO.Sedna,
   minLevel: 30,
   xpReward: 2000,
+  moneyReward: 200,
   rotationPeriodHours: 10.0,
 });
 export const charon = new Moon({
@@ -689,6 +704,7 @@ export const charon = new Moon({
   orbitalPeriodDays: 6.38723,
   minLevel: 20,
   xpReward: 1000,
+  moneyReward: 100,
   orbits: 'Pluto',
   orbitOffsetMultiplier: 125,
   satellite: {
@@ -720,6 +736,7 @@ export const phobos = new Moon({
   },
   minLevel: 5,
   xpReward: 100,
+  moneyReward: 10,
   axialTiltDeg: 0,
 });
 export const deimos = new Moon({
@@ -741,6 +758,7 @@ export const deimos = new Moon({
   },
   minLevel: 5,
   xpReward: 100,
+  moneyReward: 10,
   axialTiltDeg: 0,
 });
 
@@ -753,6 +771,7 @@ export const io = new Moon({
   orbitalPeriodDays: 1.769,
   minLevel: 8,
   xpReward: 500,
+  moneyReward: 50,
   orbits: 'Jupiter',
   satellite: {
     semiMajorAxisKm: 421700,
@@ -773,6 +792,7 @@ export const europa = new Moon({
   orbitalPeriodDays: 3.551,
   minLevel: 8,
   xpReward: 500,
+  moneyReward: 50,
   orbits: 'Jupiter',
   satellite: {
     semiMajorAxisKm: 671100,
@@ -793,6 +813,7 @@ export const ganymede = new Moon({
   orbitalPeriodDays: 7.155,
   minLevel: 8,
   xpReward: 500,
+  moneyReward: 50,
   orbits: 'Jupiter',
   satellite: {
     semiMajorAxisKm: 1070400,
@@ -813,6 +834,7 @@ export const callisto = new Moon({
   orbitalPeriodDays: 16.689,
   minLevel: 8,
   xpReward: 500,
+  moneyReward: 50,
   orbits: 'Jupiter',
   satellite: {
     semiMajorAxisKm: 1882700,
@@ -833,6 +855,7 @@ export const titan = new Moon({
   orbitalPeriodDays: 15.945,
   minLevel: 11,
   xpReward: 600,
+  moneyReward: 60,
   orbits: 'Saturn',
   satellite: {
     semiMajorAxisKm: 1221870,
@@ -853,6 +876,7 @@ export const iapetus = new Moon({
   orbitalPeriodDays: 79.3215,
   minLevel: 11,
   xpReward: 600,
+  moneyReward: 60,
   orbits: 'Saturn',
   satellite: {
     semiMajorAxisKm: 3560820,
@@ -874,6 +898,7 @@ export const mimas = new Moon({
   orbitalPeriodDays: 0.942422,
   minLevel: 11,
   xpReward: 600,
+  moneyReward: 60,
   orbits: 'Saturn',
   satellite: {
     semiMajorAxisKm: 185539,
@@ -894,6 +919,7 @@ export const enceladus = new Moon({
   orbitalPeriodDays: 1.370218,
   minLevel: 11,
   xpReward: 600,
+  moneyReward: 60,
   orbits: 'Saturn',
   satellite: {
     semiMajorAxisKm: 237948,
@@ -914,6 +940,7 @@ export const tethys = new Moon({
   orbitalPeriodDays: 1.887802,
   minLevel: 11,
   xpReward: 600,
+  moneyReward: 60,
   orbits: 'Saturn',
   satellite: {
     semiMajorAxisKm: 294619,
@@ -934,6 +961,7 @@ export const dione = new Moon({
   orbitalPeriodDays: 2.736915,
   minLevel: 11,
   xpReward: 600,
+  moneyReward: 60,
   orbits: 'Saturn',
   satellite: {
     semiMajorAxisKm: 377396,
@@ -954,6 +982,7 @@ export const rhea = new Moon({
   orbitalPeriodDays: 4.518212,
   minLevel: 11,
   xpReward: 600,
+  moneyReward: 60,
   orbits: 'Saturn',
   satellite: {
     semiMajorAxisKm: 527108,
@@ -974,6 +1003,7 @@ export const triton = new Moon({
   orbitalPeriodDays: 5.8769,
   minLevel: 17,
   xpReward: 1000,
+  moneyReward: 100,
   axialTiltDeg: 157,
   orbits: 'Neptune',
   satellite: {
@@ -995,6 +1025,7 @@ export const miranda = new Moon({
   orbitalPeriodDays: 1.4135,
   minLevel: 15,
   xpReward: 750,
+  moneyReward: 75,
   orbits: 'Uranus',
   satellite: {
     semiMajorAxisKm: 129_900,
@@ -1015,6 +1046,7 @@ export const ariel = new Moon({
   orbitalPeriodDays: 2.52,
   minLevel: 15,
   xpReward: 750,
+  moneyReward: 75,
   orbits: 'Uranus',
   satellite: {
     semiMajorAxisKm: 190_900,
@@ -1035,6 +1067,7 @@ export const umbriel = new Moon({
   orbitalPeriodDays: 4.144,
   minLevel: 15,
   xpReward: 750,
+  moneyReward: 75,
   orbits: 'Uranus',
   satellite: {
     semiMajorAxisKm: 266_000,
@@ -1055,6 +1088,7 @@ export const titania = new Moon({
   orbitalPeriodDays: 8.706,
   minLevel: 15,
   xpReward: 750,
+  moneyReward: 75,
   orbits: 'Uranus',
   satellite: {
     semiMajorAxisKm: 436_300,
@@ -1075,6 +1109,7 @@ export const oberon = new Moon({
   orbitalPeriodDays: 13.463,
   minLevel: 15,
   xpReward: 750,
+  moneyReward: 75,
   orbits: 'Uranus',
   satellite: {
     semiMajorAxisKm: 583_500,

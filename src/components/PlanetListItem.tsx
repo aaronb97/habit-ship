@@ -65,10 +65,19 @@ export function PlanetListItem({
         {formatDistance(distance)}
       </Text>
 
-      <Text style={[styles.planetInfo, isDisabled && styles.lockedText]}>
-        <Text style={styles.planetInfoLabel}>Landing reward:</Text>{' '}
-        {planet.xpReward ?? 0} XP
-      </Text>
+      {planet.xpReward && (
+        <Text style={[styles.planetInfo, isDisabled && styles.lockedText]}>
+          <Text style={styles.planetInfoLabel}>Landing XP:</Text>{' '}
+          {planet.xpReward} XP
+        </Text>
+      )}
+
+      {planet.moneyReward && (
+        <Text style={[styles.planetInfo, isDisabled && styles.lockedText]}>
+          <Text style={styles.planetInfoLabel}>Landing Money:</Text>{' '}
+          {planet.moneyReward} Space Money
+        </Text>
+      )}
 
       {isLocked && minLevel !== undefined && (
         <View style={styles.lockOverlay}>

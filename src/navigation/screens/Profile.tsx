@@ -21,6 +21,7 @@ export function Profile() {
   const selectedSkinId = useStore((s) => s.selectedSkinId);
   const setSelectedSkinId = useStore((s) => s.setSelectedSkinId);
   const markSkinsSeen = useStore((s) => s.markSkinsSeen);
+  const money = useStore((s) => s.money);
 
   const allSkins = useMemo(() => Object.values(SKINS), []);
   const visibleSkins = useMemo(
@@ -60,6 +61,10 @@ export function Profile() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.balanceRow}>
+        <Text style={styles.balanceLabel}>Space Money</Text>
+        <Text style={styles.balanceValue}>{money.toLocaleString()}</Text>
+      </View>
       <Text style={styles.sectionTitle}>Skins</Text>
       <FlatList
         data={visibleSkins}
@@ -95,6 +100,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     paddingHorizontal: 16,
     paddingTop: 8,
+  },
+  balanceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  balanceLabel: {
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.large,
+    color: colors.primaryText,
+  },
+  balanceValue: {
+    fontFamily: fonts.bold,
+    fontSize: fontSizes.large,
+    color: colors.accent,
   },
   sectionTitle: {
     fontFamily: fonts.semiBold,
