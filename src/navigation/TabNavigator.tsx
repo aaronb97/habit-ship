@@ -150,7 +150,10 @@ export function TabNavigator() {
       >
         <Animated.View
           pointerEvents={activeTab === 'HomeTab' ? 'auto' : 'none'}
-          style={{ opacity: fadeOpacity }}
+          style={{
+            opacity: fadeOpacity,
+            alignSelf: 'center',
+          }}
         >
           <Dashboard />
         </Animated.View>
