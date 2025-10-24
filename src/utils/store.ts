@@ -507,7 +507,6 @@ export const useStore = create<Store>()(
             distanceTraveled: 0,
             previousDistanceTraveled: 0,
           },
-          idCount: 1,
         });
       },
       clearData: () => set(initialData),
