@@ -8,7 +8,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
-import { GlassView, GlassViewProps } from 'expo-glass-effect';
+import { GlassViewProps } from 'expo-glass-effect';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import {
   useIsTraveling,
@@ -33,6 +33,7 @@ import { LevelUpPanel } from './LevelUpPanel';
 import { OnboardingPanel } from './OnboardingPanel';
 import { HSTextInput } from './HSTextInput';
 import { HabitList } from './HabitList';
+import { GlassOrDefault } from './GlassOrDefault';
 
 export function Dashboard() {
   const {
@@ -184,7 +185,7 @@ export function Dashboard() {
   // --- Onboarding flow rendered inside the panel until setup finishes ---
   if (!isSetupFinished) {
     return (
-      <GlassView
+      <GlassOrDefault
         style={[styles.container, styles.centered]}
         {...glassViewProps}
       >
@@ -192,14 +193,14 @@ export function Dashboard() {
           onCreateFirstHabit={(title) => addHabit({ title })}
           onComplete={() => setIsSetupFinished(true)}
         />
-      </GlassView>
+      </GlassOrDefault>
     );
   }
 
   if (mode === 'editHabit') {
     const isFormValid = newTitle.trim().length > 0 && !!editingHabitId;
     return (
-      <GlassView style={styles.container} {...glassViewProps}>
+      <GlassOrDefault style={styles.container} {...glassViewProps}>
         <View style={styles.flowHeader}>
           <TouchableOpacity
             onPress={() => {
@@ -266,13 +267,13 @@ export function Dashboard() {
           </View>
           <TimerSelection initialTimer={newTimer} onTimerChange={setNewTimer} />
         </View>
-      </GlassView>
+      </GlassOrDefault>
     );
   }
 
   if (isLevelUpModalVisible && levelUpInfo && activeTab === 'HomeTab') {
     return (
-      <GlassView style={styles.container} {...glassViewProps}>
+      <GlassOrDefault style={styles.container} {...glassViewProps}>
         <LevelUpPanel
           info={levelUpInfo}
           onOk={() => {
@@ -280,14 +281,14 @@ export function Dashboard() {
             hideLevelUp();
           }}
         />
-      </GlassView>
+      </GlassOrDefault>
     );
   }
 
   // Timer screen shows when active and not blocked by Level Up view
   if (activeTimer && timerHabit) {
     return (
-      <GlassView
+      <GlassOrDefault
         style={[styles.container, styles.centered]}
         {...glassViewProps}
       >
@@ -300,7 +301,7 @@ export function Dashboard() {
         <TouchableOpacity style={styles.cancelButton} onPress={cancelTimer}>
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
-      </GlassView>
+      </GlassOrDefault>
     );
   }
 
@@ -346,7 +347,7 @@ export function Dashboard() {
   if (mode === 'addHabit') {
     const isFormValid = newTitle.trim().length > 0;
     return (
-      <GlassView style={styles.container} {...glassViewProps}>
+      <GlassOrDefault style={styles.container} {...glassViewProps}>
         <View style={styles.flowHeader}>
           <TouchableOpacity
             onPress={() => {
@@ -411,14 +412,14 @@ export function Dashboard() {
           </View>
           <TimerSelection initialTimer={newTimer} onTimerChange={setNewTimer} />
         </View>
-      </GlassView>
+      </GlassOrDefault>
     );
   }
 
   // Inline Select Destination flow
   if (mode === 'selectDestination') {
     return (
-      <GlassView style={styles.container} {...glassViewProps}>
+      <GlassOrDefault style={styles.container} {...glassViewProps}>
         <View style={styles.flowHeader}>
           {canCancelSelection ? (
             <TouchableOpacity
@@ -462,7 +463,7 @@ export function Dashboard() {
             ),
           )}
         </ScrollView>
-      </GlassView>
+      </GlassOrDefault>
     );
   }
 
@@ -486,7 +487,7 @@ export function Dashboard() {
   );
 
   return (
-    <GlassView style={styles.container} {...glassViewProps}>
+    <GlassOrDefault style={styles.container} {...glassViewProps}>
       {!!planet && (
         <View style={styles.journeySection}>
           <View style={styles.planetInfoContainer}>
@@ -575,29 +576,24 @@ export function Dashboard() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        style={styles.habitsList}
-        contentContainerStyle={styles.habitsListContent}
-      >
-        <HabitList
-          habits={habits}
-          onStartTimer={startTimer}
-          onCompleteHabit={completeHabit}
-          onLongPressHabit={(id) => {
-            const h = habits.find((hh) => hh.id === id);
-            if (!h) {
-              return;
-            }
+      <HabitList
+        habits={habits}
+        onStartTimer={startTimer}
+        onCompleteHabit={completeHabit}
+        onLongPressHabit={(id) => {
+          const h = habits.find((hh) => hh.id === id);
+          if (!h) {
+            return;
+          }
 
-            setEditingHabitId(id);
-            setNewTitle(h.title);
-            setNewDescription(h.description ?? '');
-            setNewTimer(h.timerLength ?? 0);
-            setMode('editHabit');
-          }}
-        />
-      </ScrollView>
-    </GlassView>
+          setEditingHabitId(id);
+          setNewTitle(h.title);
+          setNewDescription(h.description ?? '');
+          setNewTimer(h.timerLength ?? 0);
+          setMode('editHabit');
+        }}
+      />
+    </GlassOrDefault>
   );
 }
 
@@ -606,6 +602,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 16,
+    minWidth: 350,
+    maxWidth: 400,
   },
   centered: {
     alignItems: 'center',
