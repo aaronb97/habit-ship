@@ -12,6 +12,8 @@ import { Dashboard } from '../components/Dashboard';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { AntDesign, Ionicons } from '@expo/vector-icons';
 
+const ICON_SIZE = 24;
+
 const Tab = createNativeBottomTabNavigator<TabParamList>();
 
 /**
@@ -47,20 +49,65 @@ export function TabNavigator() {
   >({});
 
   useEffect(() => {
-    void AntDesign.getImageSource('dashboard', 24, 'inherit').then((source) => {
-      if (!source) return;
-      setImageSources((prev) => ({ ...prev, dashboard: source }));
-    });
-    void Ionicons.getImageSource('rocket-outline', 24, 'inherit').then(
+    void AntDesign.getImageSource('dashboard', ICON_SIZE, colors.white).then(
       (source) => {
         if (!source) return;
-        setImageSources((prev) => ({ ...prev, map: source }));
+        setImageSources((prev) => ({ ...prev, dashboardWhite: source }));
       },
     );
-    void AntDesign.getImageSource('setting', 24, 'inherit').then((source) => {
+    void AntDesign.getImageSource('dashboard', ICON_SIZE, colors.primary).then(
+      (source) => {
+        if (!source) return;
+        setImageSources((prev) => ({ ...prev, dashboardPrimary: source }));
+      },
+    );
+
+    void Ionicons.getImageSource(
+      'rocket-outline',
+      ICON_SIZE,
+      colors.white,
+    ).then((source) => {
       if (!source) return;
-      setImageSources((prev) => ({ ...prev, dev: source }));
+      setImageSources((prev) => ({ ...prev, mapWhite: source }));
     });
+    void Ionicons.getImageSource(
+      'rocket-outline',
+      ICON_SIZE,
+      colors.primary,
+    ).then((source) => {
+      if (!source) return;
+      setImageSources((prev) => ({ ...prev, mapPrimary: source }));
+    });
+
+    void Ionicons.getImageSource(
+      'person-circle-outline',
+      ICON_SIZE,
+      colors.white,
+    ).then((source) => {
+      if (!source) return;
+      setImageSources((prev) => ({ ...prev, profileWhite: source }));
+    });
+    void Ionicons.getImageSource(
+      'person-circle-outline',
+      ICON_SIZE,
+      colors.primary,
+    ).then((source) => {
+      if (!source) return;
+      setImageSources((prev) => ({ ...prev, profilePrimary: source }));
+    });
+
+    void AntDesign.getImageSource('setting', ICON_SIZE, colors.white).then(
+      (source) => {
+        if (!source) return;
+        setImageSources((prev) => ({ ...prev, devWhite: source }));
+      },
+    );
+    void AntDesign.getImageSource('setting', ICON_SIZE, colors.primary).then(
+      (source) => {
+        if (!source) return;
+        setImageSources((prev) => ({ ...prev, devPrimary: source }));
+      },
+    );
   }, []);
 
   useEffect(() => {
@@ -90,9 +137,13 @@ export function TabNavigator() {
           options={{
             title: '',
             tabBarBadge: homeNeedsSelection ? ' ' : undefined,
-            ...(imageSources.dashboard && {
-              tabBarIcon: () => imageSources.dashboard!,
-            }),
+            ...(imageSources.dashboardWhite &&
+              imageSources.dashboardPrimary && {
+                tabBarIcon: ({ focused }) =>
+                  focused
+                    ? imageSources.dashboardPrimary!
+                    : imageSources.dashboardWhite!,
+              }),
           }}
           listeners={{
             focus: () => setActiveTab('HomeTab'),
@@ -104,9 +155,11 @@ export function TabNavigator() {
           options={{
             title: '',
             tabBarBadge: hasFuelAndTarget ? ' ' : undefined,
-            ...(imageSources.map && {
-              tabBarIcon: () => imageSources.map!,
-            }),
+            ...(imageSources.mapWhite &&
+              imageSources.mapPrimary && {
+                tabBarIcon: ({ focused }) =>
+                  focused ? imageSources.mapPrimary! : imageSources.mapWhite!,
+              }),
           }}
           listeners={{
             focus: () => setActiveTab('MapTab'),
@@ -119,6 +172,13 @@ export function TabNavigator() {
             title: '',
             tabBarBadge: unseenSkins.length > 0 ? ' ' : undefined,
             tabBarIcon: () => ({ sfSymbol: 'person.crop.circle' }),
+            ...(imageSources.profileWhite &&
+              imageSources.profilePrimary && {
+                tabBarIcon: ({ focused }) =>
+                  focused
+                    ? imageSources.profilePrimary!
+                    : imageSources.profileWhite!,
+              }),
           }}
           listeners={{
             focus: () => {
@@ -133,6 +193,11 @@ export function TabNavigator() {
             options={{
               title: '',
               tabBarIcon: () => ({ sfSymbol: 'gear' }),
+              ...(imageSources.devWhite &&
+                imageSources.devPrimary && {
+                  tabBarIcon: ({ focused }) =>
+                    focused ? imageSources.devPrimary! : imageSources.devWhite!,
+                }),
             }}
             listeners={{
               focus: () => setActiveTab('DevTab'),
