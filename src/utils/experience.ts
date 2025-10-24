@@ -33,7 +33,7 @@ export const XP_CONFIG = {
  */
 export function xpCurrentThresholdForLevel(level: number): number {
   if (level === 1) {
-    return 100;
+    return 125;
   }
 
   const {

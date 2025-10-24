@@ -9,7 +9,7 @@ import {
 describe('experience', () => {
   describe('xpCurrentThresholdForLevel', () => {
     it('should calculate total XP thresholds correctly', () => {
-      expect(xpCurrentThresholdForLevel(1)).toBe(100);
+      expect(xpCurrentThresholdForLevel(1)).toBe(125);
       expect(xpCurrentThresholdForLevel(2)).toBe(200);
       expect(xpCurrentThresholdForLevel(3)).toBe(250);
       expect(xpCurrentThresholdForLevel(4)).toBe(300);
