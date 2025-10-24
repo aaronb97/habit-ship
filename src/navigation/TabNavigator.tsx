@@ -36,6 +36,7 @@ export function TabNavigator() {
   const activeTab = useStore((s) => s.activeTab);
   const setActiveTab = useStore((s) => s.setActiveTab);
   const unseenSkins = useStore((s) => s.unseenUnlockedSkins);
+  const isSetupFinished = useStore((s) => s.isSetupFinished);
   // Inline flows now manage destination prompts; no need to read userPosition or level-up modal here.
   const isMapFocused = activeTab === 'MapTab';
 
@@ -121,6 +122,90 @@ export function TabNavigator() {
 
   // Inline flows are handled by Dashboard now.
 
+  const tabs = (
+    <Tab.Navigator
+      screenOptions={{
+        // headerShown: false,
+        tabBarItemHidden: !isSetupFinished,
+        tabBarActiveTintColor: colors.primary,
+      }}
+    >
+      <Tab.Screen
+        name="HomeTab"
+        component={Home}
+        options={{
+          title: '',
+          tabBarBadge: homeNeedsSelection ? ' ' : undefined,
+          ...(imageSources.dashboardWhite &&
+            imageSources.dashboardPrimary && {
+              tabBarIcon: ({ focused }) =>
+                focused
+                  ? imageSources.dashboardPrimary!
+                  : imageSources.dashboardWhite!,
+            }),
+        }}
+        listeners={{
+          focus: () => setActiveTab('HomeTab'),
+        }}
+      />
+      <Tab.Screen
+        name="MapTab"
+        component={SolarMap}
+        options={{
+          title: '',
+          tabBarBadge: hasFuelAndTarget ? ' ' : undefined,
+          ...(imageSources.mapWhite &&
+            imageSources.mapPrimary && {
+              tabBarIcon: ({ focused }) =>
+                focused ? imageSources.mapPrimary! : imageSources.mapWhite!,
+            }),
+        }}
+        listeners={{
+          focus: () => setActiveTab('MapTab'),
+        }}
+      />
+      <Tab.Screen
+        name="ProfileTab"
+        component={Profile}
+        options={{
+          title: '',
+          tabBarBadge: unseenSkins.length > 0 ? ' ' : undefined,
+          tabBarIcon: () => ({ sfSymbol: 'person.crop.circle' }),
+          ...(imageSources.profileWhite &&
+            imageSources.profilePrimary && {
+              tabBarIcon: ({ focused }) =>
+                focused
+                  ? imageSources.profilePrimary!
+                  : imageSources.profileWhite!,
+            }),
+        }}
+        listeners={{
+          focus: () => {
+            setActiveTab('ProfileTab');
+          },
+        }}
+      />
+      {isDevelopment && (
+        <Tab.Screen
+          name="DevTab"
+          component={Dev}
+          options={{
+            title: '',
+            tabBarIcon: () => ({ sfSymbol: 'gear' }),
+            ...(imageSources.devWhite &&
+              imageSources.devPrimary && {
+                tabBarIcon: ({ focused }) =>
+                  focused ? imageSources.devPrimary! : imageSources.devWhite!,
+              }),
+          }}
+          listeners={{
+            focus: () => setActiveTab('DevTab'),
+          }}
+        />
+      )}
+    </Tab.Navigator>
+  );
+
   return (
     <View style={styles.container}>
       {/* SolarSystemMap doesn't work on emulators */}
@@ -129,86 +214,7 @@ export function TabNavigator() {
           <SolarSystemMap interactive={isMapFocused} />
         </View>
       )}
-      <Tab.Navigator
-        screenOptions={{
-          // headerShown: false,
-          tabBarActiveTintColor: colors.primary,
-        }}
-      >
-        <Tab.Screen
-          name="HomeTab"
-          component={Home}
-          options={{
-            title: '',
-            tabBarBadge: homeNeedsSelection ? ' ' : undefined,
-            ...(imageSources.dashboardWhite &&
-              imageSources.dashboardPrimary && {
-                tabBarIcon: ({ focused }) =>
-                  focused
-                    ? imageSources.dashboardPrimary!
-                    : imageSources.dashboardWhite!,
-              }),
-          }}
-          listeners={{
-            focus: () => setActiveTab('HomeTab'),
-          }}
-        />
-        <Tab.Screen
-          name="MapTab"
-          component={SolarMap}
-          options={{
-            title: '',
-            tabBarBadge: hasFuelAndTarget ? ' ' : undefined,
-            ...(imageSources.mapWhite &&
-              imageSources.mapPrimary && {
-                tabBarIcon: ({ focused }) =>
-                  focused ? imageSources.mapPrimary! : imageSources.mapWhite!,
-              }),
-          }}
-          listeners={{
-            focus: () => setActiveTab('MapTab'),
-          }}
-        />
-        <Tab.Screen
-          name="ProfileTab"
-          component={Profile}
-          options={{
-            title: '',
-            tabBarBadge: unseenSkins.length > 0 ? ' ' : undefined,
-            tabBarIcon: () => ({ sfSymbol: 'person.crop.circle' }),
-            ...(imageSources.profileWhite &&
-              imageSources.profilePrimary && {
-                tabBarIcon: ({ focused }) =>
-                  focused
-                    ? imageSources.profilePrimary!
-                    : imageSources.profileWhite!,
-              }),
-          }}
-          listeners={{
-            focus: () => {
-              setActiveTab('ProfileTab');
-            },
-          }}
-        />
-        {isDevelopment && (
-          <Tab.Screen
-            name="DevTab"
-            component={Dev}
-            options={{
-              title: '',
-              tabBarIcon: () => ({ sfSymbol: 'gear' }),
-              ...(imageSources.devWhite &&
-                imageSources.devPrimary && {
-                  tabBarIcon: ({ focused }) =>
-                    focused ? imageSources.devPrimary! : imageSources.devWhite!,
-                }),
-            }}
-            listeners={{
-              focus: () => setActiveTab('DevTab'),
-            }}
-          />
-        )}
-      </Tab.Navigator>
+      {tabs}
 
       {/* Persistent overlay hosting Dashboard and related modals */}
       <KeyboardAvoidingView
