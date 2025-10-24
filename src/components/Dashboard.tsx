@@ -187,7 +187,7 @@ export function Dashboard() {
 
   const glassViewProps: GlassViewProps = {
     glassEffectStyle: 'clear',
-    tintColor: 'rgba(0, 0, 0, 0.3)',
+    tintColor: 'rgba(0, 0, 0, 0.4)',
   };
 
   // --- Onboarding flow rendered inside the panel until setup finishes ---
@@ -650,9 +650,7 @@ const styles = StyleSheet.create({
   },
   planetInfoContainer: {
     marginBottom: 12,
-    borderRadius: 16,
     padding: 8,
-    backgroundColor: 'rgba(0,0,0,0.1)',
   },
   statusText: {
     fontFamily: fonts.medium,
