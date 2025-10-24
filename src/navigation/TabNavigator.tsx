@@ -11,6 +11,7 @@ import { SolarSystemMap } from '../components/SolarSystemMap';
 import { Dashboard } from '../components/Dashboard';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { AntDesign, Ionicons } from '@expo/vector-icons';
+import * as Device from 'expo-device';
 
 const ICON_SIZE = 24;
 
@@ -122,9 +123,12 @@ export function TabNavigator() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.mapOverlay} pointerEvents={'none'}>
-        <SolarSystemMap interactive={isMapFocused} />
-      </View>
+      {/* SolarSystemMap doesn't work on emulators */}
+      {Device.isDevice && (
+        <View style={styles.mapOverlay} pointerEvents={'none'}>
+          <SolarSystemMap interactive={isMapFocused} />
+        </View>
+      )}
       <Tab.Navigator
         screenOptions={{
           // headerShown: false,

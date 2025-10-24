@@ -4,10 +4,10 @@ import { colors, fonts, fontSizes } from '../styles/theme';
 
 // Timer values are now in seconds
 const timerOptions: { label: string; value: number | 'custom' }[] = [
-  { label: '5 minutes', value: 5 * 60 },
-  { label: '10 minutes', value: 10 * 60 },
-  { label: '20 minutes', value: 20 * 60 },
-  { label: '30 minutes', value: 30 * 60 },
+  { label: '5 min', value: 5 * 60 },
+  { label: '10 min', value: 10 * 60 },
+  { label: '20 min', value: 20 * 60 },
+  { label: '30 min', value: 30 * 60 },
   { label: '1 hour', value: 60 * 60 },
   { label: 'Custom', value: 'custom' },
 ];

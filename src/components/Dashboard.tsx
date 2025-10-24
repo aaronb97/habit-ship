@@ -116,6 +116,14 @@ export function Dashboard() {
     ? `#${planet.color.toString(16).padStart(6, '0')}`
     : colors.white;
 
+  const targetName = userPosition.target?.name;
+  const targetHex = targetName
+    ? `#${cBodies
+        .find((p) => p.name === targetName)
+        ?.color.toString(16)
+        .padStart(6, '0')}`
+    : colors.white;
+
   useEffect(() => {
     if (!planet) {
       clearData();
@@ -492,14 +500,10 @@ export function Dashboard() {
         <View style={styles.journeySection}>
           <View style={styles.planetInfoContainer}>
             {!isTraveling && (
-              <Text style={[styles.statusText, { color: bodyHex }]}>
-                Welcome to
-              </Text>
+              <Text style={[styles.statusText]}>Welcome to</Text>
             )}
             {isTraveling && (
-              <Text style={[styles.statusText, { color: bodyHex }]}>
-                En route to
-              </Text>
+              <Text style={[styles.statusText]}>En route to</Text>
             )}
             <TouchableOpacity
               activeOpacity={0.7}
@@ -513,8 +517,13 @@ export function Dashboard() {
               </Text>
             </TouchableOpacity>
             {!isTraveling && userPosition.target && fuelKm > 0 ? (
-              <Text style={[styles.statusText, { color: bodyHex }]}>
-                Open the rocket tab to launch to {userPosition.target.name}
+              <Text>
+                <Text style={[styles.statusText]}>
+                  Open the rocket tab to launch to{' '}
+                </Text>
+                <Text style={[styles.statusText, { color: targetHex }]}>
+                  {userPosition.target.name}
+                </Text>
               </Text>
             ) : null}
           </View>
@@ -570,12 +579,13 @@ export function Dashboard() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.habitsHeaderRow}>
-        <TouchableOpacity onPress={() => setMode('addHabit')}>
-          <Text style={styles.newHabitText}>+ New Habit</Text>
-        </TouchableOpacity>
-      </View>
-
+      {habits.length < 5 && (
+        <View style={styles.habitsHeaderRow}>
+          <TouchableOpacity onPress={() => setMode('addHabit')}>
+            <Text style={styles.newHabitText}>+ New Habit</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       <HabitList
         habits={habits}
         onStartTimer={startTimer}
