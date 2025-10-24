@@ -11,17 +11,22 @@ import { Asset } from 'expo-asset';
 import { createURL } from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { StatusBar, Platform, Appearance } from 'react-native';
+import { StatusBar, Platform, Appearance, AppState } from 'react-native';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Navigation } from './navigation';
 import { colors } from './styles/theme';
+import { rescheduleDailyReminders } from './utils/notifications';
+import { getCurrentDate } from './utils/time';
+import { useStore } from './utils/store';
 
 const prefix = createURL('/');
 
-void Asset.loadAsync([...NavigationAssets]);
+Asset.loadAsync([...NavigationAssets]).catch((e) => {
+  console.warn('[App] Failed to preload navigation assets', e);
+});
 void SplashScreen.preventAutoHideAsync();
 
 Appearance.setColorScheme('dark');
@@ -83,6 +88,32 @@ export function App() {
       responseListener.remove();
     };
   }, []);
+
+  // Reschedule daily reminders when the app becomes active (opened/foregrounded)
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        const s = useStore.getState();
+        const dest = s.userPosition.target?.name ?? s.userPosition.startingLocation;
+        const todayKey = getCurrentDate().toDateString();
+        const anyCompletedToday = s.habits.some((h) =>
+          h.completions.some((ts) => new Date(ts).toDateString() === todayKey),
+        );
+        void rescheduleDailyReminders(dest, !anyCompletedToday);
+      }
+    });
+    // Also run once on initial mount
+    const s = useStore.getState();
+    const initialDest = s.userPosition.target?.name ?? s.userPosition.startingLocation;
+    const todayKey = getCurrentDate().toDateString();
+    const anyCompletedToday = s.habits.some((h) =>
+      h.completions.some((ts) => new Date(ts).toDateString() === todayKey),
+    );
+    void rescheduleDailyReminders(initialDest, !anyCompletedToday);
+    return () => sub.remove();
+  }, []);
+
+  // Rescheduling on destination is handled in store.setDestination to avoid duplication
 
   const linking = {
     prefixes: [prefix],

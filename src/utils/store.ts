@@ -6,6 +6,10 @@ import { immer } from 'zustand/middleware/immer';
 
 import { earth, moon, cBodies } from '../planets';
 import { schedulePushNotification } from './schedulePushNotification';
+import {
+  cancelTodayDailyReminder,
+  rescheduleDailyReminders,
+} from './notifications';
 import { getCurrentTime, getCurrentDate, setTimeOffsetProvider } from './time';
 import { Coordinates, UserPosition, XPGain } from '../types';
 import { useShallow } from 'zustand/shallow';
@@ -356,6 +360,17 @@ export const useStore = create<Store>()(
           state.userPosition.launchTime = undefined;
           state.lastUpdateTime = undefined;
         });
+        // Keep reminders' copy in sync with destination and skip today's reminder if already completed
+        {
+          const s = get();
+          const todayKey = getCurrentDate().toDateString();
+          const anyCompletedToday = s.habits.some((h) =>
+            h.completions.some(
+              (ts) => new Date(ts).toDateString() === todayKey,
+            ),
+          );
+          void rescheduleDailyReminders(planetName, !anyCompletedToday);
+        }
       },
       warpTo: (planetName) => {
         set((state) => {
@@ -559,6 +574,9 @@ export const useStore = create<Store>()(
           state.fuelKm += grant;
           state.fuelEarnedTodayKm += grant;
         });
+
+        // Remove today's reminder once any habit is completed
+        await cancelTodayDailyReminder();
       },
 
       /**
