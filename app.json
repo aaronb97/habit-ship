@@ -52,17 +52,7 @@
         }
       ],
       "react-native-edge-to-edge",
-      "@react-native-firebase/app",
-      "@react-native-firebase/auth",
-      "react-native-bottom-tabs",
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "useFrameworks": "static"
-          }
-        }
-      ]
+      "react-native-bottom-tabs"
     ],
     "experiments": {
       "reactCompiler": true
