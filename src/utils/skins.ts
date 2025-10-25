@@ -181,6 +181,12 @@ const ROCKET_SKINS: Record<string, Skin> = {
     preview: require('../../assets/skins/Solitaire.png'),
     color: 0xffffff,
   },
+  'Go Birds': {
+    id: 'Go Birds',
+    title: 'Go Birds',
+    preview: require('../../assets/skins/Go Birds.png'),
+    color: 0x4cbb17,
+  },
 };
 
 // Merge registries for consumer convenience

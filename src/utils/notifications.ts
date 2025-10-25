@@ -43,15 +43,20 @@ function atNinePmLocal(date: Date): Date {
  * now: Reference time (usually current time).
  * includeToday: Whether to include today's 9pm if it's still upcoming.
  */
-function getUpcomingNinePmDates(count: number, now: Date, includeToday: boolean): Date[] {
+function getUpcomingNinePmDates(
+  count: number,
+  now: Date,
+  includeToday: boolean,
+): Date[] {
   const results: Date[] = [];
   const todayNine = atNinePmLocal(now);
   const tomorrowNine = atNinePmLocal(
     new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1),
   );
-  const startDate = includeToday && todayNine.getTime() > now.getTime()
-    ? todayNine
-    : tomorrowNine;
+  const startDate =
+    includeToday && todayNine.getTime() > now.getTime()
+      ? todayNine
+      : tomorrowNine;
 
   for (let i = 0; i < count; i++) {
     const d = new Date(startDate);
@@ -77,7 +82,9 @@ async function cancelAllDailyReminders(): Promise<void> {
   });
 
   await Promise.all(
-    daily.map((req) => Notifications.cancelScheduledNotificationAsync(req.identifier)),
+    daily.map((req) =>
+      Notifications.cancelScheduledNotificationAsync(req.identifier),
+    ),
   );
 }
 
@@ -121,7 +128,7 @@ export async function scheduleDailyReminders(
   destination: string,
   includeToday: boolean,
 ): Promise<void> {
-  const title = 'Did you complete your habits today?';
+  const title = 'Complete your habits today?';
   const body = `Mark your habits as complete to continue your journey to ${destination}!`;
 
   const count = includeToday ? 4 : 3;
@@ -131,7 +138,10 @@ export async function scheduleDailyReminders(
       type: 'dailyReminder',
       dateKey: formatDateKey(date),
     };
-    const seconds = Math.max(1, Math.floor((date.getTime() - Date.now()) / 1000));
+    const seconds = Math.max(
+      1,
+      Math.floor((date.getTime() - Date.now()) / 1000),
+    );
 
     await Notifications.scheduleNotificationAsync({
       content: {
