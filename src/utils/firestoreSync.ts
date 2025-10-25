@@ -26,22 +26,49 @@ export function startFirestoreSync(firebaseId: string): () => void {
   let stopped = false;
   let pending = false;
 
+  // Single source of truth for which store fields to sync
+  const SYNC_FIELDS = [
+    'userPosition',
+    'username',
+    'selectedSkinId',
+    'rocketColor',
+    'totalXP',
+  ] satisfies (keyof StoreState)[];
+  type SyncKey = (typeof SYNC_FIELDS)[number];
+  type StoreState = ReturnType<typeof useStore.getState>;
+
   /**
-   * Collects the selected fields into a Firestore-safe plain object.
+   * Builds the Firestore document payload from the selected store fields.
    *
-   * Parameters: none
-   * Returns: Plain object suitable for Firestore `.set()`.
+   * Parameters: s - current store state snapshot
+   * Returns: Plain object containing only the synced fields.
    */
-  function snapshotSelected(): Record<string, unknown> {
-    const s = useStore.getState();
-    const data = {
-      userPosition: s.userPosition,
-      username: s.username,
-      selectedSkinId: s.selectedSkinId,
-      rocketColor: s.rocketColor,
-    } as const;
-    // JSON round-trip removes functions/undefined/symbols and ensures plain data
-    return JSON.parse(JSON.stringify(data)) as Record<string, unknown>;
+  function buildPayload(s: StoreState): Record<string, unknown> {
+    const out: Record<string, unknown> = {};
+    for (const k of SYNC_FIELDS) {
+      out[k] = (s as Record<SyncKey, unknown>)[k];
+    }
+    // Ensure plain data (no functions/undefined) and deep clone
+    return JSON.parse(JSON.stringify(out)) as Record<string, unknown>;
+  }
+
+  /**
+   * Determines if any of the synced fields changed between snapshots.
+   *
+   * Parameters: s - current state; prev - previous state
+   * Returns: true if a relevant field changed; false otherwise.
+   */
+  function hasRelevantChange(s: StoreState, prev: StoreState): boolean {
+    for (const k of SYNC_FIELDS) {
+      // Deep compare via JSON for robustness across objects/primitives
+      if (
+        JSON.stringify((s as Record<SyncKey, unknown>)[k]) !==
+        JSON.stringify((prev as Record<SyncKey, unknown>)[k])
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -54,7 +81,7 @@ export function startFirestoreSync(firebaseId: string): () => void {
     if (timeout) clearTimeout(timeout);
     timeout = setTimeout(async () => {
       if (stopped) return;
-      const data = snapshotSelected();
+      const data = buildPayload(useStore.getState());
       try {
         await docRef.set(data, { merge: true });
       } catch (e) {
@@ -70,14 +97,7 @@ export function startFirestoreSync(firebaseId: string): () => void {
 
   // Subscribe to store updates and trigger writes only when relevant fields change
   const unsubscribeStore = useStore.subscribe((s, prev) => {
-    if (
-      JSON.stringify(s.userPosition) !== JSON.stringify(prev.userPosition) ||
-      s.username !== prev.username ||
-      s.selectedSkinId !== prev.selectedSkinId ||
-      s.rocketColor !== prev.rocketColor
-    ) {
-      scheduleWrite();
-    }
+    if (hasRelevantChange(s, prev)) scheduleWrite();
   });
 
   /**
@@ -92,7 +112,7 @@ export function startFirestoreSync(firebaseId: string): () => void {
     }
     // If a write is pending, do a final immediate flush for best-effort consistency
     if (pending) {
-      const data = snapshotSelected();
+      const data = buildPayload(useStore.getState());
       void docRef.set(data, { merge: true }).catch((e) => {
         console.warn('[firestoreSync] Failed to set users doc', e);
       });
