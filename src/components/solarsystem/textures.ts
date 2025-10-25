@@ -91,6 +91,7 @@ export async function loadSkinTextures(
       }
       const src = asset.localUri ?? asset.uri;
       const tex = await loader.loadAsync(src);
+      tex.name = id;
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = TEXTURE_ANISOTROPY;
       textures[id] = tex;

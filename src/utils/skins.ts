@@ -4,6 +4,10 @@ export type Skin = {
   // require() returns a number for static image assets in React Native
   preview: number;
   color: number; // hex color applied to rocket materials
+  /** Optional wrap mode: 'full' wraps once around; 'half' repeats twice to form two halves. Default 'full'. */
+  wrap?: 'full' | 'half';
+  /** Optional flag to rotate the skin art by 90 degrees when mapped. Default false. */
+  rotate90?: boolean;
 };
 
 // Central registry of available skins keyed by the body name that unlocks them
@@ -168,6 +172,8 @@ const ROCKET_SKINS: Record<string, Skin> = {
     title: 'Saul',
     preview: require('../../assets/skins/Saul.png'),
     color: 0xffd4a3,
+    wrap: 'half',
+    rotate90: true,
   },
   Solitaire: {
     id: 'Solitaire',

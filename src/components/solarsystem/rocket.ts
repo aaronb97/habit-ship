@@ -15,6 +15,7 @@ import {
   ROCKET_EXHAUST_SCALE,
 } from './constants';
 import { useStore } from '../../utils/store';
+import { getSkinById } from '../../utils/skins';
 
 // Apply per-part materials/colors to the loaded rocket model
 function applyRocketMaterials(obj: THREE.Group, baseColor: number) {
@@ -309,9 +310,19 @@ export class Rocket {
 
     // Configure texture sampling once
     if (texture) {
+      const skinId = texture.name;
+      const skin = skinId ? getSkinById(skinId) : undefined;
+      const halfWrap = skin?.wrap === 'half';
+      const rot90 = Boolean(skin?.rotate90);
+
       texture.wrapS = THREE.RepeatWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
-      texture.offset.x = 0.25;
+
+      texture.center.set(0.5, 0.5);
+      // texture.rotation = rot90 ? -Math.PI / 2 : 0;
+
+      texture.repeat.set(halfWrap ? 2 : 1, 1);
+      texture.offset.x = halfWrap ? 0.5 : 0.25;
       texture.needsUpdate = true;
     }
 
