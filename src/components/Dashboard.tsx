@@ -602,6 +602,7 @@ export function Dashboard() {
           setNewTimer(h.timerLength ?? 0);
           setMode('editHabit');
         }}
+        currentDate={getCurrentDate()}
       />
     </GlassOrDefault>
   );

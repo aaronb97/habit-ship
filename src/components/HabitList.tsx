@@ -2,7 +2,6 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { Habit, HabitId } from '../utils/store';
-import { useGetCurrentDate } from '../utils/time';
 import { MaterialIcons } from '@expo/vector-icons';
 import { HSButton } from './HSButton';
 
@@ -14,6 +13,8 @@ export type HabitListProps = {
   /** Called when the complete button is pressed for a habit. */
   onCompleteHabit: (habitId: HabitId) => void | Promise<void>;
   onLongPressHabit?: (habitId: HabitId) => void;
+
+  currentDate: Date;
 };
 
 /**
@@ -29,10 +30,8 @@ export function HabitList({
   onStartTimer,
   onCompleteHabit,
   onLongPressHabit,
+  currentDate,
 }: HabitListProps) {
-  const getCurrentDate = useGetCurrentDate();
-  const now = getCurrentDate();
-
   /**
    * Determines whether a habit has been completed today based on its last completion timestamp.
    *
@@ -48,15 +47,14 @@ export function HabitList({
       habit.completions[habit.completions.length - 1]!,
     );
 
-    const today = getCurrentDate();
-    return lastCompletion.toDateString() === today.toDateString();
+    return lastCompletion.toDateString() === currentDate.toDateString();
   };
 
   return (
     <>
       {habits.map((h, idx) => {
         const completed = isCompletedToday(h);
-        const line1 = getCompletionText(h, now);
+        const line1 = getCompletionText(h, currentDate);
         const hasDivider = idx < habits.length - 1;
         const showCount = h.completions.length > 1;
         return (
