@@ -13,6 +13,7 @@ import {
   OUTLINE_PULSE_PERIOD,
   OUTLINE_EDGE_STRENGTH,
   ROCKET_EXHAUST_SCALE,
+  ROCKET_MIN_SCREEN_PIXELS,
 } from './constants';
 import { useStore } from '../../utils/store';
 import { getSkinById } from '../../utils/skins';
@@ -73,6 +74,7 @@ export class Rocket {
   private currentTexture?: THREE.Texture | null;
   private uvsApplied = false;
   private centerOffset: THREE.Vector3 = new THREE.Vector3();
+  private baseBoundingRadius: number = 0;
 
   // exhaust sprites
   private sprites: THREE.Sprite[] = [];
@@ -117,6 +119,9 @@ export class Rocket {
     const box = new THREE.Box3().setFromObject(this.hull);
     const ctrWorld = new THREE.Vector3();
     box.getCenter(ctrWorld);
+    const sphere = new THREE.Sphere();
+    box.getBoundingSphere(sphere);
+    this.baseBoundingRadius = sphere.radius;
     this.group.updateWorldMatrix(true, false);
     const ctrLocal = this.group.worldToLocal(ctrWorld.clone());
     this.centerOffset.copy(ctrLocal);
@@ -404,6 +409,49 @@ export class Rocket {
 
     // Emit only while movement animation is active (after camera move+hold)
     this.updateExhaust(traveling && animAlpha > 0 && animAlpha < 0.5);
+  }
+
+  /**
+   * Ensures the rocket maintains at least a minimum apparent size on screen by
+   * uniformly scaling the root group based on camera distance and FOV.
+   * @param camera Perspective camera used for rendering.
+   * @param viewportHeightPx Height of the drawing buffer in pixels.
+   */
+  enforceMinimumApparentSize(
+    camera: THREE.PerspectiveCamera,
+    viewportHeightPx: number,
+  ): void {
+    const minPx = Math.max(0, ROCKET_MIN_SCREEN_PIXELS);
+    if (minPx <= 0 || this.baseBoundingRadius <= 1e-9) {
+      return;
+    }
+
+    // Compute distance from camera to rocket center used for orbiting
+    const center = this.getOrbitCenter();
+    const distance = camera.position.distanceTo(center);
+    if (!(distance > 1e-6)) {
+      return;
+    }
+
+    // Convert world-space size to pixel size using vertical FOV
+    const vFovRad = (camera.fov * Math.PI) / 180;
+    const heightWorld = 2 * distance * Math.tan(vFovRad / 2);
+    const heightPx = Math.max(1, viewportHeightPx);
+
+    // Pixel radius when group scale is 1
+    const pxRadiusAtScale1 = (this.baseBoundingRadius / heightWorld) * heightPx;
+    const neededPxRadius = minPx / 2; // interpret constant as minimum diameter
+
+    // Desired uniform scale relative to group scale = 1
+    const scaleNeeded =
+      pxRadiusAtScale1 > 1e-9 ? neededPxRadius / pxRadiusAtScale1 : 1;
+
+    const targetScale = Math.max(1, scaleNeeded);
+
+    // Apply only if different to avoid needless matrix updates
+    if (Math.abs(this.group.scale.x - targetScale) > 1e-4) {
+      this.group.scale.setScalar(targetScale);
+    }
   }
 
   private updateExhaust(emit: boolean) {

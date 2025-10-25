@@ -855,6 +855,19 @@ export function SolarSystemMap({
         }
       }
 
+      // Enforce a minimum apparent size for the rocket regardless of zoom
+      {
+        const cam = cameraRef.current;
+        const rocket = rocketRef.current;
+        const glCtx = glRef.current;
+        if (rocket && cam && glCtx) {
+          rocket.enforceMinimumApparentSize(
+            cam,
+            glCtx.drawingBufferHeight,
+          );
+        }
+      }
+
       // Keep sky centered on the camera to avoid parallax and clipping
       {
         const cam = cameraRef.current;

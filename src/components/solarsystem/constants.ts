@@ -149,6 +149,9 @@ export const TRAIL_LENGTH_MULTIPLIER = 0.5;
 // Overall scale for rocket exhaust visuals: affects sprite size and travel distance
 export const ROCKET_EXHAUST_SCALE = 0.5;
 
+// Ensure the rocket maintains at least this apparent size on screen (in pixels)
+export const ROCKET_MIN_SCREEN_PIXELS = 64;
+
 // Animation durations (ms)
 export const HABIT_TRAVEL_ANIM_MS = 5000; // duration for visual travel per completion
 export const CAMERA_MOVE_MS = 2000; // camera move into starting vantage
