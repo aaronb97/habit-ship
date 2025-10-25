@@ -143,6 +143,10 @@ export function SolarSystemMap({
       if (!rocket) return;
       if (!selectedSkinId) {
         rocket.setBodyTexture(null);
+        try {
+          const baseColor = useStore.getState().rocketColor;
+          rocket.setColor(baseColor);
+        } catch {}
         return;
       }
 

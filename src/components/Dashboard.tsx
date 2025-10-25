@@ -53,6 +53,7 @@ export function Dashboard() {
   const setIsSetupFinished = useStore((s) => s.setIsSetupFinished);
   const addHabit = useStore((s) => s.addHabit);
   const editHabit = useStore((s) => s.editHabit);
+  const removeHabit = useStore((s) => s.removeHabit);
 
   const getCurrentDate = useGetCurrentDate();
   const fuelKm = useStore((s) => s.fuelKm);
@@ -274,6 +275,13 @@ export function Dashboard() {
             <Text style={styles.subLabelText}>(optional)</Text>
           </View>
           <TimerSelection initialTimer={newTimer} onTimerChange={setNewTimer} />
+
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleDeleteEditingHabit}
+          >
+            <Text style={styles.deleteButtonText}>Delete Habit</Text>
+          </TouchableOpacity>
         </View>
       </GlassOrDefault>
     );
@@ -349,6 +357,40 @@ export function Dashboard() {
         },
       ]);
     }
+  }
+
+  /**
+   * Deletes the habit currently being edited with confirmation and a single-habit guard.
+   * If only one habit exists, shows an informational alert and aborts.
+   */
+  function handleDeleteEditingHabit(): void {
+    if (!editingHabitId) return;
+    if (habits.length <= 1) {
+      Alert.alert('Cannot Delete', "You can't delete your only habit.", [
+        { text: 'OK', style: 'default' },
+      ]);
+      return;
+    }
+
+    Alert.alert(
+      'Delete Habit',
+      "Are you sure you want to delete this habit? This action can't be undone.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            removeHabit(editingHabitId);
+            setNewTitle('');
+            setNewDescription('');
+            setNewTimer(0);
+            setEditingHabitId(undefined);
+            setMode('default');
+          },
+        },
+      ],
+    );
   }
 
   // Inline Add Habit flow
@@ -872,6 +914,16 @@ const styles = StyleSheet.create({
   },
   flowScrollContent: {
     paddingBottom: 8,
+  },
+  deleteButton: {
+    marginTop: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    color: colors.danger,
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.medium,
   },
 });
 

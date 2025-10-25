@@ -14,7 +14,7 @@ import { getCurrentTime, getCurrentDate, setTimeOffsetProvider } from './time';
 import { Coordinates, UserPosition, XPGain } from '../types';
 import { useShallow } from 'zustand/shallow';
 import { calculateLevel, getDailyDistanceForLevel } from './experience';
-import { hasSkinForBody, getSkinById, ALL_SKIN_IDS, ROCKET_SKIN_IDS } from './skins';
+import { hasSkinForBody, ALL_SKIN_IDS, ROCKET_SKIN_IDS } from './skins';
 import { generateName } from './generateName';
 
 // =================================================================
@@ -219,7 +219,7 @@ type Store = {
   setLastLevelUpSeenLevel: (level: number) => void;
   setActiveTab: (tab: TabName) => void;
   // Skins actions
-  setSelectedSkinId: (skinId: string) => void;
+  setSelectedSkinId: (skinId?: string) => void;
   markSkinsSeen: () => void;
   unlockAllSkins: () => void;
   lockSkinsToDefault: () => void;
@@ -428,10 +428,6 @@ export const useStore = create<Store>()(
       setSelectedSkinId: (skinId) => {
         set((state) => {
           state.selectedSkinId = skinId;
-          const skin = getSkinById(skinId);
-          if (skin) {
-            state.rocketColor = skin.color;
-          }
         });
       },
       markSkinsSeen: () => set({ unseenUnlockedSkins: [] }),

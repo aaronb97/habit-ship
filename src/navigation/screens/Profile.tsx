@@ -39,7 +39,11 @@ export function Profile() {
       markSkinsSeen();
     }
   }, [isFocused, unseenUnlockedSkins, markSkinsSeen]);
-
+  /**
+   * Handles skin card selection. If the skin is locked, shows an info alert.
+   * If the selected skin is already applied, prompts to remove it (become skinless).
+   * Otherwise, prompts to apply the selected skin.
+   */
   const onSelect = (skinId: string) => {
     const skin = getSkinById(skinId);
     if (!skin) return;
@@ -47,6 +51,18 @@ export function Profile() {
     const isUnlocked = unlockedSkins.includes(skinId);
     if (!isUnlocked) {
       Alert.alert('Locked', 'Land on this body to unlock the skin.');
+      return;
+    }
+
+    const isCurrentlySelected = selectedSkinId === skinId;
+    if (isCurrentlySelected) {
+      Alert.alert('Remove Skin', 'Do you want to remove the current skin?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          onPress: () => setSelectedSkinId(undefined),
+        },
+      ]);
       return;
     }
 
