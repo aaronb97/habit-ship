@@ -13,6 +13,7 @@ export function LevelUpListener() {
   const prevLevelRef = useRef<number>(currentLevel);
   const showLevelUp = useStore((s) => s.showLevelUp);
   const lastLevelUpSeenLevel = useStore((s) => s.lastLevelUpSeenLevel);
+  const unlockRandomRocketSkin = useStore((s) => s.unlockRandomRocketSkin);
 
   useEffect(() => {
     const prev = prevLevelRef.current;
@@ -29,17 +30,19 @@ export function LevelUpListener() {
         )
         .map((b) => b.name);
 
+      const awarded = unlockRandomRocketSkin();
       showLevelUp({
         prevLevel: fromLevel,
         currLevel: curr,
         prevDistanceKm: prevDist,
         currDistanceKm: currDist,
         discoveredBodies: newBodies,
+        awardedSkinId: awarded,
       });
     } else if (curr < prev) {
       prevLevelRef.current = curr;
     }
-  }, [currentLevel, showLevelUp, lastLevelUpSeenLevel]);
+  }, [currentLevel, showLevelUp, lastLevelUpSeenLevel, unlockRandomRocketSkin]);
 
   return null;
 }

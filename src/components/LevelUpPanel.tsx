@@ -10,6 +10,7 @@ import type { LevelUpInfo } from '../utils/store';
 import { cBodies } from '../planets';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { FadingTextList, FadingLine } from './FadingTextList';
+import { getSkinById } from '../utils/skins';
 
 // Delays for title fade-in and text list rendering
 const TITLE_FADE_IN_START_DELAY_MS = 500;
@@ -114,6 +115,11 @@ export function LevelUpPanel({
     `Your daily travel length has increased from ${formatKm(info.prevDistanceKm)} to ${formatKm(info.currDistanceKm)}`,
   ];
 
+  // Optional skin reward line
+  const skinLine: FadingLine[] = info.awardedSkinId
+    ? [`New Rocket Skin: ${getSkinById(info.awardedSkinId)?.title ?? info.awardedSkinId}`]
+    : [];
+
   const fullDiscovered = info.discoveredBodies
     .map((name) => cBodies.find((b) => b.name === name))
     .filter((b): b is NonNullable<typeof b> => !!b)
@@ -141,6 +147,7 @@ export function LevelUpPanel({
 
   const lines: FadingLine[] = [
     ...baseLines,
+    ...skinLine,
     ...discoveredLines,
     ...(restCount > 0 ? [`and ${restCount} others`] : []),
   ];

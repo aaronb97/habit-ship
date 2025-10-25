@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { TextureLoader } from 'expo-three';
 import { Asset } from 'expo-asset';
 import { TEXTURE_ANISOTROPY } from './constants';
+import { SKINS } from '../../utils/skins';
 
 // Map planet/star names to their texture assets in assets/cbodies
 // We use require() so Metro bundles the images and Expo Asset can resolve to a local URI.
@@ -42,7 +43,6 @@ export async function loadBodyTextures(
     if (!req) {
       continue;
     }
-
     try {
       const asset = Asset.fromModule(req);
       try {
@@ -57,6 +57,45 @@ export async function loadBodyTextures(
       textures[name] = tex;
     } catch (e) {
       console.warn(`[textures] Failed to load texture for ${name}`, e);
+    }
+  }
+
+  return textures;
+}
+
+/**
+ * Loads textures for arbitrary skin IDs using the SKINS registry's preview images.
+ * Supports both planet/body skins and rocket skins under assets/skins/.
+ *
+ * names: Array of skin IDs to load.
+ * Returns: Map of id -> THREE.Texture for ids that could be loaded.
+ */
+export async function loadSkinTextures(
+  names: string[],
+): Promise<Record<string, THREE.Texture>> {
+  const textures: Record<string, THREE.Texture> = {};
+  const loader = new TextureLoader();
+
+  for (const id of names) {
+    const skin = SKINS[id];
+    if (!skin) continue;
+    try {
+      const asset = Asset.fromModule(skin.preview);
+      try {
+        await asset.downloadAsync();
+      } catch (err) {
+        console.warn(
+          `[textures] downloadAsync failed for skin ${id}, using uri fallback`,
+          err,
+        );
+      }
+      const src = asset.localUri ?? asset.uri;
+      const tex = await loader.loadAsync(src);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = TEXTURE_ANISOTROPY;
+      textures[id] = tex;
+    } catch (e) {
+      console.warn(`[textures] Failed to load texture for skin ${id}`, e);
     }
   }
 

@@ -1,5 +1,5 @@
 export type Skin = {
-  id: string; // same as CBody name for simplicity
+  id: string; // unique id, for planet skins this is the body name; for rocket skins it's the file base name
   title: string;
   // require() returns a number for static image assets in React Native
   preview: number;
@@ -8,7 +8,8 @@ export type Skin = {
 
 // Central registry of available skins keyed by the body name that unlocks them
 // Only include bodies that have a dedicated image in assets/cbodies/
-export const SKINS: Record<string, Skin> = {
+// Planet/body-themed skins (unlocked by landing on bodies)
+const PLANET_SKINS: Record<string, Skin> = {
   Earth: {
     id: 'Earth',
     title: 'Earth',
@@ -130,14 +131,67 @@ export const SKINS: Record<string, Skin> = {
   },
 };
 
+// Rocket skins (unlocked via level-up). Names match file base names in assets/skins.
+const ROCKET_SKINS: Record<string, Skin> = {
+  'A Friend is a Wonderful Thing': {
+    id: 'A Friend is a Wonderful Thing',
+    title: 'A Friend is a Wonderful Thing',
+    preview: require('../../assets/skins/A Friend is a Wonderful Thing.png'),
+    color: 0xffffff,
+  },
+  Bliss: {
+    id: 'Bliss',
+    title: 'Bliss',
+    preview: require('../../assets/skins/Bliss.png'),
+    color: 0xadd8e6,
+  },
+  Escher: {
+    id: 'Escher',
+    title: 'Escher',
+    preview: require('../../assets/skins/Escher.jpg'),
+    color: 0xff6b6b,
+  },
+  Froggy: {
+    id: 'Froggy',
+    title: 'Froggy',
+    preview: require('../../assets/skins/Froggy.png'),
+    color: 0xffff00,
+  },
+  // Hawaiian: {
+  //   id: 'Hawaiian',
+  //   title: 'Hawaiian',
+  //   preview: require('../../assets/skins/Hawaiian.jpg'),
+  //   color: 0xffffff,
+  // },
+  Saul: {
+    id: 'Saul',
+    title: 'Saul',
+    preview: require('../../assets/skins/Saul.png'),
+    color: 0xffd4a3,
+  },
+  Solitaire: {
+    id: 'Solitaire',
+    title: 'Solitaire',
+    preview: require('../../assets/skins/Solitaire.png'),
+    color: 0xffffff,
+  },
+};
+
+// Merge registries for consumer convenience
+export const SKINS: Record<string, Skin> = {
+  ...PLANET_SKINS,
+  ...ROCKET_SKINS,
+};
+
 export const ALL_SKIN_IDS = Object.keys(SKINS);
+export const ROCKET_SKIN_IDS = Object.keys(ROCKET_SKINS);
 
 export function hasSkinForBody(bodyName: string): boolean {
-  return Boolean(SKINS[bodyName]);
+  return Boolean(PLANET_SKINS[bodyName]);
 }
 
 export function getSkinForBody(bodyName: string): Skin | undefined {
-  return SKINS[bodyName];
+  return PLANET_SKINS[bodyName];
 }
 
 export function getSkinById(id: string): Skin | undefined {

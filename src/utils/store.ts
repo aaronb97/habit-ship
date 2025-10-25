@@ -14,7 +14,7 @@ import { getCurrentTime, getCurrentDate, setTimeOffsetProvider } from './time';
 import { Coordinates, UserPosition, XPGain } from '../types';
 import { useShallow } from 'zustand/shallow';
 import { calculateLevel, getDailyDistanceForLevel } from './experience';
-import { hasSkinForBody, getSkinById, ALL_SKIN_IDS } from './skins';
+import { hasSkinForBody, getSkinById, ALL_SKIN_IDS, ROCKET_SKIN_IDS } from './skins';
 import { generateName } from './generateName';
 
 // =================================================================
@@ -36,6 +36,8 @@ export type LevelUpInfo = {
   prevDistanceKm: number;
   currDistanceKm: number;
   discoveredBodies: string[];
+  /** Optional rocket skin id awarded on this level-up (if any). */
+  awardedSkinId?: string;
 };
 
 export type LandingReward = {
@@ -221,6 +223,11 @@ type Store = {
   markSkinsSeen: () => void;
   unlockAllSkins: () => void;
   lockSkinsToDefault: () => void;
+  /**
+   * Unlocks a random rocket skin that the user does not already own.
+   * Returns the awarded skin id, or undefined if none available.
+   */
+  unlockRandomRocketSkin: () => string | undefined;
 
   // Tilt-shift setters
   setTiltShiftEnabled: (value: boolean) => void;
@@ -442,6 +449,19 @@ export const useStore = create<Store>()(
             state.selectedSkinId = undefined;
           }
         }),
+      unlockRandomRocketSkin: () => {
+        const state = get();
+        const owned = new Set(state.unlockedSkins);
+        const pool = ROCKET_SKIN_IDS.filter((id) => !owned.has(id));
+        if (pool.length === 0) return undefined;
+        const idx = Math.floor(Math.random() * pool.length);
+        const awarded = pool[idx]!;
+        set((s) => {
+          s.unlockedSkins.push(awarded);
+          s.unseenUnlockedSkins.push(awarded);
+        });
+        return awarded;
+      },
       setSkipRocketAnimation: (value) => set({ skipRocketAnimation: value }),
       setShowJourneyRemaining: (value) => set({ showJourneyRemaining: value }),
       setShowFuelCapacity: (value) => set({ showFuelCapacity: value }),

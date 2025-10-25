@@ -125,7 +125,10 @@ export class Rocket {
     if (this.uvsApplied) return;
 
     // Compute global bounds over all Body meshes to normalize V consistently
-    const bounds = { min: new THREE.Vector3(+Infinity, +Infinity, +Infinity), max: new THREE.Vector3(-Infinity, -Infinity, -Infinity) };
+    const bounds = {
+      min: new THREE.Vector3(+Infinity, +Infinity, +Infinity),
+      max: new THREE.Vector3(-Infinity, -Infinity, -Infinity),
+    };
     const bodyMeshes: THREE.Mesh[] = [];
     // Make sure world matrices are up-to-date
     this.hull.updateWorldMatrix(true, true);
@@ -141,7 +144,9 @@ export class Rocket {
             const lx = arr[i * 3 + 0]!;
             const ly = arr[i * 3 + 1]!;
             const lz = arr[i * 3 + 2]!;
-            const wp = new THREE.Vector3(lx, ly, lz).applyMatrix4(child.matrixWorld);
+            const wp = new THREE.Vector3(lx, ly, lz).applyMatrix4(
+              child.matrixWorld,
+            );
             if (wp.x < bounds.min.x) bounds.min.x = wp.x;
             if (wp.y < bounds.min.y) bounds.min.y = wp.y;
             if (wp.z < bounds.min.z) bounds.min.z = wp.z;
@@ -162,7 +167,10 @@ export class Rocket {
     const radialA = (heightAxis + 1) % 3;
     const radialB = (heightAxis + 2) % 3;
     const minH = [bounds.min.x, bounds.min.y, bounds.min.z][heightAxis]!;
-    const rangeH = Math.max(1e-6, [extents.x, extents.y, extents.z][heightAxis]!);
+    const rangeH = Math.max(
+      1e-6,
+      [extents.x, extents.y, extents.z][heightAxis]!,
+    );
 
     // Apply cylindrical UVs per body mesh
     for (const mesh of bodyMeshes) {
@@ -209,7 +217,10 @@ export class Rocket {
     try {
       await rocketAsset.downloadAsync();
     } catch (err) {
-      console.warn('[rocket] downloadAsync failed for Rocket.obj, using uri fallback', err);
+      console.warn(
+        '[rocket] downloadAsync failed for Rocket.obj, using uri fallback',
+        err,
+      );
     }
     const loader = new OBJLoader();
     const uri = rocketAsset.localUri ?? rocketAsset.uri;
@@ -278,6 +289,16 @@ export class Rocket {
     }
   }
 
+  /**
+   * Applies a texture to all rocket meshes except windows. Body meshes render the
+   * texture at full brightness; non-body meshes render the same texture darkened
+   * to preserve part contrast. While a texture is active, the outline pass uses
+   * the provided accentColor if specified; when clearing the texture, the
+   * outline reverts to the baseColor.
+   *
+   * texture: THREE.Texture to apply, or null to clear the texture from all parts.
+   * accentColor: Optional 24-bit integer color used for the outline while textured.
+   */
   setBodyTexture(texture: THREE.Texture | null, accentColor?: number) {
     // Dispose previous texture (if any) and clear maps when null
     const prev = this.currentTexture;
@@ -286,36 +307,54 @@ export class Rocket {
     // Ensure we have consistent UVs across the hull parts
     this.ensureCylindricalUVsApplied();
 
+    // Configure texture sampling once
+    if (texture) {
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.offset.x = 0.25;
+      texture.needsUpdate = true;
+    }
+
     this.hull.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        const name = child.name || '';
+      if (!(child instanceof THREE.Mesh)) return;
+      const name = child.name || '';
+      // Skip windows entirely
+      if (name.includes('Window')) return;
+
+      const mat = child.material as THREE.MeshStandardMaterial;
+      if (texture) {
+        // Apply texture to all parts; darker multiplier for non-body parts
+        mat.map = texture;
         if (name.includes('Body')) {
-          const mat = child.material as THREE.MeshStandardMaterial;
-          if (texture) {
-            texture.wrapS = THREE.RepeatWrapping;
-            texture.wrapT = THREE.ClampToEdgeWrapping;
-            texture.needsUpdate = true;
-            mat.map = texture;
-            mat.color.set(0xffffff);
-          } else {
-            mat.map = null;
-            mat.color.set(this.baseColor);
-          }
-          mat.needsUpdate = true;
+          mat.color.set(0xffffff);
         } else {
-          // Non-body parts inherit accent color while a texture is active, otherwise base color
-          const mat = child.material as THREE.MeshStandardMaterial;
-          if (texture) {
-            mat.color.set(
-              typeof accentColor === 'number' ? accentColor : this.baseColor,
-            );
-          } else {
-            mat.color.set(this.baseColor);
-          }
-          mat.needsUpdate = true;
+          // Darken non-body parts to distinguish paneling/fins
+          mat.color.setScalar(0.6);
         }
+      } else {
+        // Clear texture maps; colors restored below via applyRocketMaterials
+        mat.map = null;
       }
+      mat.needsUpdate = true;
     });
+
+    // Keep outline color aligned with accent while textured; revert when cleared
+    if (this.outlinePass) {
+      try {
+        if (texture && typeof accentColor === 'number') {
+          this.outlinePass.visibleEdgeColor.set(accentColor);
+          this.outlinePass.hiddenEdgeColor.set(accentColor);
+        } else if (!texture) {
+          this.outlinePass.visibleEdgeColor.set(this.baseColor);
+          this.outlinePass.hiddenEdgeColor.set(this.baseColor);
+        }
+      } catch {}
+    }
+
+    // When clearing the texture, restore original materials/colors
+    if (!texture) {
+      applyRocketMaterials(this.hull, this.baseColor);
+    }
 
     if (prev && prev !== texture) {
       try {

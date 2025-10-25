@@ -70,6 +70,12 @@ export function Dev() {
               Quick Reset (Home with Default Habit)
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => store.unlockAllSkins()}
+          >
+            <Text style={styles.buttonText}>Unlock All Skins</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.button} onPress={handleLevelUpOnce}>
             <Text style={styles.buttonText}>Level +1</Text>
           </TouchableOpacity>

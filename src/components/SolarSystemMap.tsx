@@ -24,7 +24,11 @@ import { useDebugValues } from '../hooks/useDebugValues';
 // Modularized helpers/builders
 import { toVec3 } from './solarsystem/helpers';
 import { type MappedMaterial } from './solarsystem/builders';
-import { loadBodyTextures, loadRingTextures } from './solarsystem/textures';
+import {
+  loadBodyTextures,
+  loadRingTextures,
+  loadSkinTextures,
+} from './solarsystem/textures';
 import { createSky } from './solarsystem/sky';
 import {
   CameraController,
@@ -143,7 +147,7 @@ export function SolarSystemMap({
       }
 
       try {
-        const texMap = await loadBodyTextures([selectedSkinId]);
+        const texMap = await loadSkinTextures([selectedSkinId]);
         if (canceled) return;
         const tex = texMap[selectedSkinId] ?? null;
         const skin = getSkinById(selectedSkinId);
@@ -548,7 +552,11 @@ export function SolarSystemMap({
        * @param radius Current camera radius.
        * @returns Minimum safe radius (>= radius) to avoid clipping.
        */
-      const resolver: CameraCollisionResolver = ({ center, desiredPos, radius }) => {
+      const resolver: CameraCollisionResolver = ({
+        center,
+        desiredPos,
+        radius,
+      }) => {
         let safe = radius;
         const dir = desiredPos.clone().sub(center);
         const rLen = dir.length();
@@ -651,7 +659,7 @@ export function SolarSystemMap({
       try {
         const persistedSkinId = useStore.getState().selectedSkinId;
         if (persistedSkinId) {
-          const texMap = await loadBodyTextures([persistedSkinId]);
+          const texMap = await loadSkinTextures([persistedSkinId]);
           const tex = texMap[persistedSkinId] ?? null;
           const skin = getSkinById(persistedSkinId);
           rocket.setBodyTexture(tex, skin?.color);
