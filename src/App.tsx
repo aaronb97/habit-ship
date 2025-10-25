@@ -21,6 +21,7 @@ import { colors } from './styles/theme';
 import { rescheduleDailyReminders } from './utils/notifications';
 import { getCurrentDate } from './utils/time';
 import { useStore } from './utils/store';
+import { ensureFirebaseId } from './utils/firebaseAuth';
 
 const prefix = createURL('/');
 
@@ -88,6 +89,17 @@ export function App() {
       responseListener.remove();
     };
   }, []);
+
+  // Ensure anonymous Firebase auth whenever firebaseId is missing (first run or after dev resets)
+  const firebaseId = useStore((s) => s.firebaseId);
+  useEffect(() => {
+    if (firebaseId) return;
+    const s = useStore.getState();
+    void (async () => {
+      const uid = await ensureFirebaseId();
+      if (uid) s.setFirebaseId(uid);
+    })();
+  }, [firebaseId]);
 
   // Reschedule daily reminders when the app becomes active (opened/foregrounded)
   useEffect(() => {

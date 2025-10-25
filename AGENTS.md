@@ -1,4 +1,4 @@
-This project is using the React compiler; avoid using useCallback and useMemo unless necessary
+This project is using the React compiler; avoid using useCallback and useMemo unless necessary. This project will run on both iOS and Android but not the web.
 
 Do not use the 'any' type
 

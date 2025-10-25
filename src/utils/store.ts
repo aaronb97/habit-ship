@@ -16,6 +16,7 @@ import { useShallow } from 'zustand/shallow';
 import { calculateLevel, getDailyDistanceForLevel } from './experience';
 import { hasSkinForBody, ALL_SKIN_IDS, ROCKET_SKIN_IDS } from './skins';
 import { generateName } from './generateName';
+import { signOutForDevResets } from './firebaseAuth';
 
 // =================================================================
 // TYPES
@@ -116,6 +117,8 @@ type Store = {
   outlinesRocketEnabled: boolean;
 
   username: string;
+
+  firebaseId?: string;
 
   skipRocketAnimation: boolean;
 
@@ -249,6 +252,12 @@ type Store = {
   finalizeLandingAfterAnimation: () => void;
   // Clear the justLanded flag after Home acknowledged the landing
   acknowledgeLandingOnHome: () => void;
+
+  /**
+   * Sets the Firebase UID for this device/profile. Pass undefined to clear.
+   * id: UID string to persist, or undefined to clear.
+   */
+  setFirebaseId: (id?: string) => void;
 };
 
 const initialData = {
@@ -314,6 +323,7 @@ const initialData = {
   money: 0,
   lastLandingReward: undefined,
   username: generateName(),
+  firebaseId: undefined,
 } satisfies Partial<Store>;
 
 export const useStore = create<Store>()(
@@ -323,6 +333,7 @@ export const useStore = create<Store>()(
       activeTab: 'HomeTab' as TabName,
       setRocketColor: (color) => set({ rocketColor: color }),
       setIsSetupFinished: (value) => set({ isSetupFinished: value }),
+      setFirebaseId: (id) => set({ firebaseId: id }),
       addHabit: (habit) => {
         set((state) => {
           state.habits.push({
@@ -473,6 +484,8 @@ export const useStore = create<Store>()(
       setTiltShiftBlur: (value) =>
         set({ tiltShiftBlur: Math.max(0, Math.min(64, value)) }),
       quickReset: () => {
+        // Sign out so a new anonymous user is created on next app tick
+        void signOutForDevResets();
         //preserve debug values
         const {
           showDebugOverlay,
@@ -557,9 +570,15 @@ export const useStore = create<Store>()(
             distanceTraveled: 0,
             previousDistanceTraveled: 0,
           },
+          // Clear firebase identity so the bootstrap flow re-authenticates
+          firebaseId: undefined,
         });
       },
-      clearData: () => set(initialData),
+      clearData: () => {
+        // Ensure next session starts with a brand new anonymous identity
+        void signOutForDevResets();
+        set(initialData);
+      },
 
       // --- Complex/Async Actions ---
 

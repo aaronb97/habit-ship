@@ -10,6 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.habit-ship",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "UISupportedInterfaceOrientations": [
@@ -50,6 +51,8 @@
         }
       ],
       "react-native-edge-to-edge",
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
       "react-native-bottom-tabs"
     ],
     "experiments": {
