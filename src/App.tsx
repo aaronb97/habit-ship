@@ -22,6 +22,7 @@ import { rescheduleDailyReminders } from './utils/notifications';
 import { getCurrentDate } from './utils/time';
 import { useStore } from './utils/store';
 import { ensureFirebaseId } from './utils/firebaseAuth';
+import { startFirestoreSync } from './utils/firestoreSync';
 
 const prefix = createURL('/');
 
@@ -99,6 +100,13 @@ export function App() {
       const uid = await ensureFirebaseId();
       if (uid) s.setFirebaseId(uid);
     })();
+  }, [firebaseId]);
+
+  // Mirror Zustand store to Firestore (device-only source of truth)
+  useEffect(() => {
+    if (!firebaseId) return;
+    const stop = startFirestoreSync(firebaseId);
+    return () => stop();
   }, [firebaseId]);
 
   // Reschedule daily reminders when the app becomes active (opened/foregrounded)

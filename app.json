@@ -11,6 +11,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.habit-ship",
       "googleServicesFile": "./GoogleService-Info.plist",
+      "teamId": "SZ3Q2Y73R2",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "UISupportedInterfaceOrientations": [
@@ -60,7 +61,7 @@
         {
           "ios": {
             "useFrameworks": "static",
-            "forceStaticLinking": ["RNFBApp", "RNFBAuth"]
+            "forceStaticLinking": ["RNFBApp", "RNFBAuth", "RNFBFirestore"]
           }
         }
       ]
