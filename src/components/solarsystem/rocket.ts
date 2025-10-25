@@ -313,7 +313,7 @@ export class Rocket {
       const skinId = texture.name;
       const skin = skinId ? getSkinById(skinId) : undefined;
       const halfWrap = skin?.wrap === 'half';
-      const rot90 = Boolean(skin?.rotate90);
+      // const rot90 = Boolean(skin?.rotate90);
 
       texture.wrapS = THREE.RepeatWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
