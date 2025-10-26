@@ -47,6 +47,7 @@ export function TabNavigator() {
     loadingAccepted,
     loadingIncoming,
     loadingOutgoing,
+    friendProfiles,
   } = useFriendships(uid);
   // Inline flows now manage destination prompts; no need to read userPosition or level-up modal here.
   const isMapFocused = activeTab === 'MapTab';
@@ -214,6 +215,7 @@ export function TabNavigator() {
             loadingAccepted={loadingAccepted}
             loadingIncoming={loadingIncoming}
             loadingOutgoing={loadingOutgoing}
+            friendProfiles={friendProfiles}
           />
         )}
       </Tab.Screen>

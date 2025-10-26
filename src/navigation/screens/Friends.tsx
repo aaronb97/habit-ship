@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -20,7 +20,6 @@ import {
   sendFriendRequest,
   getUidByUsername,
   type FriendshipDoc,
-  userDoc,
   type UsersDoc,
 } from '../../utils/db';
 import { HSButton } from '../../components/HSButton';
@@ -84,6 +83,7 @@ interface Props {
   loadingAccepted: boolean;
   loadingIncoming: boolean;
   loadingOutgoing: boolean;
+  friendProfiles: Record<string, UsersDoc | undefined>;
 }
 
 /**
@@ -98,6 +98,7 @@ export function Friends({
   loadingAccepted,
   loadingIncoming,
   loadingOutgoing,
+  friendProfiles,
 }: Props) {
   const uid = useStore((s) => s.firebaseId);
 
@@ -105,45 +106,6 @@ export function Friends({
   const [inputUsername, setInputUsername] = useState<string>('');
   const [busy, setBusy] = useState<boolean>(false);
   const username = useStore((s) => s.username);
-
-  // Cache of friend user profiles keyed by UID (to read rocketColor/selectedSkinId)
-  const [friendProfiles, setFriendProfiles] = useState<
-    Record<string, UsersDoc | undefined>
-  >({});
-  // Track mount state to safely set state after async work
-  const mountedRef = useRef<boolean>(true);
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  // No username lookup effect is needed now that friendship docs store names.
-
-  // Load user docs for each accepted friend so we can render their rocket color/skin
-  useEffect(() => {
-    if (!uid) return;
-    if (accepted.length === 0) return;
-    const uids = Array.from(new Set(accepted.map((f) => otherUid(f, uid))));
-    const missing = uids.filter((u) => friendProfiles[u] === undefined);
-    if (missing.length === 0) return;
-    void (async () => {
-      const entries: Record<string, UsersDoc | undefined> = {};
-      await Promise.all(
-        missing.map(async (u) => {
-          try {
-            const snap = await userDoc(u).get();
-            entries[u] = snap.data() as UsersDoc | undefined;
-          } catch {
-            entries[u] = undefined;
-          }
-        }),
-      );
-      if (!mountedRef.current) return;
-      setFriendProfiles((prev) => ({ ...prev, ...entries }));
-    })();
-  }, [uid, accepted, friendProfiles, mountedRef]);
 
   /**
    * Accepts a pending incoming friend request.

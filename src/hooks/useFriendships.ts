@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import type { FriendshipDoc } from '../utils/db';
+import type { FriendshipDoc, UsersDoc } from '../utils/db';
 import {
   observeFriendshipsAccepted,
   observeFriendshipsIncoming,
   observeFriendshipsOutgoing,
+  userDoc,
 } from '../utils/db';
 
 export type FriendshipsData = {
@@ -13,6 +14,7 @@ export type FriendshipsData = {
   loadingAccepted: boolean;
   loadingIncoming: boolean;
   loadingOutgoing: boolean;
+  friendProfiles: Record<string, UsersDoc | undefined>;
 };
 
 /**
@@ -33,6 +35,14 @@ export function useFriendships(uid?: string): FriendshipsData {
   const [loadingIncoming, setLoadingIncoming] = useState<boolean>(true);
   const [loadingOutgoing, setLoadingOutgoing] = useState<boolean>(true);
 
+  const [friendProfiles, setFriendProfiles] = useState<
+    Record<string, UsersDoc | undefined>
+  >({});
+
+  function otherUid(f: FriendshipDoc, selfUid: string): string {
+    return f.user1 === selfUid ? f.user2 : f.user1;
+  }
+
   useEffect(() => {
     if (!uid) {
       setAccepted([]);
@@ -41,6 +51,7 @@ export function useFriendships(uid?: string): FriendshipsData {
       setLoadingAccepted(false);
       setLoadingIncoming(false);
       setLoadingOutgoing(false);
+      setFriendProfiles({});
       return;
     }
 
@@ -68,6 +79,29 @@ export function useFriendships(uid?: string): FriendshipsData {
     };
   }, [uid]);
 
+  // Fetch friend profiles (users docs) for accepted friendships
+  useEffect(() => {
+    if (!uid) return;
+    if (accepted.length === 0) return;
+    const uids = Array.from(new Set(accepted.map((f) => otherUid(f, uid))));
+    const missing = uids.filter((u) => friendProfiles[u] === undefined);
+    if (missing.length === 0) return;
+    void (async () => {
+      const entries: Record<string, UsersDoc | undefined> = {};
+      await Promise.all(
+        missing.map(async (u) => {
+          try {
+            const snap = await userDoc(u).get();
+            entries[u] = snap.data() as UsersDoc | undefined;
+          } catch {
+            entries[u] = undefined;
+          }
+        }),
+      );
+      setFriendProfiles((prev) => ({ ...prev, ...entries }));
+    })();
+  }, [uid, accepted, friendProfiles]);
+
   return {
     accepted,
     incoming,
@@ -75,5 +109,6 @@ export function useFriendships(uid?: string): FriendshipsData {
     loadingAccepted,
     loadingIncoming,
     loadingOutgoing,
+    friendProfiles,
   };
 }
