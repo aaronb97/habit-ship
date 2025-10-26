@@ -15,7 +15,7 @@ import { Coordinates, UserPosition, XPGain } from '../types';
 import { useShallow } from 'zustand/shallow';
 import { calculateLevel, getDailyDistanceForLevel } from './experience';
 import { hasSkinForBody, ALL_SKIN_IDS, ROCKET_SKIN_IDS } from './skins';
-import { generateName } from './generateName';
+// username is assigned during initial Firestore sync to ensure uniqueness
 import { signOutForDevResets } from './firebaseAuth';
 
 // =================================================================
@@ -116,7 +116,7 @@ type Store = {
   outlinesBodiesEnabled: boolean;
   outlinesRocketEnabled: boolean;
 
-  username: string;
+  username?: string;
 
   firebaseId?: string;
 
@@ -258,6 +258,12 @@ type Store = {
    * id: UID string to persist, or undefined to clear.
    */
   setFirebaseId: (id?: string) => void;
+
+  /**
+   * Sets the user's unique username. Pass undefined to clear.
+   * name: Username string to persist, or undefined to clear.
+   */
+  setUsername: (name?: string) => void;
 };
 
 const initialData = {
@@ -322,7 +328,7 @@ const initialData = {
   xpEarnedDate: undefined,
   money: 0,
   lastLandingReward: undefined,
-  username: generateName(),
+  username: undefined,
   firebaseId: undefined,
 } satisfies Partial<Store>;
 
@@ -334,6 +340,7 @@ export const useStore = create<Store>()(
       setRocketColor: (color) => set({ rocketColor: color }),
       setIsSetupFinished: (value) => set({ isSetupFinished: value }),
       setFirebaseId: (id) => set({ firebaseId: id }),
+      setUsername: (name) => set({ username: name }),
       addHabit: (habit) => {
         set((state) => {
           state.habits.push({

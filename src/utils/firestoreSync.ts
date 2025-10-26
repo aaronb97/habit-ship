@@ -1,5 +1,6 @@
 import firestore from '@react-native-firebase/firestore';
 import { useStore } from './store';
+import { generateName } from './generateName';
 
 /**
  * Starts a one-way Firestore sync of select Zustand fields to
@@ -11,6 +12,7 @@ import { useStore } from './store';
  * - username
  * - selectedSkinId
  * - rocketColor
+ * - totalXP
  *
  * Parameters:
  * - firebaseId: UID string of the authenticated Firebase user; used as the document id.
@@ -25,7 +27,10 @@ export function startFirestoreSync(firebaseId: string): () => void {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   let stopped = false;
   let pending = false;
+  let lastDataStr: string | undefined;
 
+  // Establish state type for referencing keys below
+  type StoreState = ReturnType<typeof useStore.getState>;
   // Single source of truth for which store fields to sync
   const SYNC_FIELDS = [
     'userPosition',
@@ -35,7 +40,41 @@ export function startFirestoreSync(firebaseId: string): () => void {
     'totalXP',
   ] satisfies (keyof StoreState)[];
   type SyncKey = (typeof SYNC_FIELDS)[number];
-  type StoreState = ReturnType<typeof useStore.getState>;
+
+  /**
+   * Ensures the user has a unique username before the first sync.
+   * Generates names until none exist in the `users` collection, then sets it in the store.
+   *
+   * Parameters: none
+   * Returns: void
+   */
+  async function allocateUniqueUsernameIfMissing(): Promise<void> {
+    const s = useStore.getState();
+    if (s.username) return; // already assigned
+    // Try a handful of candidates to find an unused username
+    const MAX_TRIES = 8;
+    for (let i = 0; i < MAX_TRIES; i++) {
+      const candidate = generateName();
+      console.log('Checking username', candidate);
+      try {
+        const snapshot = await firestore()
+          .collection('users')
+          .where('username', '==', candidate)
+          .limit(1)
+          .get();
+        if (snapshot.empty) {
+          s.setUsername(candidate);
+          return;
+        }
+      } catch (e) {
+        console.warn('[firestoreSync] Username uniqueness check failed', e);
+        // On transient errors, try a different candidate
+      }
+    }
+    // As a last resort, include a short suffix to reduce collision likelihood
+    const fallback = `${generateName()}-${Math.random().toString(36).slice(2, 5)}`;
+    s.setUsername(fallback);
+  }
 
   /**
    * Builds the Firestore document payload from the selected store fields.
@@ -50,25 +89,6 @@ export function startFirestoreSync(firebaseId: string): () => void {
     }
     // Ensure plain data (no functions/undefined) and deep clone
     return JSON.parse(JSON.stringify(out)) as Record<string, unknown>;
-  }
-
-  /**
-   * Determines if any of the synced fields changed between snapshots.
-   *
-   * Parameters: s - current state; prev - previous state
-   * Returns: true if a relevant field changed; false otherwise.
-   */
-  function hasRelevantChange(s: StoreState, prev: StoreState): boolean {
-    for (const k of SYNC_FIELDS) {
-      // Deep compare via JSON for robustness across objects/primitives
-      if (
-        JSON.stringify((s as Record<SyncKey, unknown>)[k]) !==
-        JSON.stringify((prev as Record<SyncKey, unknown>)[k])
-      ) {
-        return true;
-      }
-    }
-    return false;
   }
 
   /**
@@ -92,12 +112,20 @@ export function startFirestoreSync(firebaseId: string): () => void {
     }, DEBOUNCE_MS);
   }
 
-  // Initial write once we start syncing
-  scheduleWrite();
+  // Ensure username uniqueness (if needed) and then perform initial write
+  void (async () => {
+    await allocateUniqueUsernameIfMissing();
+    lastDataStr = JSON.stringify(buildPayload(useStore.getState()));
+    scheduleWrite();
+  })();
 
   // Subscribe to store updates and trigger writes only when relevant fields change
-  const unsubscribeStore = useStore.subscribe((s, prev) => {
-    if (hasRelevantChange(s, prev)) scheduleWrite();
+  const unsubscribeStore = useStore.subscribe((s) => {
+    const nextStr = JSON.stringify(buildPayload(s));
+    if (nextStr !== lastDataStr) {
+      lastDataStr = nextStr;
+      scheduleWrite();
+    }
   });
 
   /**
