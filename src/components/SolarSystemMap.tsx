@@ -261,6 +261,8 @@ export function SolarSystemMap({
               camera,
               composer,
               resolution,
+              withoutOutline: true,
+              useBasicMaterials: true,
             });
             friendRocketsRef.current.set(uid, fr);
             scene.add(fr.group);
@@ -830,6 +832,8 @@ export function SolarSystemMap({
             camera,
             composer,
             resolution,
+            withoutOutline: true,
+            useBasicMaterials: true,
           });
           friendRocketsRef.current.set(uid, fr);
           scene.add(fr.group);

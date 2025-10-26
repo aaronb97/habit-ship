@@ -19,7 +19,12 @@ import { useStore } from '../../utils/store';
 import { getSkinById } from '../../utils/skins';
 
 // Apply per-part materials/colors to the loaded rocket model
-function applyRocketMaterials(obj: THREE.Group, baseColor: number) {
+// useBasic: If true, uses MeshBasicMaterial for all non-window parts to avoid lighting cost.
+function applyRocketMaterials(
+  obj: THREE.Group,
+  baseColor: number,
+  useBasic: boolean,
+) {
   const base = new THREE.Color(baseColor);
   const hsl = { h: 0, s: 0, l: 0 };
   base.getHSL(hsl);
@@ -37,11 +42,15 @@ function applyRocketMaterials(obj: THREE.Group, baseColor: number) {
         mat.color.set(isDaytime ? 0xfff8e3 : 0x000000);
         child.material = mat;
       } else if (name.includes('Body')) {
-        const mat = new THREE.MeshStandardMaterial();
+        const mat = useBasic
+          ? new THREE.MeshBasicMaterial()
+          : new THREE.MeshStandardMaterial();
         mat.color.set(base);
         child.material = mat;
       } else {
-        const mat = new THREE.MeshStandardMaterial();
+        const mat = useBasic
+          ? new THREE.MeshBasicMaterial()
+          : new THREE.MeshStandardMaterial();
         const other = new THREE.Color();
         other.setHSL(hsl.h, hsl.s, altL);
         mat.color.set(other);
@@ -60,6 +69,10 @@ type CreateArgs = {
   camera: THREE.Camera;
   composer: EffectComposer;
   resolution: THREE.Vector2;
+  /** If true, do not create an OutlinePass for this rocket. Defaults to false. */
+  withoutOutline?: boolean;
+  /** If true, use MeshBasicMaterial for hull/parts instead of lit materials. Defaults to false. */
+  useBasicMaterials?: boolean;
 };
 
 export class Rocket {
@@ -75,6 +88,7 @@ export class Rocket {
   private uvsApplied = false;
   private centerOffset: THREE.Vector3 = new THREE.Vector3();
   private baseBoundingRadius: number = 0;
+  private readonly useBasicMaterials: boolean;
 
   // exhaust sprites
   private sprites: THREE.Sprite[] = [];
@@ -87,12 +101,14 @@ export class Rocket {
     exhaustGroup: THREE.Group,
     outlinePass: OutlinePass | undefined,
     baseColor: number,
+    useBasicMaterials: boolean,
   ) {
     this.group = group;
     this.hull = hull;
     this.exhaustGroup = exhaustGroup;
     this.outlinePass = outlinePass;
     this.baseColor = baseColor;
+    this.useBasicMaterials = true;
     this.outlineGlobalEnabled = Boolean(
       useStore.getState().outlinesRocketEnabled,
     );
@@ -208,12 +224,24 @@ export class Rocket {
     this.uvsApplied = true;
   }
 
+  /**
+   * Creates a Rocket instance and optionally configures an OutlinePass.
+   * @param color 24-bit integer base color for the rocket materials and outline.
+   * @param scene THREE.Scene to attach post-processing and meshes to.
+   * @param camera Active camera used for OutlinePass configuration.
+   * @param composer EffectComposer where the OutlinePass (if any) will be added.
+   * @param resolution Current renderer resolution in pixels.
+   * @param withoutOutline When true, skips creating an OutlinePass (useful for friend rockets).
+   * @param useBasicMaterials When true, uses MeshBasicMaterial for hull/parts (unlit, cheaper).
+   */
   static async create({
     color,
     scene,
     camera,
     composer,
     resolution,
+    withoutOutline = false,
+    useBasicMaterials = false,
   }: CreateArgs): Promise<Rocket> {
     const rocketAsset = Asset.fromModule(
       // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -236,7 +264,7 @@ export class Rocket {
 
     obj.rotation.x = THREE.MathUtils.degToRad(-90);
 
-    applyRocketMaterials(obj, color);
+    applyRocketMaterials(obj, color, Boolean(useBasicMaterials));
 
     obj.scale.setScalar(ROCKET_MODEL_SCALE);
 
@@ -246,23 +274,33 @@ export class Rocket {
     root.add(exhaust);
 
     // Outline just the hull (not the exhaust)
-    const outline = new OutlinePass(
-      resolution.clone(),
-      scene,
-      camera as THREE.PerspectiveCamera,
-      [obj],
+    let outline: OutlinePass | undefined;
+    if (!withoutOutline) {
+      outline = new OutlinePass(
+        resolution.clone(),
+        scene,
+        camera as THREE.PerspectiveCamera,
+        [obj],
+      );
+
+      outline.edgeStrength = OUTLINE_EDGE_STRENGTH;
+      outline.edgeGlow = OUTLINE_EDGE_GLOW;
+      outline.edgeThickness = OUTLINE_EDGE_THICKNESS;
+      outline.pulsePeriod = OUTLINE_PULSE_PERIOD;
+      outline.visibleEdgeColor.set(color);
+      outline.hiddenEdgeColor.set(color);
+      outline.enabled = Boolean(useStore.getState().outlinesRocketEnabled);
+      composer.addPass(outline);
+    }
+
+    return new Rocket(
+      root,
+      obj,
+      exhaust,
+      outline,
+      color,
+      Boolean(useBasicMaterials),
     );
-
-    outline.edgeStrength = OUTLINE_EDGE_STRENGTH;
-    outline.edgeGlow = OUTLINE_EDGE_GLOW;
-    outline.edgeThickness = OUTLINE_EDGE_THICKNESS;
-    outline.pulsePeriod = OUTLINE_PULSE_PERIOD;
-    outline.visibleEdgeColor.set(color);
-    outline.hiddenEdgeColor.set(color);
-    outline.enabled = Boolean(useStore.getState().outlinesRocketEnabled);
-    composer.addPass(outline);
-
-    return new Rocket(root, obj, exhaust, outline, color);
   }
 
   setResolution(v: THREE.Vector2) {
@@ -283,7 +321,7 @@ export class Rocket {
     this.baseColor = color;
     // If no texture is set, recolor the hull materials; otherwise only update outline
     if (!this.currentTexture) {
-      applyRocketMaterials(this.hull, color);
+      applyRocketMaterials(this.hull, color, this.useBasicMaterials);
     }
     if (this.outlinePass) {
       try {
@@ -337,7 +375,9 @@ export class Rocket {
       // Skip windows entirely
       if (name.includes('Window')) return;
 
-      const mat = child.material as THREE.MeshStandardMaterial;
+      const mat = child.material as
+        | THREE.MeshStandardMaterial
+        | THREE.MeshBasicMaterial;
       if (texture) {
         // Apply texture to all parts; darker multiplier for non-body parts
         mat.map = texture;
@@ -369,7 +409,7 @@ export class Rocket {
 
     // When clearing the texture, restore original materials/colors
     if (!texture) {
-      applyRocketMaterials(this.hull, this.baseColor);
+      applyRocketMaterials(this.hull, this.baseColor, this.useBasicMaterials);
     }
 
     if (prev && prev !== texture) {
