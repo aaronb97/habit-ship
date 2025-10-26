@@ -265,7 +265,22 @@ export function TabNavigator() {
       {/* SolarSystemMap doesn't work on emulators */}
       {Device.isDevice && (
         <View style={styles.mapOverlay} pointerEvents={'none'}>
-          <SolarSystemMap interactive={isMapFocused} />
+          {(() => {
+            // Build friend entries (uid + profile) without useMemo for React compiler compatibility
+            const friendUids = new Set(
+              accepted.map((f) => (f.user1 === uid ? f.user2 : f.user1)),
+            );
+            const friendEntries = Array.from(friendUids)
+              .map((fid) => {
+                const profile = friendProfiles[fid];
+                return profile ? { uid: fid, profile } : undefined;
+              })
+              .filter(Boolean) as { uid: string; profile: import('../utils/db').UsersDoc }[];
+
+            return (
+              <SolarSystemMap interactive={isMapFocused} friends={friendEntries} />
+            );
+          })()}
         </View>
       )}
       {tabs}

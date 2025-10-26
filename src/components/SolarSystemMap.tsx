@@ -18,6 +18,8 @@ import { cBodies as PLANETS, Moon, Planet, earth } from '../planets';
 import { getCurrentTime } from '../utils/time';
 import { useStore } from '../utils/store';
 import { calculateLevel } from '../utils/experience';
+import type { UsersDoc } from '../utils/db';
+import type { UserPosition } from '../types';
 // import { useIsFocused } from '@react-navigation/native';
 import { useDebugValues } from '../hooks/useDebugValues';
 
@@ -58,9 +60,9 @@ import {
   CAMERA_COLLISION_CLEARANCE,
   ZOOM_MAX_RADIUS,
 } from './solarsystem/constants';
+import { getSkinById } from '../utils/skins';
 import { DebugOverlay } from './DebugOverlay';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getSkinById } from '../utils/skins';
 
 // [moved] Helpers moved to './solarsystem/helpers'.
 
@@ -70,7 +72,12 @@ import { getSkinById } from '../utils/skins';
 
 export function SolarSystemMap({
   interactive,
-}: { interactive?: boolean } = {}) {
+  friends,
+}: {
+  interactive?: boolean;
+  /** Optional list of friend entries to render rockets for. */
+  friends?: { uid: string; profile: UsersDoc }[];
+} = {}) {
   const { width, height } = useWindowDimensions();
 
   // Refs for scene graph
@@ -88,6 +95,14 @@ export function SolarSystemMap({
   const rocketRef = useRef<Rocket | null>(null);
   const displayUserPosRef = useRef<THREE.Vector3>(new THREE.Vector3());
   const skyRef = useRef<THREE.Mesh | null>(null);
+  const friendRocketsRef = useRef<Map<string, Rocket>>(new Map());
+  const friendMetaRef = useRef<
+    Map<string, { rocketColor: number; selectedSkinId?: string }>
+  >(new Map());
+  const friendsRef = useRef<{ uid: string; profile: UsersDoc }[]>([]);
+  useEffect(() => {
+    friendsRef.current = friends ?? [];
+  }, [friends]);
 
   const showTextures = useStore((s) => s.showTextures);
   const showDebugOverlay = useStore((s) => s.showDebugOverlay);
@@ -120,6 +135,43 @@ export function SolarSystemMap({
       console.log('SolarSystemMap unmounted');
     };
   }, []);
+
+  /**
+   * Computes the display position of a friend's rocket based on their UserPosition.
+   * Places the rocket on the surface-to-surface segment between start and target when traveling,
+   * otherwise centers it on the current body's visual center.
+   *
+   * Parameters:
+   * - position: Snapshot of the friend's user position and travel state.
+   *
+   * Returns: Scene-space vector representing the rocket position to render.
+   */
+  const computeFriendDisplayPos = (position: UserPosition): THREE.Vector3 => {
+    const { startingLocation, target, initialDistance, distanceTraveled } =
+      position;
+    if (
+      target &&
+      typeof initialDistance === 'number' &&
+      typeof distanceTraveled === 'number'
+    ) {
+      const startBody =
+        PLANETS.find((b) => b.name === startingLocation) ?? earth;
+      const targetBody = PLANETS.find((b) => b.name === target) ?? earth;
+      const startCenter = toVec3(startBody.getVisualPosition());
+      const targetCenter = toVec3(targetBody.getVisualPosition());
+      const { startSurface, targetSurface } = Rocket.computeSurfaceEndpoints(
+        startCenter,
+        bodyRegistryRef.current.getVisualRadius(startBody.name),
+        targetCenter,
+        bodyRegistryRef.current.getVisualRadius(targetBody.name),
+      );
+      const denom = initialDistance === 0 ? 1 : initialDistance;
+      const t = Math.min(1, Math.max(0, distanceTraveled / denom));
+      return startSurface.clone().lerp(targetSurface, t);
+    }
+    const body = PLANETS.find((b) => b.name === startingLocation) ?? earth;
+    return toVec3(body.getVisualPosition());
+  };
 
   // Apply runtime color updates to the rocket if already created
   useEffect(() => {
@@ -166,6 +218,88 @@ export function SolarSystemMap({
       canceled = true;
     };
   }, [selectedSkinId]);
+
+  /**
+   * Sync friend rockets in the scene whenever the provided friends list changes.
+   * Creates missing rockets, updates appearance (color/skin), and disposes rockets no longer needed.
+   */
+  useEffect(() => {
+    const scene = sceneRef.current;
+    const camera = cameraRef.current;
+    const composer = composerRef.current;
+    const gl = glRef.current;
+    if (!scene || !camera || !composer || !gl) return;
+
+    const resolution = new THREE.Vector2(
+      gl.drawingBufferWidth,
+      gl.drawingBufferHeight,
+    );
+    const list = friendsRef.current;
+    const nextUids = new Set<string>(list.map((e) => e.uid));
+
+    // Dispose rockets for users no longer present
+    friendRocketsRef.current.forEach((fr, uid) => {
+      if (!nextUids.has(uid)) {
+        try {
+          scene.remove(fr.group);
+          fr.dispose();
+        } catch {}
+        friendRocketsRef.current.delete(uid);
+        friendMetaRef.current.delete(uid);
+      }
+    });
+
+    // Create or update rockets for current users
+    const run = async () => {
+      for (const { uid, profile } of list) {
+        let fr = friendRocketsRef.current.get(uid);
+        if (!fr) {
+          try {
+            fr = await Rocket.create({
+              color: profile.rocketColor,
+              scene,
+              camera,
+              composer,
+              resolution,
+            });
+            friendRocketsRef.current.set(uid, fr);
+            scene.add(fr.group);
+          } catch {
+            continue;
+          }
+        }
+
+        // Update base color if changed
+        const prevMeta = friendMetaRef.current.get(uid);
+        if (!prevMeta || prevMeta.rocketColor !== profile.rocketColor) {
+          try {
+            fr.setColor(profile.rocketColor);
+          } catch {}
+        }
+
+        // Update skin if changed
+        if (!prevMeta || prevMeta.selectedSkinId !== profile.selectedSkinId) {
+          try {
+            if (profile.selectedSkinId) {
+              const texMap = await loadSkinTextures([profile.selectedSkinId]);
+              const tex = texMap[profile.selectedSkinId] ?? null;
+              const skin = getSkinById(profile.selectedSkinId);
+              fr.setBodyTexture(tex, skin?.color);
+            } else {
+              fr.setBodyTexture(null);
+            }
+          } catch {}
+        }
+
+        friendMetaRef.current.set(uid, {
+          rocketColor: profile.rocketColor,
+          selectedSkinId: profile.selectedSkinId,
+        });
+      }
+    };
+
+    void run();
+  }, [friends]);
 
   // Determine which planet systems are relevant for rendering moons
   const getRelevantPlanetSystems = (): Set<string> => {
@@ -678,6 +812,44 @@ export function SolarSystemMap({
       console.warn(e);
     }
 
+    // Initialize friend rockets for the current friends list
+    try {
+      const glCtx = glRef.current;
+      const resolution = new THREE.Vector2(
+        glCtx.drawingBufferWidth,
+        glCtx.drawingBufferHeight,
+      );
+      const list = friendsRef.current;
+      for (const entry of list) {
+        const { uid, profile } = entry;
+        if (friendRocketsRef.current.has(uid)) continue;
+        try {
+          const fr = await Rocket.create({
+            color: profile.rocketColor,
+            scene,
+            camera,
+            composer,
+            resolution,
+          });
+          friendRocketsRef.current.set(uid, fr);
+          scene.add(fr.group);
+          // Apply selected skin (if any)
+          if (profile.selectedSkinId) {
+            try {
+              const texMap = await loadSkinTextures([profile.selectedSkinId]);
+              const tex = texMap[profile.selectedSkinId] ?? null;
+              const skin = getSkinById(profile.selectedSkinId);
+              fr.setBodyTexture(tex, skin?.color);
+            } catch {}
+          }
+          friendMetaRef.current.set(uid, {
+            rocketColor: profile.rocketColor,
+            selectedSkinId: profile.selectedSkinId,
+          });
+        } catch {}
+      }
+    } catch {}
+
     const relevantSystems = getRelevantPlanetSystems();
     const unlockedBodies = getUnlockedBodies();
     const visitedBodies = getVisitedBodies();
@@ -800,6 +972,38 @@ export function SolarSystemMap({
             shouldAnimateTravel,
             animAlphaRef.current,
           );
+        }
+      }
+
+      // Update friend rockets (positions, visibility, minimum size)
+      {
+        const cam = cameraRef.current as THREE.PerspectiveCamera | null;
+        const glCtx = glRef.current;
+        if (cam && glCtx) {
+          const resH = glCtx.drawingBufferHeight;
+          const list = friendsRef.current;
+          const byUid: Record<string, UsersDoc> = {};
+          for (const e of list) byUid[e.uid] = e.profile;
+          friendRocketsRef.current.forEach((fr, uid) => {
+            const prof = byUid[uid];
+            if (!prof) return;
+            const pos = computeFriendDisplayPos(prof.userPosition);
+            // Aim toward target surface if traveling; otherwise face current body
+            const { startingLocation, target } = prof.userPosition;
+            const startBody =
+              PLANETS.find((b) => b.name === startingLocation) ?? earth;
+            const targetBody =
+              PLANETS.find((b) => b.name === (target ?? startingLocation)) ??
+              earth;
+            const aimPos = Rocket.computeAimPosition(
+              toVec3(startBody.getVisualPosition()),
+              toVec3(targetBody.getVisualPosition()),
+              getVisualRadius(targetBody.name),
+            );
+            fr.setVisible(true);
+            fr.update(pos, aimPos, false, 0);
+            fr.enforceMinimumApparentSize(cam, resH);
+          });
         }
       }
 
@@ -965,6 +1169,12 @@ export function SolarSystemMap({
           new THREE.Vector2(drawingBufferWidth, drawingBufferHeight),
         );
       }
+      // Update friend rocket outline resolutions
+      friendRocketsRef.current.forEach((fr) =>
+        fr.setResolution(
+          new THREE.Vector2(drawingBufferWidth, drawingBufferHeight),
+        ),
+      );
     }
   }, [width, height]);
 
@@ -1023,6 +1233,17 @@ export function SolarSystemMap({
         } catch (e) {
           console.warn(e);
         }
+        // Dispose friend rockets
+        try {
+          friendRocketsRef.current.forEach((fr) => {
+            try {
+              sceneRef.current?.remove(fr.group);
+              fr.dispose();
+            } catch {}
+          });
+          friendRocketsRef.current.clear();
+          friendMetaRef.current.clear();
+        } catch {}
 
         // Dispose postprocessing passes and composer
         if (composerRef.current) {
