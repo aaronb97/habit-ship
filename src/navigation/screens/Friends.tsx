@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -9,22 +9,24 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
+  ImageBackground,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fonts, fontSizes } from '../../styles/theme';
 import { useStore } from '../../utils/store';
 import {
-  observeFriendshipsAccepted,
-  observeFriendshipsIncoming,
-  observeFriendshipsOutgoing,
   acceptFriendship,
   declineFriendship,
   sendFriendRequest,
   getUidByUsername,
   type FriendshipDoc,
+  userDoc,
+  type UsersDoc,
 } from '../../utils/db';
 import { HSButton } from '../../components/HSButton';
 import { MaterialIcons } from '@expo/vector-icons';
+import { getSkinById } from '../../utils/skins';
+import { calculateLevel } from '../../utils/experience';
 
 /**
  * Returns the other user's display name from a friendship given the current user's UID.
@@ -34,7 +36,54 @@ import { MaterialIcons } from '@expo/vector-icons';
  * @returns Username string for the other user in the friendship
  */
 function otherName(f: FriendshipDoc, selfUid: string): string {
-  return f.user1 === selfUid ? (f.user2Name || f.user2) : (f.user1Name || f.user1);
+  return f.user1 === selfUid ? f.user2Name || f.user2 : f.user1Name || f.user1;
+}
+
+/**
+ * Returns the other user's UID from a friendship given the current user's UID.
+ *
+ * @param f - Friendship document
+ * @param selfUid - Current user's Firebase UID
+ * @returns UID string for the other user in the friendship
+ */
+function otherUid(f: FriendshipDoc, selfUid: string): string {
+  return f.user1 === selfUid ? f.user2 : f.user1;
+}
+
+/**
+ * Converts a 24-bit integer color (0xRRGGBB) to a CSS hex color string.
+ *
+ * @param color - Integer color value
+ * @returns Hex color string in the form "#rrggbb"
+ */
+function intColorToHex(color: number): string {
+  const clamped = Math.max(0, Math.min(0xffffff, color >>> 0));
+  return `#${clamped.toString(16).padStart(6, '0')}`;
+}
+
+/**
+ * Darkens a 24-bit integer color by multiplying each channel by the factor.
+ * Factor should be in (0,1].
+ *
+ * @param color - Integer color value
+ * @param factor - Multiplier per channel; <1 darkens
+ * @returns Hex color string for React Native styles
+ */
+function darkenIntColor(color: number, factor: number = 0.6): string {
+  const r = Math.floor(((color >> 16) & 0xff) * factor);
+  const g = Math.floor(((color >> 8) & 0xff) * factor);
+  const b = Math.floor((color & 0xff) * factor);
+  const out = (r << 16) | (g << 8) | b;
+  return intColorToHex(out);
+}
+
+interface Props {
+  accepted: FriendshipDoc[];
+  incoming: FriendshipDoc[];
+  outgoing: FriendshipDoc[];
+  loadingAccepted: boolean;
+  loadingIncoming: boolean;
+  loadingOutgoing: boolean;
 }
 
 /**
@@ -42,43 +91,59 @@ function otherName(f: FriendshipDoc, selfUid: string): string {
  * Displays current friends, incoming requests (with accept/decline),
  * and outgoing requests. Allows sending a new friend request by username.
  */
-export function Friends() {
+export function Friends({
+  accepted,
+  incoming,
+  outgoing,
+  loadingAccepted,
+  loadingIncoming,
+  loadingOutgoing,
+}: Props) {
   const uid = useStore((s) => s.firebaseId);
-
-  const [accepted, setAccepted] = useState<FriendshipDoc[]>([]);
-  const [incoming, setIncoming] = useState<FriendshipDoc[]>([]);
-  const [outgoing, setOutgoing] = useState<FriendshipDoc[]>([]);
 
   const [isAdding, setIsAdding] = useState<boolean>(false);
   const [inputUsername, setInputUsername] = useState<string>('');
   const [busy, setBusy] = useState<boolean>(false);
-  const [loadedAccepted, setLoadedAccepted] = useState<boolean>(false);
-  const [loadedIncoming, setLoadedIncoming] = useState<boolean>(false);
-  const [loadedOutgoing, setLoadedOutgoing] = useState<boolean>(false);
   const username = useStore((s) => s.username);
 
+  // Cache of friend user profiles keyed by UID (to read rocketColor/selectedSkinId)
+  const [friendProfiles, setFriendProfiles] = useState<
+    Record<string, UsersDoc | undefined>
+  >({});
+  // Track mount state to safely set state after async work
+  const mountedRef = useRef<boolean>(true);
   useEffect(() => {
-    if (!uid) return;
-    const unsubAccepted = observeFriendshipsAccepted(uid, (rows) => {
-      setAccepted(rows);
-      setLoadedAccepted(true);
-    });
-    const unsubIncoming = observeFriendshipsIncoming(uid, (rows) => {
-      setIncoming(rows);
-      setLoadedIncoming(true);
-    });
-    const unsubOutgoing = observeFriendshipsOutgoing(uid, (rows) => {
-      setOutgoing(rows);
-      setLoadedOutgoing(true);
-    });
+    mountedRef.current = true;
     return () => {
-      unsubAccepted();
-      unsubIncoming();
-      unsubOutgoing();
+      mountedRef.current = false;
     };
-  }, [uid]);
+  }, []);
 
   // No username lookup effect is needed now that friendship docs store names.
+
+  // Load user docs for each accepted friend so we can render their rocket color/skin
+  useEffect(() => {
+    if (!uid) return;
+    if (accepted.length === 0) return;
+    const uids = Array.from(new Set(accepted.map((f) => otherUid(f, uid))));
+    const missing = uids.filter((u) => friendProfiles[u] === undefined);
+    if (missing.length === 0) return;
+    void (async () => {
+      const entries: Record<string, UsersDoc | undefined> = {};
+      await Promise.all(
+        missing.map(async (u) => {
+          try {
+            const snap = await userDoc(u).get();
+            entries[u] = snap.data() as UsersDoc | undefined;
+          } catch {
+            entries[u] = undefined;
+          }
+        }),
+      );
+      if (!mountedRef.current) return;
+      setFriendProfiles((prev) => ({ ...prev, ...entries }));
+    })();
+  }, [uid, accepted, friendProfiles, mountedRef]);
 
   /**
    * Accepts a pending incoming friend request.
@@ -148,7 +213,10 @@ export function Friends() {
           Alert.alert('Already Friends', 'You are already friends.');
           break;
         case 'already_pending':
-          Alert.alert('Already Requested', 'A friend request is already pending.');
+          Alert.alert(
+            'Already Requested',
+            'A friend request is already pending.',
+          );
           break;
       }
     } catch (e) {
@@ -184,7 +252,53 @@ export function Friends() {
     }
   };
 
-  const renderFriendRow = (f: FriendshipDoc) => {
+  const renderFriendItem = (f: FriendshipDoc) => {
+    if (!uid) return null;
+    const label = otherName(f, uid);
+    const fid = otherUid(f, uid);
+    const profile = friendProfiles[fid];
+    const rocketColorInt = profile?.rocketColor ?? 0x2a2f4a; // fallback to theme-ish dark
+    const skin = profile?.selectedSkinId
+      ? getSkinById(profile.selectedSkinId)
+      : undefined;
+    const borderColorInt = skin ? skin.color : rocketColorInt;
+    const borderColor = intColorToHex(borderColorInt);
+
+    if (skin) {
+      return (
+        <ImageBackground
+          source={skin.preview}
+          imageStyle={{ borderRadius: 8 }}
+          style={[styles.card, { borderColor }]}
+        >
+          <View style={styles.cardOverlay} />
+          <Text style={styles.cardText}>{label}</Text>
+          <Text style={styles.cardText}>
+            Level {calculateLevel(profile?.totalXP ?? 0)}
+          </Text>
+        </ImageBackground>
+      );
+    }
+
+    return (
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: darkenIntColor(rocketColorInt), borderColor },
+        ]}
+      >
+        <Text style={styles.cardText}>{label}</Text>
+      </View>
+    );
+  };
+
+  /**
+   * Renders a simple list row for an outgoing request.
+   *
+   * @param f - Friendship document (pending, initiated by self)
+   * @returns Row element showing recipient's name
+   */
+  const renderOutgoingRow = (f: FriendshipDoc) => {
     if (!uid) return null;
     const label = otherName(f, uid);
     return (
@@ -259,7 +373,7 @@ export function Friends() {
           <Text style={styles.addBtnText}>Add Friend</Text>
         </TouchableOpacity>
       </View>
-      {!loadedAccepted ? (
+      {loadingAccepted ? (
         <ActivityIndicator color={colors.grey} />
       ) : accepted.length === 0 ? (
         <Text style={styles.empty}>No friends yet.</Text>
@@ -268,12 +382,13 @@ export function Friends() {
           style={{ flexGrow: 0 }}
           data={accepted}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => renderFriendRow(item)}
+          numColumns={2}
+          renderItem={({ item }) => renderFriendItem(item)}
         />
       )}
 
       <Text style={styles.sectionTitle}>Requests</Text>
-      {!loadedIncoming ? (
+      {loadingIncoming ? (
         <ActivityIndicator color={colors.grey} />
       ) : incoming.length === 0 ? (
         <Text style={styles.empty}>No incoming requests.</Text>
@@ -287,7 +402,7 @@ export function Friends() {
       )}
 
       <Text style={styles.sectionTitle}>Requests Sent</Text>
-      {!loadedOutgoing ? (
+      {loadingOutgoing ? (
         <ActivityIndicator color={colors.grey} />
       ) : outgoing.length === 0 ? (
         <Text style={styles.empty}>No outgoing requests.</Text>
@@ -296,7 +411,7 @@ export function Friends() {
           style={{ flexGrow: 0 }}
           data={outgoing}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => renderFriendRow(item)}
+          renderItem={({ item }) => renderOutgoingRow(item)}
         />
       )}
 
@@ -364,6 +479,25 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontFamily: fonts.regular,
     fontSize: fontSizes.medium,
+  },
+  card: {
+    flex: 0.5,
+    height: 100,
+    margin: 6,
+    borderRadius: 8,
+    borderWidth: 2,
+    overflow: 'hidden',
+    padding: 8,
+  },
+  cardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 8,
+  },
+  cardText: {
+    color: colors.white,
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.smallish,
   },
   actions: {
     flexDirection: 'row',

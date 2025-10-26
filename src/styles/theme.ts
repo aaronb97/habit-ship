@@ -26,6 +26,7 @@ export const fonts = {
 export const fontSizes = {
   xsmall: 8,
   small: 10,
+  smallish: 12,
   medium: 14,
   large: 18,
   xlarge: 20,

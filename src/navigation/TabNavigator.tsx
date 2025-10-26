@@ -13,6 +13,7 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { AntDesign, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { Friends } from './screens/Friends';
 import * as Device from 'expo-device';
+import { useFriendships } from '../hooks/useFriendships';
 
 const ICON_SIZE = 24;
 
@@ -38,6 +39,15 @@ export function TabNavigator() {
   const setActiveTab = useStore((s) => s.setActiveTab);
   const unseenSkins = useStore((s) => s.unseenUnlockedSkins);
   const isSetupFinished = useStore((s) => s.isSetupFinished);
+  const uid = useStore((s) => s.firebaseId);
+  const {
+    accepted,
+    incoming,
+    outgoing,
+    loadingAccepted,
+    loadingIncoming,
+    loadingOutgoing,
+  } = useFriendships(uid);
   // Inline flows now manage destination prompts; no need to read userPosition or level-up modal here.
   const isMapFocused = activeTab === 'MapTab';
 
@@ -181,9 +191,9 @@ export function TabNavigator() {
       />
       <Tab.Screen
         name="FriendsTab"
-        component={Friends}
         options={{
           title: '',
+          tabBarBadge: incoming.length > 0 ? String(incoming.length) : undefined,
           ...(imageSources.friendsWhite &&
             imageSources.friendsPrimary && {
               tabBarIcon: ({ focused }) =>
@@ -195,7 +205,18 @@ export function TabNavigator() {
         listeners={{
           focus: () => setActiveTab('FriendsTab'),
         }}
-      />
+      >
+        {() => (
+          <Friends
+            accepted={accepted}
+            incoming={incoming}
+            outgoing={outgoing}
+            loadingAccepted={loadingAccepted}
+            loadingIncoming={loadingIncoming}
+            loadingOutgoing={loadingOutgoing}
+          />
+        )}
+      </Tab.Screen>
       <Tab.Screen
         name="ProfileTab"
         component={Profile}

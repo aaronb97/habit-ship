@@ -259,16 +259,8 @@ export async function sendFriendRequest(
 
   const col = friendshipsCollection();
   const [a, b] = await Promise.all([
-    col
-      .where('user1', '==', user1)
-      .where('user2', '==', user2)
-      .limit(1)
-      .get(),
-    col
-      .where('user1', '==', user2)
-      .where('user2', '==', user1)
-      .limit(1)
-      .get(),
+    col.where('user1', '==', user1).where('user2', '==', user2).limit(1).get(),
+    col.where('user1', '==', user2).where('user2', '==', user1).limit(1).get(),
   ]);
 
   const existing = [...a.docs, ...b.docs];

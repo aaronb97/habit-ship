@@ -7,20 +7,12 @@ import { usernameExists, writeUser, UsersDoc } from './db';
  * the document `users/{firebaseId}`. The device is the source of truth;
  * no reads are performed from Firestore.
  *
- * Synced fields:
- * - userPosition (entire object)
- * - username
- * - selectedSkinId
- * - rocketColor
- * - totalXP
- *
  * Parameters:
  * - firebaseId: UID string of the authenticated Firebase user; used as the document id.
  *
  * Returns: Unsubscribe function that stops the sync and flushes any pending write.
  */
 export function startFirestoreSync(firebaseId: string): () => void {
-
   // Debounce writes to reduce frequency during rapid state changes
   const DEBOUNCE_MS = 1000;
   let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -37,6 +29,7 @@ export function startFirestoreSync(firebaseId: string): () => void {
     'selectedSkinId',
     'rocketColor',
     'totalXP',
+    'selectedSkinId',
   ] satisfies (keyof UsersDoc)[];
   type SyncKey = (typeof SYNC_FIELDS)[number];
 
