@@ -170,7 +170,7 @@ export function SolarSystemMap({
   // Determine which planet systems are relevant for rendering moons
   const getRelevantPlanetSystems = (): Set<string> => {
     const { startingLocation, target } = useStore.getState().userPosition;
-    return getRelevantPlanetSystemsFor(startingLocation, target?.name, PLANETS);
+    return getRelevantPlanetSystemsFor(startingLocation, target, PLANETS);
   };
 
   // Determine which planets are unlocked (visible) at current level
@@ -232,7 +232,7 @@ export function SolarSystemMap({
       const startBody =
         PLANETS.find((b) => b.name === startingLocation) ?? earth;
 
-      const targetBody = PLANETS.find((b) => b.name === target?.name) ?? earth;
+      const targetBody = PLANETS.find((b) => b.name === target) ?? earth;
       const startCenter = toVec3(startBody.getVisualPosition());
       const targetCenter = toVec3(targetBody.getVisualPosition());
       const separation = startCenter.distanceTo(targetCenter);
@@ -318,7 +318,7 @@ export function SolarSystemMap({
       const startBody =
         PLANETS.find((b) => b.name === startingLocation) ?? earth;
 
-      const targetBody = PLANETS.find((b) => b.name === target?.name) ?? earth;
+      const targetBody = PLANETS.find((b) => b.name === target) ?? earth;
       const startCenter = toVec3(startBody.getVisualPosition());
       const targetCenter = toVec3(targetBody.getVisualPosition());
       const separation = startCenter.distanceTo(targetCenter);
@@ -453,7 +453,7 @@ export function SolarSystemMap({
       const startBody =
         PLANETS.find((b) => b.name === startingLocation) ?? earth;
 
-      const targetBody = PLANETS.find((b) => b.name === target.name) ?? earth;
+      const targetBody = PLANETS.find((b) => b.name === target) ?? earth;
 
       const startCenter = toVec3(startBody.getVisualPosition());
       const targetCenter = toVec3(targetBody.getVisualPosition());
@@ -682,7 +682,7 @@ export function SolarSystemMap({
     const unlockedBodies = getUnlockedBodies();
     const visitedBodies = getVisitedBodies();
     const startName = useStore.getState().userPosition.startingLocation;
-    const targetName = useStore.getState().userPosition.target?.name;
+    const targetName = useStore.getState().userPosition.target;
     const showTrailsInit = useStore.getState().showTrails;
 
     // Create body nodes with encapsulated mesh/trail/outline behavior
@@ -779,8 +779,7 @@ export function SolarSystemMap({
           const startBody =
             PLANETS.find((b) => b.name === startingLocation) ?? earth;
 
-          const targetBody =
-            PLANETS.find((b) => b.name === target.name) ?? earth;
+          const targetBody = PLANETS.find((b) => b.name === target) ?? earth;
 
           const startCenter = toVec3(startBody.getVisualPosition());
           const targetCenter = toVec3(targetBody.getVisualPosition());
@@ -813,7 +812,7 @@ export function SolarSystemMap({
           const visitedBodiesNow = getVisitedBodies();
           const startingLocationNow =
             useStore.getState().userPosition.startingLocation;
-          const targetNameNow = useStore.getState().userPosition.target?.name;
+          const targetNameNow = useStore.getState().userPosition.target;
           bodyRegistryRef.current.forEach((node) =>
             node.update({
               glHeight: glCtx.drawingBufferHeight,
@@ -836,7 +835,7 @@ export function SolarSystemMap({
           const { target: targetState } = useStore.getState().userPosition;
 
           const targetBody =
-            PLANETS.find((b) => b.name === targetState?.name) ?? earth;
+            PLANETS.find((b) => b.name === targetState) ?? earth;
 
           let center = displayUserPosRef.current.clone();
           const rocket = rocketRef.current;
@@ -851,9 +850,7 @@ export function SolarSystemMap({
 
           // If the target is The Moon, force the orbit plane normal to Y-up (align to XZ plane)
           const planeOverride =
-            targetState?.name === 'The Moon'
-              ? new THREE.Vector3(0, 0, 1)
-              : undefined;
+            targetState === 'The Moon' ? new THREE.Vector3(0, 0, 1) : undefined;
 
           controller.tick(center, targetVisual, planeOverride);
         }
@@ -865,10 +862,7 @@ export function SolarSystemMap({
         const rocket = rocketRef.current;
         const glCtx = glRef.current;
         if (rocket && cam && glCtx) {
-          rocket.enforceMinimumApparentSize(
-            cam,
-            glCtx.drawingBufferHeight,
-          );
+          rocket.enforceMinimumApparentSize(cam, glCtx.drawingBufferHeight);
         }
       }
 

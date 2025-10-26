@@ -24,7 +24,12 @@ import { signOutForDevResets } from './firebaseAuth';
 
 export type HabitId = string & { __habitId: true };
 
-export type TabName = 'HomeTab' | 'MapTab' | 'ProfileTab' | 'DevTab';
+export type TabName =
+  | 'HomeTab'
+  | 'MapTab'
+  | 'ProfileTab'
+  | 'FriendsTab'
+  | 'DevTab';
 
 /**
  * Structured information to present when a user levels up.
@@ -266,15 +271,16 @@ type Store = {
   setUsername: (name?: string) => void;
 };
 
+type StoreV1 = Omit<Store, 'target'> & {
+  target: { name: string };
+};
+
 const initialData = {
   isSetupFinished: false,
   habits: [],
   userPosition: {
     startingLocation: 'Earth',
-    target: {
-      name: 'The Moon',
-      position: moon.getPosition(),
-    },
+    target: 'The Moon',
     initialDistance: Math.max(
       0,
       calculateDistance(getPlanetPosition('Earth'), moon.getPosition()) -
@@ -374,10 +380,7 @@ export const useStore = create<Store>()(
 
       setDestination: (planetName) => {
         set((state) => {
-          state.userPosition.target = {
-            name: planetName,
-            position: getPlanetPosition(planetName),
-          };
+          state.userPosition.target = planetName;
 
           // Initialize travel metrics toward target
           const startPos = getPlanetPosition(
@@ -562,10 +565,7 @@ export const useStore = create<Store>()(
           ],
           userPosition: {
             startingLocation: 'Earth',
-            target: {
-              name: 'The Moon',
-              position: moon.getPosition(),
-            },
+            target: 'The Moon',
             initialDistance: Math.max(
               0,
               calculateDistance(
@@ -787,7 +787,7 @@ export const useStore = create<Store>()(
           return;
         }
 
-        const destinationName = target.name;
+        const destinationName = target;
         const isNewPlanet = !state.completedPlanets.includes(destinationName);
         // Determine rewards (XP may only be on first landing)
         const body = cBodies.find((b) => b.name === destinationName);
@@ -875,7 +875,20 @@ export const useStore = create<Store>()(
     {
       name: 'space-explorer-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 1,
+      version: 2,
+      migrate: (persistedState, version) => {
+        if (version === 1) {
+          const v1State = persistedState as StoreV1;
+
+          return {
+            ...v1State,
+            target: v1State.target.name,
+            version: 2,
+          };
+        }
+
+        return persistedState;
+      },
     },
   ),
 );
@@ -898,7 +911,7 @@ function getCurrentPosition(position: UserPosition) {
     position.distanceTraveled !== undefined
   ) {
     const start = getPlanetPosition(position.startingLocation);
-    const target = getPlanetPosition(position.target.name);
+    const target = getPlanetPosition(position.target);
     const denom = position.initialDistance === 0 ? 1 : position.initialDistance;
     const t = Math.min(1, Math.max(0, position.distanceTraveled / denom));
 

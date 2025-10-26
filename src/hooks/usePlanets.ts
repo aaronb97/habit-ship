@@ -45,7 +45,7 @@ export function usePlanets(): PlanetWithDistance[] {
         !userPosition.target
       ) {
         disabledReason = 'You are currently on this planet';
-      } else if (planet.name === userPosition.target?.name) {
+      } else if (planet.name === userPosition.target) {
         disabledReason = 'You are traveling here';
       }
 

@@ -114,7 +114,7 @@ export function App() {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         const s = useStore.getState();
-        const dest = s.userPosition.target?.name ?? s.userPosition.startingLocation;
+        const dest = s.userPosition.target ?? s.userPosition.startingLocation;
         const todayKey = getCurrentDate().toDateString();
         const anyCompletedToday = s.habits.some((h) =>
           h.completions.some((ts) => new Date(ts).toDateString() === todayKey),
@@ -124,7 +124,8 @@ export function App() {
     });
     // Also run once on initial mount
     const s = useStore.getState();
-    const initialDest = s.userPosition.target?.name ?? s.userPosition.startingLocation;
+    const initialDest =
+      s.userPosition.target ?? s.userPosition.startingLocation;
     const todayKey = getCurrentDate().toDateString();
     const anyCompletedToday = s.habits.some((h) =>
       h.completions.some((ts) => new Date(ts).toDateString() === todayKey),

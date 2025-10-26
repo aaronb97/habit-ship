@@ -13,6 +13,8 @@ import { useIsFocused } from '@react-navigation/native';
 import { colors, fonts, fontSizes } from '../../styles/theme';
 import { useStore } from '../../utils/store';
 import { SKINS, getSkinById } from '../../utils/skins';
+import { FontAwesome5 } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 
 export function Profile() {
   const isFocused = useIsFocused();
@@ -76,11 +78,37 @@ export function Profile() {
     ]);
   };
 
+  /**
+   * Copies the current username to the system clipboard.
+   */
+  const copyUsername = async (): Promise<void> => {
+    const text = username ?? '';
+    try {
+      await Clipboard.setStringAsync(text);
+      Alert.alert('Copied', 'Username copied to clipboard.');
+    } catch (e) {
+      Alert.alert('Error', 'Failed to copy username.');
+      console.warn('Copy username failed', e);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.balanceRow}>
         <Text style={styles.balanceLabel}>Username</Text>
-        <Text style={styles.balanceValue}>{username}</Text>
+        <View style={styles.usernameRight}>
+          <Text style={styles.balanceValue}>{username}</Text>
+          <TouchableOpacity
+            style={styles.copyBtn}
+            onPress={() => {
+              void copyUsername();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Copy username"
+          >
+            <FontAwesome5 name="copy" size={16} color={colors.accent} />
+          </TouchableOpacity>
+        </View>
       </View>
       <View style={styles.balanceRow}>
         <Text style={styles.balanceLabel}>Space Money</Text>
@@ -128,6 +156,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  usernameRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   balanceLabel: {
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.large,
@@ -137,6 +170,10 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     fontSize: fontSizes.large,
     color: colors.accent,
+  },
+  copyBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
   },
   sectionTitle: {
     fontFamily: fonts.semiBold,

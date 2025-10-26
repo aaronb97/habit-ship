@@ -33,6 +33,23 @@ export function userDoc(uid: string) {
 }
 
 /**
+ * Resolves a username to a user's Firebase UID by querying the `users` collection.
+ *
+ * username: Unique username to resolve.
+ * Returns: UID string if found, otherwise undefined.
+ */
+export async function getUidByUsername(
+  username: string,
+): Promise<string | undefined> {
+  const snap = await usersCollection()
+    .where('username', '==', username)
+    .limit(1)
+    .get();
+  if (snap.empty) return undefined;
+  return snap.docs[0]!.id;
+}
+
+/**
  * Writes the provided partial user data to Firestore using merge semantics.
  *
  * uid: Firebase Authentication UID used as the document id.

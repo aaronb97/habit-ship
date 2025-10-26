@@ -217,7 +217,7 @@ describe('store', () => {
       result.current.setDestination('The Moon');
     });
 
-    expect(result.current.userPosition.target?.name).toBe('The Moon');
+    expect(result.current.userPosition.target).toBe('The Moon');
     expect(result.current.userPosition.initialDistance).toBeGreaterThan(0);
   });
 

@@ -35,6 +35,12 @@ import { HSTextInput } from './HSTextInput';
 import { HabitList } from './HabitList';
 import { GlassOrDefault } from './GlassOrDefault';
 
+function formatNum(num: number) {
+  return num.toLocaleString(undefined, {
+    maximumFractionDigits: 0,
+  });
+}
+
 export function Dashboard() {
   const {
     userPosition,
@@ -109,7 +115,7 @@ export function Dashboard() {
   }, [mode]);
 
   const displayLocation = isTraveling
-    ? userPosition.target?.name
+    ? userPosition.target
     : userPosition.startingLocation;
 
   const planet = cBodies.find((p) => p.name === displayLocation);
@@ -117,7 +123,7 @@ export function Dashboard() {
     ? `#${planet.color.toString(16).padStart(6, '0')}`
     : colors.white;
 
-  const targetName = userPosition.target?.name;
+  const targetName = userPosition.target;
   const targetHex = targetName
     ? `#${cBodies
         .find((p) => p.name === targetName)
@@ -564,7 +570,7 @@ export function Dashboard() {
                   Open the rocket tab to launch to{' '}
                 </Text>
                 <Text style={[styles.statusText, { color: targetHex }]}>
-                  {userPosition.target.name}
+                  {userPosition.target}
                 </Text>
               </Text>
             ) : null}
@@ -580,9 +586,7 @@ export function Dashboard() {
           {renderProgressItem(
             showJourneyRemaining ? 'Distance Remaining' : 'Journey Progress',
             showJourneyRemaining
-              ? `${distanceRemaining.toLocaleString(undefined, {
-                  maximumFractionDigits: 0,
-                })} km`
+              ? `${formatNum(distanceRemaining)} km`
               : `${(distancePercentage * 100).toFixed(1)}%`,
             distancePercentage,
             colors.primary,
@@ -593,7 +597,7 @@ export function Dashboard() {
       <View style={styles.levelSection}>
         {renderProgressItem(
           `Level ${level}`,
-          `${currentXP} / ${levelThreshold} XP`,
+          `${formatNum(currentXP)} / ${formatNum(levelThreshold)} XP`,
           levelProgress,
           colors.accent,
         )}
@@ -607,14 +611,8 @@ export function Dashboard() {
           {renderProgressItem(
             'Fuel',
             showFuelCapacity
-              ? `${fuelKm.toLocaleString(undefined, {
-                  maximumFractionDigits: 0,
-                })} km / ${dailyFuelCap.toLocaleString(undefined, {
-                  maximumFractionDigits: 0,
-                })} km`
-              : `${fuelKm.toLocaleString(undefined, {
-                  maximumFractionDigits: 0,
-                })} km`,
+              ? `${formatNum(fuelKm)} km / ${formatNum(dailyFuelCap)} km`
+              : `${formatNum(fuelKm)} km`,
             fuelProgress,
             '#90EE90',
           )}

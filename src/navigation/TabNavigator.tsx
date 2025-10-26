@@ -10,7 +10,8 @@ import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation';
 import { SolarSystemMap } from '../components/SolarSystemMap';
 import { Dashboard } from '../components/Dashboard';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { AntDesign, Ionicons } from '@expo/vector-icons';
+import { AntDesign, Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { Friends } from './screens/Friends';
 import * as Device from 'expo-device';
 
 const ICON_SIZE = 24;
@@ -51,16 +52,17 @@ export function TabNavigator() {
   >({});
 
   useEffect(() => {
-    void AntDesign.getImageSource('dashboard', ICON_SIZE, colors.white).then(
-      (source) => {
+    // Home: FontAwesome5 'tv'
+    void FontAwesome5.getImageSource('tv', ICON_SIZE, colors.white).then(
+      (source: ImageSourcePropType | null) => {
         if (!source) return;
-        setImageSources((prev) => ({ ...prev, dashboardWhite: source }));
+        setImageSources((prev) => ({ ...prev, homeWhite: source }));
       },
     );
-    void AntDesign.getImageSource('dashboard', ICON_SIZE, colors.primary).then(
-      (source) => {
+    void FontAwesome5.getImageSource('tv', ICON_SIZE, colors.primary).then(
+      (source: ImageSourcePropType | null) => {
         if (!source) return;
-        setImageSources((prev) => ({ ...prev, dashboardPrimary: source }));
+        setImageSources((prev) => ({ ...prev, homePrimary: source }));
       },
     );
 
@@ -68,7 +70,7 @@ export function TabNavigator() {
       'rocket-outline',
       ICON_SIZE,
       colors.white,
-    ).then((source) => {
+    ).then((source: ImageSourcePropType | null) => {
       if (!source) return;
       setImageSources((prev) => ({ ...prev, mapWhite: source }));
     });
@@ -76,36 +78,51 @@ export function TabNavigator() {
       'rocket-outline',
       ICON_SIZE,
       colors.primary,
-    ).then((source) => {
+    ).then((source: ImageSourcePropType | null) => {
       if (!source) return;
       setImageSources((prev) => ({ ...prev, mapPrimary: source }));
     });
 
-    void Ionicons.getImageSource(
-      'person-circle-outline',
+    // Profile: FontAwesome5 'user'
+    void FontAwesome5.getImageSource('user', ICON_SIZE, colors.white).then(
+      (source: ImageSourcePropType | null) => {
+        if (!source) return;
+        setImageSources((prev) => ({ ...prev, profileWhite: source }));
+      },
+    );
+    void FontAwesome5.getImageSource('user', ICON_SIZE, colors.primary).then(
+      (source: ImageSourcePropType | null) => {
+        if (!source) return;
+        setImageSources((prev) => ({ ...prev, profilePrimary: source }));
+      },
+    );
+
+    // Friends: FontAwesome5 'user-friends'
+    void FontAwesome5.getImageSource(
+      'user-friends',
       ICON_SIZE,
       colors.white,
-    ).then((source) => {
+    ).then((source: ImageSourcePropType | null) => {
       if (!source) return;
-      setImageSources((prev) => ({ ...prev, profileWhite: source }));
+      setImageSources((prev) => ({ ...prev, friendsWhite: source }));
     });
-    void Ionicons.getImageSource(
-      'person-circle-outline',
+    void FontAwesome5.getImageSource(
+      'user-friends',
       ICON_SIZE,
       colors.primary,
-    ).then((source) => {
+    ).then((source: ImageSourcePropType | null) => {
       if (!source) return;
-      setImageSources((prev) => ({ ...prev, profilePrimary: source }));
+      setImageSources((prev) => ({ ...prev, friendsPrimary: source }));
     });
 
     void AntDesign.getImageSource('setting', ICON_SIZE, colors.white).then(
-      (source) => {
+      (source: ImageSourcePropType | null) => {
         if (!source) return;
         setImageSources((prev) => ({ ...prev, devWhite: source }));
       },
     );
     void AntDesign.getImageSource('setting', ICON_SIZE, colors.primary).then(
-      (source) => {
+      (source: ImageSourcePropType | null) => {
         if (!source) return;
         setImageSources((prev) => ({ ...prev, devPrimary: source }));
       },
@@ -136,12 +153,10 @@ export function TabNavigator() {
         options={{
           title: '',
           tabBarBadge: homeNeedsSelection ? ' ' : undefined,
-          ...(imageSources.dashboardWhite &&
-            imageSources.dashboardPrimary && {
+          ...(imageSources.homeWhite &&
+            imageSources.homePrimary && {
               tabBarIcon: ({ focused }) =>
-                focused
-                  ? imageSources.dashboardPrimary!
-                  : imageSources.dashboardWhite!,
+                focused ? imageSources.homePrimary! : imageSources.homeWhite!,
             }),
         }}
         listeners={{
@@ -165,12 +180,28 @@ export function TabNavigator() {
         }}
       />
       <Tab.Screen
+        name="FriendsTab"
+        component={Friends}
+        options={{
+          title: '',
+          ...(imageSources.friendsWhite &&
+            imageSources.friendsPrimary && {
+              tabBarIcon: ({ focused }) =>
+                focused
+                  ? imageSources.friendsPrimary!
+                  : imageSources.friendsWhite!,
+            }),
+        }}
+        listeners={{
+          focus: () => setActiveTab('FriendsTab'),
+        }}
+      />
+      <Tab.Screen
         name="ProfileTab"
         component={Profile}
         options={{
           title: '',
           tabBarBadge: unseenSkins.length > 0 ? ' ' : undefined,
-          tabBarIcon: () => ({ sfSymbol: 'person.crop.circle' }),
           ...(imageSources.profileWhite &&
             imageSources.profilePrimary && {
               tabBarIcon: ({ focused }) =>
@@ -241,6 +272,7 @@ export function TabNavigator() {
 export type TabParamList = {
   HomeTab: undefined;
   MapTab: undefined;
+  FriendsTab: undefined;
   ProfileTab: undefined;
   DevTab: undefined;
 };
