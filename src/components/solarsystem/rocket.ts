@@ -108,7 +108,7 @@ export class Rocket {
     this.exhaustGroup = exhaustGroup;
     this.outlinePass = outlinePass;
     this.baseColor = baseColor;
-    this.useBasicMaterials = true;
+    this.useBasicMaterials = useBasicMaterials;
     this.outlineGlobalEnabled = Boolean(
       useStore.getState().outlinesRocketEnabled,
     );
