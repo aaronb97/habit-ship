@@ -15,6 +15,7 @@ import { useStore } from '../../utils/store';
 import { SKINS, getSkinById } from '../../utils/skins';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import * as Device from 'expo-device';
 
 export function Profile() {
   const isFocused = useIsFocused();
@@ -148,7 +149,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: Device.deviceType === Device.DeviceType.TABLET ? 60 : 24,
   },
   balanceRow: {
     flexDirection: 'row',
