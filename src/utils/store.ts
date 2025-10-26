@@ -511,10 +511,14 @@ export const useStore = create<Store>()(
           tiltShiftBlur,
           showJourneyRemaining,
           showFuelCapacity,
+          username,
+          firebaseId,
         } = get();
 
         set({
           ...initialData,
+          username,
+          firebaseId,
           showDebugOverlay,
           showTextures,
           showTrails,
@@ -577,8 +581,6 @@ export const useStore = create<Store>()(
             distanceTraveled: 0,
             previousDistanceTraveled: 0,
           },
-          // Clear firebase identity so the bootstrap flow re-authenticates
-          firebaseId: undefined,
         });
       },
       clearData: () => {
