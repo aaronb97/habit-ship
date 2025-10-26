@@ -226,6 +226,15 @@ export function Friends({
     const borderColorInt = skin ? skin.color : rocketColorInt;
     const borderColor = intColorToHex(borderColorInt);
 
+    const content = (
+      <>
+        <Text style={styles.cardText}>{label}</Text>
+        <Text style={styles.cardText}>
+          Level {calculateLevel(profile?.totalXP ?? 0)}
+        </Text>
+      </>
+    );
+
     if (skin) {
       return (
         <ImageBackground
@@ -234,10 +243,7 @@ export function Friends({
           style={[styles.card, { borderColor }]}
         >
           <View style={styles.cardOverlay} />
-          <Text style={styles.cardText}>{label}</Text>
-          <Text style={styles.cardText}>
-            Level {calculateLevel(profile?.totalXP ?? 0)}
-          </Text>
+          {content}
         </ImageBackground>
       );
     }
@@ -249,7 +255,7 @@ export function Friends({
           { backgroundColor: darkenIntColor(rocketColorInt), borderColor },
         ]}
       >
-        <Text style={styles.cardText}>{label}</Text>
+        {content}
       </View>
     );
   };
