@@ -151,6 +151,8 @@ export const ROCKET_EXHAUST_SCALE = 0.5;
 
 // Ensure the rocket maintains at least this apparent size on screen (in pixels)
 export const ROCKET_MIN_SCREEN_PIXELS = 64;
+export const ROCKET_LANDING_SPREAD_FRACTION = 0.25;
+export const FRIEND_AIM_YAW_OFFSET_STEP_RAD = Math.PI / 36;
 
 // Animation durations (ms)
 export const HABIT_TRAVEL_ANIM_MS = 5000; // duration for visual travel per completion

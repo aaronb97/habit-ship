@@ -59,6 +59,8 @@ import {
   YAW_SIDE_ON_DISTANCE_CUTOFF,
   CAMERA_COLLISION_CLEARANCE,
   ZOOM_MAX_RADIUS,
+  ROCKET_LANDING_SPREAD_FRACTION,
+  FRIEND_AIM_YAW_OFFSET_STEP_RAD,
 } from './solarsystem/constants';
 import { getSkinById } from '../utils/skins';
 import { DebugOverlay } from './DebugOverlay';
@@ -98,6 +100,9 @@ export function SolarSystemMap({
   const friendRocketsRef = useRef<Map<string, Rocket>>(new Map());
   const friendMetaRef = useRef<
     Map<string, { rocketColor: number; selectedSkinId?: string }>
+  >(new Map());
+  const friendStickyOverridesRef = useRef<
+    Map<string, { key: string; theta: number; yaw: number }>
   >(new Map());
   const friendsRef = useRef<{ uid: string; profile: UsersDoc }[]>([]);
   useEffect(() => {
@@ -545,6 +550,100 @@ export function SolarSystemMap({
     return bodyRegistryRef.current.getVisualRadius(name);
   };
 
+  /**
+   * Computes a friend's surface position and aim vector on the start body using
+   * a stable tangent basis around the start-target axis.
+   *
+   * Parameters:
+   * - startName: Name of the start celestial body where the friend is landed.
+   * - targetName: Name of the target celestial body the friend is aiming toward.
+   * - theta: Tangent-plane angle in radians for lateral spread around the start.
+   * - yaw: Yaw offset in radians to rotate the aim slightly around the radial axis.
+   *
+   * Returns: Object with pos (surface position) and aim (look-at target) in scene space.
+   */
+  const computeFriendSurfacePosAim = (
+    startName: string,
+    targetName: string,
+    theta: number,
+    yaw: number,
+  ): { pos: THREE.Vector3; aim: THREE.Vector3 } => {
+    const startBody = PLANETS.find((b) => b.name === startName) ?? earth;
+    const targetBody = PLANETS.find((b) => b.name === targetName) ?? earth;
+    const startCenter = toVec3(startBody.getVisualPosition());
+    const targetCenter = toVec3(targetBody.getVisualPosition());
+    const startRadius = getVisualRadius(startBody.name);
+    const dirN = targetCenter.clone().sub(startCenter).normalize();
+    const baseStartSurface = startCenter
+      .clone()
+      .add(dirN.clone().multiplyScalar(startRadius));
+    const aimBase = Rocket.computeAimPosition(
+      startCenter,
+      targetCenter,
+      getVisualRadius(targetBody.name),
+    );
+    const baseAimDir = aimBase.clone().sub(baseStartSurface);
+
+    let helper = new THREE.Vector3(0, 0, 1);
+    if (Math.abs(dirN.dot(helper)) > 0.98) helper = new THREE.Vector3(1, 0, 0);
+    const r = dirN.clone().cross(helper).normalize();
+    const u = r.clone().cross(dirN).normalize();
+
+    const alpha = Math.max(0, ROCKET_LANDING_SPREAD_FRACTION);
+    const offsetDir = r
+      .clone()
+      .multiplyScalar(Math.cos(theta))
+      .add(u.clone().multiplyScalar(Math.sin(theta)));
+    const newDir = dirN.clone().add(offsetDir.multiplyScalar(alpha)).normalize();
+    const pos = startCenter.clone().add(newDir.multiplyScalar(startRadius));
+
+    const aimDir = baseAimDir.clone().applyAxisAngle(dirN, yaw);
+    const aim = pos.clone().add(aimDir);
+    return { pos, aim };
+  };
+
+  /**
+   * Computes a friend's in-flight position offset next to the centerline and a
+   * matching aim direction so all rockets point the same way while traveling.
+   *
+   * Parameters:
+   * - startName: Name of the start celestial body.
+   * - targetName: Name of the target celestial body.
+   * - basePos: Centerline interpolated position of the friend.
+   * - theta: Tangent-plane angle in radians for lateral spread around the path.
+   *
+   * Returns: Object with pos (offset from centerline) and aim (look-at target).
+   */
+  const computeFriendTravelPosAim = (
+    startName: string,
+    targetName: string,
+    basePos: THREE.Vector3,
+    theta: number,
+  ): { pos: THREE.Vector3; aim: THREE.Vector3 } => {
+    const startBody = PLANETS.find((b) => b.name === startName) ?? earth;
+    const targetBody = PLANETS.find((b) => b.name === targetName) ?? earth;
+    const startCenter = toVec3(startBody.getVisualPosition());
+    const targetCenter = toVec3(targetBody.getVisualPosition());
+    const dir = targetCenter.clone().sub(startCenter);
+    const dirN = dir.clone().normalize();
+    let helper = new THREE.Vector3(0, 0, 1);
+    if (Math.abs(dirN.dot(helper)) > 0.98) helper = new THREE.Vector3(1, 0, 0);
+    const r = dirN.clone().cross(helper).normalize();
+    const u = r.clone().cross(dirN).normalize();
+
+    const lateralDir = r
+      .clone()
+      .multiplyScalar(Math.cos(theta))
+      .add(u.clone().multiplyScalar(Math.sin(theta)));
+    const lateralMag = Math.max(0, ROCKET_LANDING_SPREAD_FRACTION) *
+      getVisualRadius(startBody.name);
+    const pos = basePos.clone().add(lateralDir.multiplyScalar(lateralMag));
+
+    // Keep everyone pointing exactly along the path direction
+    const aim = pos.clone().add(dirN);
+    return { pos, aim };
+  };
+
   const computeDisplayUserPos = (): THREE.Vector3 => {
     // If traveling, place user between start and target using distance proportion
     const {
@@ -943,6 +1042,75 @@ export function SolarSystemMap({
         }
       }
 
+      // Compute small separation offsets for friend rockets clustered at the start.
+      const clusterFriendOverrides = new Map<
+        string,
+        { pos: THREE.Vector3; aim: THREE.Vector3 }
+      >();
+      {
+        const upos = useStore.getState().userPosition;
+        const userKey =
+          upos.target && (upos.distanceTraveled ?? 0) <= 1e-9
+            ? `${upos.startingLocation}|${upos.target}`
+            : null;
+
+        const list = friendsRef.current;
+        if (list.length > 0) {
+          type Entry = { uid: string; start: string; target: string };
+          const clusters = new Map<string, Entry[]>();
+          for (const e of list) {
+            const fp = e.profile.userPosition;
+            const t = fp.target;
+            if (!t) continue;
+            const fAtStart = (fp.distanceTraveled ?? 0) <= 1e-9;
+            if (!fAtStart) continue;
+            const key = `${fp.startingLocation}|${t}`;
+            let arr = clusters.get(key);
+            if (!arr) {
+              arr = [];
+              clusters.set(key, arr);
+            }
+            arr.push({ uid: e.uid, start: fp.startingLocation, target: t });
+          }
+
+          clusters.forEach((arr, key) => {
+            const n = arr.length;
+            const shouldOffset = n > 1 || (userKey && key === userKey && n >= 1);
+            if (!shouldOffset) return;
+            const angStep = Math.min(Math.PI / 4, (2 * Math.PI) / Math.max(3, n + 1));
+            const sorted = [...arr].sort((a, b) => (a.uid < b.uid ? -1 : 1));
+            sorted.forEach((entry, idx) => {
+              const rel = idx - (n - 1) / 2;
+              const existing = friendStickyOverridesRef.current.get(entry.uid);
+              let theta: number;
+              let yaw: number;
+              if (existing && existing.key === key) {
+                theta = existing.theta;
+                yaw = existing.yaw;
+              } else {
+                theta = rel * angStep;
+                let relYaw = rel;
+                if (relYaw === 0) relYaw = 1;
+                yaw = relYaw * FRIEND_AIM_YAW_OFFSET_STEP_RAD;
+                friendStickyOverridesRef.current.set(entry.uid, {
+                  key,
+                  theta,
+                  yaw,
+                });
+              }
+
+              const { pos, aim } = computeFriendSurfacePosAim(
+                entry.start,
+                entry.target,
+                theta,
+                yaw,
+              );
+              clusterFriendOverrides.set(entry.uid, { pos, aim });
+            });
+          });
+        }
+      }
+
       // Scripted camera progression is handled inside CameraController.tick()
       if (rocketRef.current) {
         const { target, startingLocation } = useStore.getState().userPosition;
@@ -986,27 +1154,137 @@ export function SolarSystemMap({
         if (cam && glCtx) {
           const resH = glCtx.drawingBufferHeight;
           const list = friendsRef.current;
+          const userNow = useStore.getState().userPosition;
+          const userTravelKey =
+            userNow.target && typeof userNow.initialDistance === 'number' &&
+            typeof userNow.distanceTraveled === 'number' &&
+            (userNow.distanceTraveled ?? 0) > 1e-9 &&
+            (userNow.initialDistance ?? 0) - (userNow.distanceTraveled ?? 0) > 1e-9
+              ? `${userNow.startingLocation}|${userNow.target}`
+              : null;
+          type Entry = { uid: string; start: string; target: string };
+          const travelClusters = new Map<string, Entry[]>();
+          for (const e of list) {
+            const fp = e.profile.userPosition;
+            if (
+              fp.target &&
+              typeof fp.initialDistance === 'number' &&
+              typeof fp.distanceTraveled === 'number' &&
+              fp.distanceTraveled > 1e-9 &&
+              fp.initialDistance - fp.distanceTraveled > 1e-9
+            ) {
+              const key = `${fp.startingLocation}|${fp.target}`;
+              let arr = travelClusters.get(key);
+              if (!arr) {
+                arr = [];
+                travelClusters.set(key, arr);
+              }
+              arr.push({ uid: e.uid, start: fp.startingLocation, target: fp.target });
+            }
+          }
+
+          const clusterFriendTravelOverrides = new Map<
+            string,
+            { pos: THREE.Vector3; aim: THREE.Vector3 }
+          >();
+          travelClusters.forEach((arr, key) => {
+            const n = arr.length;
+            if (n <= 0) return;
+            const includeUser = userTravelKey === key;
+            const angStep = Math.min(Math.PI / 4, (2 * Math.PI) / Math.max(3, (includeUser ? n + 1 : n)));
+            const sorted = [...arr].sort((a, b) => (a.uid < b.uid ? -1 : 1));
+            sorted.forEach((entry, idx) => {
+              let rel = idx - (n - 1) / 2;
+              if (includeUser) {
+                // Skip center slot (reserved for user)
+                if (rel >= 0) rel += 1;
+              }
+
+              const existing = friendStickyOverridesRef.current.get(entry.uid);
+              let theta: number;
+              if (existing && existing.key === key) {
+                theta = existing.theta;
+              } else {
+                theta = rel * angStep;
+                friendStickyOverridesRef.current.set(entry.uid, {
+                  key,
+                  theta,
+                  yaw: 0,
+                });
+              }
+
+              // Compute per-friend base position along centerline then offset
+              const prof = list.find((x) => x.uid === entry.uid)?.profile;
+              const basePos = prof
+                ? computeFriendDisplayPos(prof.userPosition)
+                : new THREE.Vector3();
+              const { pos, aim } = computeFriendTravelPosAim(
+                entry.start,
+                entry.target,
+                basePos,
+                theta,
+              );
+              clusterFriendTravelOverrides.set(entry.uid, { pos, aim });
+            });
+          });
+
           const byUid: Record<string, UsersDoc> = {};
           for (const e of list) byUid[e.uid] = e.profile;
           friendRocketsRef.current.forEach((fr, uid) => {
             const prof = byUid[uid];
             if (!prof) return;
-            const pos = computeFriendDisplayPos(prof.userPosition);
+            const fp = prof.userPosition;
+            const startOverride = clusterFriendOverrides.get(uid);
+            const travelOverride = clusterFriendTravelOverrides.get(uid);
+            const clusterKey = fp.target ? `${fp.startingLocation}|${fp.target}` : null;
+            let pos = (travelOverride ?? startOverride)?.pos ?? computeFriendDisplayPos(fp);
             // Aim toward target surface if traveling; otherwise face current body
-            const { startingLocation, target } = prof.userPosition;
+            const { startingLocation, target } = fp;
             const startBody =
               PLANETS.find((b) => b.name === startingLocation) ?? earth;
             const targetBody =
               PLANETS.find((b) => b.name === (target ?? startingLocation)) ??
               earth;
-            const aimPos = Rocket.computeAimPosition(
-              toVec3(startBody.getVisualPosition()),
-              toVec3(targetBody.getVisualPosition()),
-              getVisualRadius(targetBody.name),
-            );
+            let defaultAim: THREE.Vector3;
+            if (travelOverride) {
+              defaultAim = travelOverride.aim;
+            } else {
+              defaultAim = Rocket.computeAimPosition(
+                toVec3(startBody.getVisualPosition()),
+                toVec3(targetBody.getVisualPosition()),
+                getVisualRadius(targetBody.name),
+              );
+              // If we have a sticky start override, apply it
+              if (!startOverride && clusterKey) {
+                const sticky = friendStickyOverridesRef.current.get(uid);
+                if (sticky && sticky.key === clusterKey && (fp.distanceTraveled ?? 0) <= 1e-9) {
+                  const res = computeFriendSurfacePosAim(
+                    startingLocation,
+                    target ?? startingLocation,
+                    sticky.theta,
+                    sticky.yaw,
+                  );
+                  pos = res.pos;
+                  defaultAim = res.aim;
+                }
+              }
+            }
+            const aimPos = (travelOverride ?? startOverride)?.aim ?? defaultAim;
             fr.setVisible(true);
             fr.update(pos, aimPos, false, 0);
             fr.enforceMinimumApparentSize(cam, resH);
+
+            // Clear sticky if the friend cleared target or changed key
+            if (!clusterKey) {
+              if (friendStickyOverridesRef.current.has(uid)) {
+                friendStickyOverridesRef.current.delete(uid);
+              }
+            } else {
+              const sticky = friendStickyOverridesRef.current.get(uid);
+              if (sticky && sticky.key !== clusterKey) {
+                friendStickyOverridesRef.current.delete(uid);
+              }
+            }
           });
         }
       }
