@@ -1,6 +1,6 @@
-import firestore from '@react-native-firebase/firestore';
 import { useStore } from './store';
 import { generateName } from './generateName';
+import { usernameExists, writeUser, UsersDoc } from './db';
 
 /**
  * Starts a one-way Firestore sync of select Zustand fields to
@@ -20,7 +20,6 @@ import { generateName } from './generateName';
  * Returns: Unsubscribe function that stops the sync and flushes any pending write.
  */
 export function startFirestoreSync(firebaseId: string): () => void {
-  const docRef = firestore().collection('users').doc(firebaseId);
 
   // Debounce writes to reduce frequency during rapid state changes
   const DEBOUNCE_MS = 1000;
@@ -38,7 +37,7 @@ export function startFirestoreSync(firebaseId: string): () => void {
     'selectedSkinId',
     'rocketColor',
     'totalXP',
-  ] satisfies (keyof StoreState)[];
+  ] satisfies (keyof UsersDoc)[];
   type SyncKey = (typeof SYNC_FIELDS)[number];
 
   /**
@@ -57,16 +56,12 @@ export function startFirestoreSync(firebaseId: string): () => void {
       const candidate = generateName();
       console.log('Checking username', candidate);
       try {
-        const snapshot = await firestore()
-          .collection('users')
-          .where('username', '==', candidate)
-          .limit(1)
-          .get();
-        if (snapshot.empty) {
+        const exists = await usernameExists(candidate);
+        if (!exists) {
           s.setUsername(candidate);
           return;
         }
-      } catch (e) {
+      } catch (e: unknown) {
         console.warn('[firestoreSync] Username uniqueness check failed', e);
         // On transient errors, try a different candidate
       }
@@ -82,13 +77,13 @@ export function startFirestoreSync(firebaseId: string): () => void {
    * Parameters: s - current store state snapshot
    * Returns: Plain object containing only the synced fields.
    */
-  function buildPayload(s: StoreState): Record<string, unknown> {
-    const out: Record<string, unknown> = {};
+  function buildPayload(s: StoreState): Partial<UsersDoc> {
+    const out = {} as Partial<UsersDoc>;
     for (const k of SYNC_FIELDS) {
-      out[k] = (s as Record<SyncKey, unknown>)[k];
+      (out as Record<SyncKey, unknown>)[k] = (s as Record<SyncKey, unknown>)[k];
     }
     // Ensure plain data (no functions/undefined) and deep clone
-    return JSON.parse(JSON.stringify(out)) as Record<string, unknown>;
+    return JSON.parse(JSON.stringify(out)) as Partial<UsersDoc>;
   }
 
   /**
@@ -103,8 +98,8 @@ export function startFirestoreSync(firebaseId: string): () => void {
       if (stopped) return;
       const data = buildPayload(useStore.getState());
       try {
-        await docRef.set(data, { merge: true });
-      } catch (e) {
+        await writeUser(firebaseId, data);
+      } catch (e: unknown) {
         console.warn('[firestoreSync] Failed to set users doc', e);
       } finally {
         pending = false;
@@ -141,7 +136,7 @@ export function startFirestoreSync(firebaseId: string): () => void {
     // If a write is pending, do a final immediate flush for best-effort consistency
     if (pending) {
       const data = buildPayload(useStore.getState());
-      void docRef.set(data, { merge: true }).catch((e) => {
+      void writeUser(firebaseId, data).catch((e: unknown) => {
         console.warn('[firestoreSync] Failed to set users doc', e);
       });
       pending = false;
