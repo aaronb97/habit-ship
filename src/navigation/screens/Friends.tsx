@@ -19,22 +19,22 @@ import {
   observeFriendshipsOutgoing,
   acceptFriendship,
   declineFriendship,
-  sendFriendRequestByUsername,
-  getUsernamesForUids,
+  sendFriendRequest,
+  getUidByUsername,
   type FriendshipDoc,
 } from '../../utils/db';
 import { HSButton } from '../../components/HSButton';
 import { MaterialIcons } from '@expo/vector-icons';
 
 /**
- * Returns the other user's UID from a friendship given the current user's UID.
+ * Returns the other user's display name from a friendship given the current user's UID.
  *
  * @param f - Friendship document
  * @param selfUid - Current user's Firebase UID
- * @returns UID string for the other user in the friendship
+ * @returns Username string for the other user in the friendship
  */
-function otherUid(f: FriendshipDoc, selfUid: string): string {
-  return f.user1 === selfUid ? f.user2 : f.user1;
+function otherName(f: FriendshipDoc, selfUid: string): string {
+  return f.user1 === selfUid ? (f.user2Name || f.user2) : (f.user1Name || f.user1);
 }
 
 /**
@@ -49,18 +49,28 @@ export function Friends() {
   const [incoming, setIncoming] = useState<FriendshipDoc[]>([]);
   const [outgoing, setOutgoing] = useState<FriendshipDoc[]>([]);
 
-  const [usernamesByUid, setUsernamesByUid] = useState<Record<string, string>>(
-    {},
-  );
   const [isAdding, setIsAdding] = useState<boolean>(false);
   const [inputUsername, setInputUsername] = useState<string>('');
   const [busy, setBusy] = useState<boolean>(false);
+  const [loadedAccepted, setLoadedAccepted] = useState<boolean>(false);
+  const [loadedIncoming, setLoadedIncoming] = useState<boolean>(false);
+  const [loadedOutgoing, setLoadedOutgoing] = useState<boolean>(false);
+  const username = useStore((s) => s.username);
 
   useEffect(() => {
     if (!uid) return;
-    const unsubAccepted = observeFriendshipsAccepted(uid, setAccepted);
-    const unsubIncoming = observeFriendshipsIncoming(uid, setIncoming);
-    const unsubOutgoing = observeFriendshipsOutgoing(uid, setOutgoing);
+    const unsubAccepted = observeFriendshipsAccepted(uid, (rows) => {
+      setAccepted(rows);
+      setLoadedAccepted(true);
+    });
+    const unsubIncoming = observeFriendshipsIncoming(uid, (rows) => {
+      setIncoming(rows);
+      setLoadedIncoming(true);
+    });
+    const unsubOutgoing = observeFriendshipsOutgoing(uid, (rows) => {
+      setOutgoing(rows);
+      setLoadedOutgoing(true);
+    });
     return () => {
       unsubAccepted();
       unsubIncoming();
@@ -68,25 +78,7 @@ export function Friends() {
     };
   }, [uid]);
 
-  useEffect(() => {
-    // Fetch usernames for displayed UIDs if missing in cache
-    async function load() {
-      if (!uid) return;
-      const setUids = new Set<string>();
-      for (const f of [...accepted, ...incoming, ...outgoing]) {
-        setUids.add(otherUid(f, uid));
-      }
-      const all = Array.from(setUids);
-      const needed = all.filter((u) => !usernamesByUid[u]);
-      if (needed.length === 0) return;
-      const map = await getUsernamesForUids(needed);
-      setUsernamesByUid((prev) => ({
-        ...prev,
-        ...map,
-      }));
-    }
-    void load();
-  }, [accepted, incoming, outgoing, uid, usernamesByUid]);
+  // No username lookup effect is needed now that friendship docs store names.
 
   /**
    * Accepts a pending incoming friend request.
@@ -122,7 +114,7 @@ export function Friends() {
    *
    * @param targetName - Username string of the recipient
    */
-  const sendFriendRequest = async (targetName: string): Promise<void> => {
+  const handleSendFriendRequest = async (targetName: string): Promise<void> => {
     const name = targetName.trim();
     if (!uid) return;
     if (!name) {
@@ -132,15 +124,22 @@ export function Friends() {
 
     try {
       setBusy(true);
-      const outcome = await sendFriendRequestByUsername(uid, name);
+      const targetUid = await getUidByUsername(name);
+      if (!targetUid) {
+        Alert.alert('Not Found', `No user with username "${name}".`);
+        return;
+      }
+      const outcome = await sendFriendRequest({
+        user1: uid,
+        user1Name: username ?? '(unknown)',
+        user2: targetUid,
+        user2Name: name,
+      });
       switch (outcome.kind) {
         case 'created':
           Alert.alert('Request Sent', `Sent a request to ${name}.`);
           setIsAdding(false);
           setInputUsername('');
-          break;
-        case 'not_found':
-          Alert.alert('Not Found', `No user with username "${name}".`);
           break;
         case 'self':
           Alert.alert('Oops', 'You cannot friend yourself.');
@@ -174,7 +173,7 @@ export function Friends() {
           {
             text: 'Send',
             onPress: (text?: string) => {
-              if (typeof text === 'string') void sendFriendRequest(text);
+              if (typeof text === 'string') void handleSendFriendRequest(text);
             },
           },
         ],
@@ -187,8 +186,7 @@ export function Friends() {
 
   const renderFriendRow = (f: FriendshipDoc) => {
     if (!uid) return null;
-    const other = otherUid(f, uid);
-    const label = usernamesByUid[other] ?? other;
+    const label = otherName(f, uid);
     return (
       <View style={styles.row}>
         <Text style={styles.rowText}>{label}</Text>
@@ -198,8 +196,7 @@ export function Friends() {
 
   const renderIncomingRow = (f: FriendshipDoc) => {
     if (!uid) return null;
-    const other = otherUid(f, uid);
-    const label = usernamesByUid[other] ?? other;
+    const label = otherName(f, uid);
     return (
       <View style={styles.row}>
         <Text style={styles.rowText}>{label}</Text>
@@ -217,17 +214,6 @@ export function Friends() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>Friends</Text>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={startAddFriend}
-          disabled={!uid || busy}
-        >
-          <Text style={styles.addBtnText}>Add Friend</Text>
-        </TouchableOpacity>
-      </View>
-
       {Platform.OS === 'android' && isAdding && (
         <View style={styles.inlinePrompt}>
           <TextInput
@@ -241,7 +227,7 @@ export function Friends() {
           />
           <TouchableOpacity
             style={[styles.btn, styles.accept]}
-            onPress={() => void sendFriendRequest(inputUsername)}
+            onPress={() => void handleSendFriendRequest(inputUsername)}
             disabled={busy}
           >
             {busy ? (
@@ -263,8 +249,19 @@ export function Friends() {
         </View>
       )}
 
-      <Text style={styles.sectionTitle}>Current Friends</Text>
-      {accepted.length === 0 ? (
+      <View style={styles.headerRow}>
+        <Text style={styles.sectionTitle}>Friends</Text>
+        <TouchableOpacity
+          style={styles.addBtn}
+          onPress={startAddFriend}
+          disabled={!uid || busy}
+        >
+          <Text style={styles.addBtnText}>Add Friend</Text>
+        </TouchableOpacity>
+      </View>
+      {!loadedAccepted ? (
+        <ActivityIndicator color={colors.grey} />
+      ) : accepted.length === 0 ? (
         <Text style={styles.empty}>No friends yet.</Text>
       ) : (
         <FlatList
@@ -275,8 +272,10 @@ export function Friends() {
         />
       )}
 
-      <Text style={styles.sectionTitle}>Incoming Requests</Text>
-      {incoming.length === 0 ? (
+      <Text style={styles.sectionTitle}>Requests</Text>
+      {!loadedIncoming ? (
+        <ActivityIndicator color={colors.grey} />
+      ) : incoming.length === 0 ? (
         <Text style={styles.empty}>No incoming requests.</Text>
       ) : (
         <FlatList
@@ -288,7 +287,9 @@ export function Friends() {
       )}
 
       <Text style={styles.sectionTitle}>Requests Sent</Text>
-      {outgoing.length === 0 ? (
+      {!loadedOutgoing ? (
+        <ActivityIndicator color={colors.grey} />
+      ) : outgoing.length === 0 ? (
         <Text style={styles.empty}>No outgoing requests.</Text>
       ) : (
         <FlatList

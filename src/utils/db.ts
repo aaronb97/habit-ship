@@ -94,7 +94,9 @@ export type FriendshipStatus = 'pending' | 'accepted';
 export type FriendshipDoc = {
   id: string;
   user1: string;
+  user1Name: string;
   user2: string;
+  user2Name: string;
   status: FriendshipStatus;
 };
 
@@ -222,41 +224,49 @@ export async function declineFriendship(docId: string): Promise<void> {
  * Response shape for attempting to send a friend request by username.
  */
 export type SendFriendRequestOutcome =
-  | { kind: 'created'; targetUid: string }
-  | { kind: 'not_found' }
+  | { kind: 'created' }
   | { kind: 'self' }
   | { kind: 'already_friends' }
   | { kind: 'already_pending' };
 
 /**
+ * Input required to create a new friendship request document.
+ *
+ * user1: UID of the requester (initiator).
+ * user1Name: Username to persist for the requester.
+ * user2: UID of the recipient.
+ * user2Name: Username to persist for the recipient.
+ */
+export type SendFriendRequestInput = {
+  user1: string;
+  user1Name: string;
+  user2: string;
+  user2Name: string;
+};
+
+/**
  * Sends a friend request from one user to another resolved by username.
  * Prevents self-requests and duplicates (both directions).
  *
- * fromUid: UID of the requester (user1).
- * toUsername: Username of the recipient to resolve.
+ * input: Input required to create a new friendship request document.
  * Returns: Outcome describing the result of the operation.
  */
-export async function sendFriendRequestByUsername(
-  fromUid: string,
-  toUsername: string,
+export async function sendFriendRequest(
+  input: SendFriendRequestInput,
 ): Promise<SendFriendRequestOutcome> {
-  const name = toUsername.trim();
-  if (!name) return { kind: 'not_found' };
-
-  const targetUid = await getUidByUsername(name);
-  if (!targetUid) return { kind: 'not_found' };
-  if (targetUid === fromUid) return { kind: 'self' };
+  const { user1, user1Name, user2, user2Name } = input;
+  if (user1 === user2) return { kind: 'self' };
 
   const col = friendshipsCollection();
   const [a, b] = await Promise.all([
     col
-      .where('user1', '==', fromUid)
-      .where('user2', '==', targetUid)
+      .where('user1', '==', user1)
+      .where('user2', '==', user2)
       .limit(1)
       .get(),
     col
-      .where('user1', '==', targetUid)
-      .where('user2', '==', fromUid)
+      .where('user1', '==', user2)
+      .where('user2', '==', user1)
       .limit(1)
       .get(),
   ]);
@@ -270,13 +280,15 @@ export async function sendFriendRequestByUsername(
   }
 
   await col.add({
-    user1: fromUid,
-    user2: targetUid,
+    user1,
+    user1Name,
+    user2,
+    user2Name,
     status: 'pending' as FriendshipStatus,
     createdAt: firestore.FieldValue.serverTimestamp(),
   });
 
-  return { kind: 'created', targetUid };
+  return { kind: 'created' };
 }
 
 /**
