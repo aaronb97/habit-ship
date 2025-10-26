@@ -9,8 +9,8 @@ import type { UserPosition } from '../types';
  */
 export type UsersDoc = {
   userPosition: UserPosition;
-  username?: string;
-  selectedSkinId?: string;
+  username?: string | null;
+  selectedSkinId?: string | null;
   rocketColor: number;
   totalXP: number;
 };

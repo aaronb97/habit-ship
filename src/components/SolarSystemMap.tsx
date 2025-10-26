@@ -99,7 +99,7 @@ export function SolarSystemMap({
   const skyRef = useRef<THREE.Mesh | null>(null);
   const friendRocketsRef = useRef<Map<string, Rocket>>(new Map());
   const friendMetaRef = useRef<
-    Map<string, { rocketColor: number; selectedSkinId?: string }>
+    Map<string, { rocketColor: number; selectedSkinId?: string | null }>
   >(new Map());
   const friendStickyOverridesRef = useRef<
     Map<string, { key: string; theta: number; yaw: number }>
@@ -320,7 +320,11 @@ export function SolarSystemMap({
   // Determine which planet systems are relevant for rendering moons
   const getRelevantPlanetSystems = (): Set<string> => {
     const { startingLocation, target } = useStore.getState().userPosition;
-    return getRelevantPlanetSystemsFor(startingLocation, target, PLANETS);
+    return getRelevantPlanetSystemsFor(
+      startingLocation,
+      target ?? undefined,
+      PLANETS,
+    );
   };
 
   // Determine which planets are unlocked (visible) at current level
@@ -446,8 +450,8 @@ export function SolarSystemMap({
           useStore.getState().userPosition;
 
         prevDistanceRef.current = {
-          prev: previousDistanceTraveled,
-          curr: distanceTraveled,
+          prev: previousDistanceTraveled ?? undefined,
+          curr: distanceTraveled ?? undefined,
         };
 
         return;
@@ -496,8 +500,8 @@ export function SolarSystemMap({
     // If values differ, an animation is pending; if equal, batch already synced
     animSyncedRef.current = previousDistanceTraveledVal === distanceTraveledVal;
     prevDistanceRef.current = {
-      prev: previousDistanceTraveledVal,
-      curr: distanceTraveledVal,
+      prev: previousDistanceTraveledVal ?? undefined,
+      curr: distanceTraveledVal ?? undefined,
     };
   }, [
     distanceTraveledVal,
@@ -1440,7 +1444,7 @@ export function SolarSystemMap({
               unlockedBodies: unlockedBodiesNow,
               visitedBodies: visitedBodiesNow,
               startingLocation: startingLocationNow,
-              targetName: targetNameNow,
+              targetName: targetNameNow ?? undefined,
             }),
           );
         }

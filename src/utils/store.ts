@@ -100,7 +100,7 @@ type Store = {
   // Skins
   unlockedSkins: string[]; // skin ids
   unseenUnlockedSkins: string[]; // newly unlocked since last Profile view
-  selectedSkinId?: string; // currently applied skin id
+  selectedSkinId: string | null; // currently applied skin id
   totalXP: number;
   xpHistory: XPGain[];
   money: number;
@@ -121,7 +121,7 @@ type Store = {
   outlinesBodiesEnabled: boolean;
   outlinesRocketEnabled: boolean;
 
-  username?: string;
+  username: string | null;
 
   firebaseId?: string;
 
@@ -227,7 +227,7 @@ type Store = {
   setLastLevelUpSeenLevel: (level: number) => void;
   setActiveTab: (tab: TabName) => void;
   // Skins actions
-  setSelectedSkinId: (skinId?: string) => void;
+  setSelectedSkinId: (skinId: string | null | undefined) => void;
   markSkinsSeen: () => void;
   unlockAllSkins: () => void;
   lockSkinsToDefault: () => void;
@@ -265,10 +265,10 @@ type Store = {
   setFirebaseId: (id?: string) => void;
 
   /**
-   * Sets the user's unique username. Pass undefined to clear.
-   * name: Username string to persist, or undefined to clear.
+   * Sets the user's unique username. Pass null to clear.
+   * name: Username string to persist, or null to clear.
    */
-  setUsername: (name?: string) => void;
+  setUsername: (name: string | null | undefined) => void;
 };
 
 type StoreV1 = Omit<Store, 'target'> & {
@@ -292,7 +292,7 @@ const initialData = {
   completedPlanets: ['Earth'],
   unlockedSkins: ['Earth'],
   unseenUnlockedSkins: [],
-  selectedSkinId: undefined,
+  selectedSkinId: null,
   totalXP: 0,
   xpHistory: [],
   idCount: 5,
@@ -334,7 +334,7 @@ const initialData = {
   xpEarnedDate: undefined,
   money: 0,
   lastLandingReward: undefined,
-  username: undefined,
+  username: null,
   firebaseId: undefined,
 } satisfies Partial<Store>;
 
@@ -346,7 +346,7 @@ export const useStore = create<Store>()(
       setRocketColor: (color) => set({ rocketColor: color }),
       setIsSetupFinished: (value) => set({ isSetupFinished: value }),
       setFirebaseId: (id) => set({ firebaseId: id }),
-      setUsername: (name) => set({ username: name }),
+      setUsername: (name) => set({ username: name ?? null }),
       addHabit: (habit) => {
         set((state) => {
           state.habits.push({
@@ -404,7 +404,7 @@ export const useStore = create<Store>()(
 
           state.userPosition.distanceTraveled = 0;
           state.userPosition.previousDistanceTraveled = 0;
-          state.userPosition.launchTime = undefined;
+          state.userPosition.launchTime = null;
           state.lastUpdateTime = undefined;
         });
         // Keep reminders' copy in sync with destination and skip today's reminder if already completed
@@ -423,11 +423,11 @@ export const useStore = create<Store>()(
         set((state) => {
           // Instantly move to the specified planet and clear any travel state
           state.userPosition.startingLocation = planetName;
-          state.userPosition.target = undefined;
-          state.userPosition.launchTime = undefined;
-          state.userPosition.initialDistance = undefined;
-          state.userPosition.distanceTraveled = undefined;
-          state.userPosition.previousDistanceTraveled = undefined;
+          state.userPosition.target = null;
+          state.userPosition.launchTime = null;
+          state.userPosition.initialDistance = null;
+          state.userPosition.distanceTraveled = null;
+          state.userPosition.previousDistanceTraveled = null;
           state.lastUpdateTime = undefined;
         });
       },
@@ -448,7 +448,7 @@ export const useStore = create<Store>()(
       // Skins
       setSelectedSkinId: (skinId) => {
         set((state) => {
-          state.selectedSkinId = skinId;
+          state.selectedSkinId = skinId ?? null;
         });
       },
       markSkinsSeen: () => set({ unseenUnlockedSkins: [] }),
@@ -463,7 +463,7 @@ export const useStore = create<Store>()(
           state.unlockedSkins = ['Earth'];
           state.unseenUnlockedSkins = [];
           if (state.selectedSkinId && state.selectedSkinId !== 'Earth') {
-            state.selectedSkinId = undefined;
+            state.selectedSkinId = null;
           }
         }),
       unlockRandomRocketSkin: () => {
@@ -717,7 +717,7 @@ export const useStore = create<Store>()(
       syncTravelVisuals: () => {
         set((state) => {
           if (
-            state.userPosition.distanceTraveled !== undefined &&
+            typeof state.userPosition.distanceTraveled === 'number' &&
             state.userPosition.target
           ) {
             state.userPosition.previousDistanceTraveled =
@@ -804,11 +804,11 @@ export const useStore = create<Store>()(
 
         set((nextState) => {
           nextState.userPosition.startingLocation = destinationName;
-          nextState.userPosition.target = undefined;
-          nextState.userPosition.launchTime = undefined;
-          nextState.userPosition.initialDistance = undefined;
-          nextState.userPosition.distanceTraveled = undefined;
-          nextState.userPosition.previousDistanceTraveled = undefined;
+          nextState.userPosition.target = null;
+          nextState.userPosition.launchTime = null;
+          nextState.userPosition.initialDistance = null;
+          nextState.userPosition.distanceTraveled = null;
+          nextState.userPosition.previousDistanceTraveled = null;
           nextState.lastUpdateTime = undefined;
 
           if (isNewPlanet) {
@@ -877,16 +877,49 @@ export const useStore = create<Store>()(
     {
       name: 'space-explorer-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 2,
+      version: 3,
       migrate: (persistedState, version) => {
+        // v1 -> v2 migration (existing)
         if (version === 1) {
           const v1State = persistedState as StoreV1;
-
-          return {
+          const migrated = {
             ...v1State,
             target: v1State.target.name,
             version: 2,
+          } as unknown as Record<string, unknown>;
+          // Fall through to v2->v3 migration by updating version variable
+          persistedState = migrated as unknown as typeof persistedState;
+          version = 2;
+        }
+
+        // v2 -> v3 migration: normalize unset fields to null for network serialization
+        if (version === 2) {
+          const s = persistedState as Record<string, unknown> & {
+            userPosition?: Partial<UserPosition>;
+            selectedSkinId?: string | null;
+            username?: string | null;
           };
+          const up = { ...(s.userPosition ?? {}) } as Partial<UserPosition> &
+            Record<string, unknown>;
+          // Ensure nested fields exist as null when not set
+          if (typeof up.target !== 'string') up.target = null;
+          if (typeof up.launchTime !== 'string') up.launchTime = null;
+          if (typeof up.initialDistance !== 'number') up.initialDistance = null;
+          if (typeof up.distanceTraveled !== 'number')
+            up.distanceTraveled = null;
+          if (typeof up.previousDistanceTraveled !== 'number')
+            up.previousDistanceTraveled = null;
+
+          const next = {
+            ...s,
+            userPosition: { ...(s.userPosition ?? {}), ...up },
+            selectedSkinId:
+              s.selectedSkinId === undefined ? null : s.selectedSkinId,
+            username: s.username === undefined ? null : s.username,
+            version: 3,
+          } as unknown;
+
+          return next as typeof persistedState;
         }
 
         return persistedState;
@@ -909,8 +942,8 @@ function getCurrentPosition(position: UserPosition) {
   // CURRENT positions of the start and target bodies using traveled ratio.
   if (
     position.target &&
-    position.initialDistance !== undefined &&
-    position.distanceTraveled !== undefined
+    typeof position.initialDistance === 'number' &&
+    typeof position.distanceTraveled === 'number'
   ) {
     const start = getPlanetPosition(position.startingLocation);
     const target = getPlanetPosition(position.target);

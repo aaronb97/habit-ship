@@ -304,7 +304,7 @@ describe('store', () => {
 
     expect(traveling.current).toBe(false);
     expect(result.current.userPosition.startingLocation).toBe('The Moon');
-    expect(result.current.userPosition.target).toBeUndefined();
+    expect(result.current.userPosition.target).toBeNull();
     expect(result.current.completedPlanets.includes('The Moon')).toBe(true);
     const last = result.current.xpHistory[result.current.xpHistory.length - 1]!;
     expect(last.amount).toBe(moon.xpReward);
@@ -326,7 +326,7 @@ describe('store', () => {
     expect(result.current.isSetupFinished).toBe(false);
     expect(result.current.habits).toEqual([]);
     expect(result.current.userPosition.startingLocation).toBe('Earth');
-    expect(result.current.userPosition.target).toBeUndefined();
+    expect(result.current.userPosition.target).toBeNull();
     expect(result.current.completedPlanets).toEqual(['Earth']);
   });
 });
