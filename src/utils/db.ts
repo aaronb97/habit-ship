@@ -1,4 +1,6 @@
-import firestore from '@react-native-firebase/firestore';
+import firestore, {
+  FirebaseFirestoreTypes,
+} from '@react-native-firebase/firestore';
 import type { UserPosition } from '../types';
 
 /**
@@ -75,4 +77,229 @@ export async function usernameExists(username: string): Promise<boolean> {
     .limit(1)
     .get();
   return !snap.empty;
+}
+
+/**
+ * Friendship status values supported by the backend.
+ */
+export type FriendshipStatus = 'pending' | 'accepted';
+
+/**
+ * In-app representation of a friendship document.
+ * id: Firestore document id.
+ * user1: UID of the initiator.
+ * user2: UID of the recipient.
+ * status: Current state of the friendship.
+ */
+export type FriendshipDoc = {
+  id: string;
+  user1: string;
+  user2: string;
+  status: FriendshipStatus;
+};
+
+type Unsubscribe = () => void;
+
+/**
+ * Returns a reference to the `friendships` collection.
+ *
+ * Returns: Collection reference for the friendships collection.
+ */
+export function friendshipsCollection() {
+  return firestore().collection('friendships');
+}
+
+/**
+ * Maps a Firestore snapshot to typed `FriendshipDoc[]`.
+ *
+ * snap: Query snapshot from Firestore.
+ * Returns: Array of typed friendship rows.
+ */
+function mapFriendshipSnap(
+  snap: FirebaseFirestoreTypes.QuerySnapshot<FirebaseFirestoreTypes.DocumentData>,
+): FriendshipDoc[] {
+  return snap.docs.map((d) => ({
+    id: d.id,
+    ...(d.data() as Omit<FriendshipDoc, 'id'>),
+  }));
+}
+
+/**
+ * Observes all accepted friendships for the given uid.
+ * Internally merges two snapshots: user1==uid and user2==uid.
+ *
+ * uid: Firebase Authentication UID to observe for.
+ * onChange: Callback invoked with the merged set of accepted friendships.
+ * Returns: Unsubscribe function to remove all listeners.
+ */
+export function observeFriendshipsAccepted(
+  uid: string,
+  onChange: (rows: FriendshipDoc[]) => void,
+): Unsubscribe {
+  const col = friendshipsCollection();
+
+  let a: FriendshipDoc[] = [];
+  let b: FriendshipDoc[] = [];
+  const emit = () => onChange([...a, ...b]);
+
+  const unsub1 = col
+    .where('user1', '==', uid)
+    .where('status', '==', 'accepted')
+    .onSnapshot((snap) => {
+      a = mapFriendshipSnap(snap);
+      emit();
+    });
+
+  const unsub2 = col
+    .where('user2', '==', uid)
+    .where('status', '==', 'accepted')
+    .onSnapshot((snap) => {
+      b = mapFriendshipSnap(snap);
+      emit();
+    });
+
+  return () => {
+    unsub1();
+    unsub2();
+  };
+}
+
+/**
+ * Observes pending incoming friendship requests for the given uid.
+ *
+ * uid: Firebase Authentication UID to observe for.
+ * onChange: Callback invoked with the current set of incoming requests.
+ * Returns: Unsubscribe function.
+ */
+export function observeFriendshipsIncoming(
+  uid: string,
+  onChange: (rows: FriendshipDoc[]) => void,
+): Unsubscribe {
+  return friendshipsCollection()
+    .where('user2', '==', uid)
+    .where('status', '==', 'pending')
+    .onSnapshot((snap) => onChange(mapFriendshipSnap(snap)));
+}
+
+/**
+ * Observes pending outgoing friendship requests for the given uid.
+ *
+ * uid: Firebase Authentication UID to observe for.
+ * onChange: Callback invoked with the current set of outgoing requests.
+ * Returns: Unsubscribe function.
+ */
+export function observeFriendshipsOutgoing(
+  uid: string,
+  onChange: (rows: FriendshipDoc[]) => void,
+): Unsubscribe {
+  return friendshipsCollection()
+    .where('user1', '==', uid)
+    .where('status', '==', 'pending')
+    .onSnapshot((snap) => onChange(mapFriendshipSnap(snap)));
+}
+
+/**
+ * Accepts a pending incoming friend request by document id.
+ *
+ * docId: Firestore document id for the friendship.
+ */
+export async function acceptFriendship(docId: string): Promise<void> {
+  await friendshipsCollection()
+    .doc(docId)
+    .update({ status: 'accepted' as FriendshipStatus });
+}
+
+/**
+ * Declines (deletes) a pending incoming friend request by document id.
+ *
+ * docId: Firestore document id for the friendship.
+ */
+export async function declineFriendship(docId: string): Promise<void> {
+  await friendshipsCollection().doc(docId).delete();
+}
+
+/**
+ * Response shape for attempting to send a friend request by username.
+ */
+export type SendFriendRequestOutcome =
+  | { kind: 'created'; targetUid: string }
+  | { kind: 'not_found' }
+  | { kind: 'self' }
+  | { kind: 'already_friends' }
+  | { kind: 'already_pending' };
+
+/**
+ * Sends a friend request from one user to another resolved by username.
+ * Prevents self-requests and duplicates (both directions).
+ *
+ * fromUid: UID of the requester (user1).
+ * toUsername: Username of the recipient to resolve.
+ * Returns: Outcome describing the result of the operation.
+ */
+export async function sendFriendRequestByUsername(
+  fromUid: string,
+  toUsername: string,
+): Promise<SendFriendRequestOutcome> {
+  const name = toUsername.trim();
+  if (!name) return { kind: 'not_found' };
+
+  const targetUid = await getUidByUsername(name);
+  if (!targetUid) return { kind: 'not_found' };
+  if (targetUid === fromUid) return { kind: 'self' };
+
+  const col = friendshipsCollection();
+  const [a, b] = await Promise.all([
+    col
+      .where('user1', '==', fromUid)
+      .where('user2', '==', targetUid)
+      .limit(1)
+      .get(),
+    col
+      .where('user1', '==', targetUid)
+      .where('user2', '==', fromUid)
+      .limit(1)
+      .get(),
+  ]);
+
+  const existing = [...a.docs, ...b.docs];
+  if (existing.length > 0) {
+    const data = existing[0]!.data() as { status?: FriendshipStatus };
+    const status = data.status ?? 'pending';
+    if (status === 'accepted') return { kind: 'already_friends' };
+    return { kind: 'already_pending' };
+  }
+
+  await col.add({
+    user1: fromUid,
+    user2: targetUid,
+    status: 'pending' as FriendshipStatus,
+    createdAt: firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { kind: 'created', targetUid };
+}
+
+/**
+ * Resolves a set of user ids to usernames. Falls back to "(unknown)" when missing.
+ *
+ * uids: Array of user ids to resolve.
+ * Returns: Record mapping uid -> username or "(unknown)".
+ */
+export async function getUsernamesForUids(
+  uids: string[],
+): Promise<Record<string, string>> {
+  if (uids.length === 0) return {};
+  const entries: Record<string, string> = {};
+  await Promise.all(
+    uids.map(async (uid) => {
+      try {
+        const doc = await userDoc(uid).get();
+        const data = doc.data() as UsersDoc | undefined;
+        entries[uid] = data?.username ?? '(unknown)';
+      } catch {
+        entries[uid] = '(unknown)';
+      }
+    }),
+  );
+  return entries;
 }

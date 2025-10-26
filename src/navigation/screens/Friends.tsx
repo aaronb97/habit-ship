@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -11,31 +11,20 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import firestore from '@react-native-firebase/firestore';
 import { colors, fonts, fontSizes } from '../../styles/theme';
 import { useStore } from '../../utils/store';
-import { usersCollection, getUidByUsername } from '../../utils/db';
+import {
+  observeFriendshipsAccepted,
+  observeFriendshipsIncoming,
+  observeFriendshipsOutgoing,
+  acceptFriendship,
+  declineFriendship,
+  sendFriendRequestByUsername,
+  getUsernamesForUids,
+  type FriendshipDoc,
+} from '../../utils/db';
 import { HSButton } from '../../components/HSButton';
 import { MaterialIcons } from '@expo/vector-icons';
-
-/**
- * Friendship status values supported by the backend.
- */
-type FriendshipStatus = 'pending' | 'accepted';
-
-/**
- * In-app representation of a friendship document.
- * id: Firestore document id.
- * user1: UID of the initiator.
- * user2: UID of the recipient.
- * status: Current state of the friendship.
- */
-interface FriendshipDoc {
-  id: string;
-  user1: string;
-  user2: string;
-  status: FriendshipStatus;
-}
 
 /**
  * Returns the other user's UID from a friendship given the current user's UID.
@@ -67,78 +56,13 @@ export function Friends() {
   const [inputUsername, setInputUsername] = useState<string>('');
   const [busy, setBusy] = useState<boolean>(false);
 
-  // Derived set of all other-user UIDs to fetch usernames for
-  const allOtherUids = useMemo(() => {
-    if (!uid) return [] as string[];
-    const uids = new Set<string>();
-    for (const f of [...accepted, ...incoming, ...outgoing]) {
-      uids.add(otherUid(f, uid));
-    }
-    return Array.from(uids);
-  }, [accepted, incoming, outgoing, uid]);
-
   useEffect(() => {
     if (!uid) return;
-    const col = firestore().collection('friendships');
-
-    const unsubAccepted1 = col
-      .where('user1', '==', uid)
-      .where('status', '==', 'accepted')
-      .onSnapshot((snap) => {
-        const rows: FriendshipDoc[] = snap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<FriendshipDoc, 'id'>),
-        }));
-        setAccepted((prev) => {
-          // Merge with user2==uid accepted in a separate listener
-          const others = prev.filter(
-            (p) => !(p.user1 === uid && p.status === 'accepted'),
-          );
-          return [...others, ...rows];
-        });
-      });
-
-    const unsubAccepted2 = col
-      .where('user2', '==', uid)
-      .where('status', '==', 'accepted')
-      .onSnapshot((snap) => {
-        const rows: FriendshipDoc[] = snap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<FriendshipDoc, 'id'>),
-        }));
-        setAccepted((prev) => {
-          const others = prev.filter(
-            (p) => !(p.user2 === uid && p.status === 'accepted'),
-          );
-          return [...others, ...rows];
-        });
-      });
-
-    const unsubIncoming = col
-      .where('user2', '==', uid)
-      .where('status', '==', 'pending')
-      .onSnapshot((snap) => {
-        const rows: FriendshipDoc[] = snap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<FriendshipDoc, 'id'>),
-        }));
-        setIncoming(rows);
-      });
-
-    const unsubOutgoing = col
-      .where('user1', '==', uid)
-      .where('status', '==', 'pending')
-      .onSnapshot((snap) => {
-        const rows: FriendshipDoc[] = snap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<FriendshipDoc, 'id'>),
-        }));
-        setOutgoing(rows);
-      });
-
+    const unsubAccepted = observeFriendshipsAccepted(uid, setAccepted);
+    const unsubIncoming = observeFriendshipsIncoming(uid, setIncoming);
+    const unsubOutgoing = observeFriendshipsOutgoing(uid, setOutgoing);
     return () => {
-      unsubAccepted1();
-      unsubAccepted2();
+      unsubAccepted();
       unsubIncoming();
       unsubOutgoing();
     };
@@ -148,28 +72,21 @@ export function Friends() {
     // Fetch usernames for displayed UIDs if missing in cache
     async function load() {
       if (!uid) return;
-      const needed = allOtherUids.filter((u) => !usernamesByUid[u]);
+      const setUids = new Set<string>();
+      for (const f of [...accepted, ...incoming, ...outgoing]) {
+        setUids.add(otherUid(f, uid));
+      }
+      const all = Array.from(setUids);
+      const needed = all.filter((u) => !usernamesByUid[u]);
       if (needed.length === 0) return;
-      const entries: [string, string][] = [];
-      await Promise.all(
-        needed.map(async (other) => {
-          try {
-            const doc = await usersCollection().doc(other).get();
-            const data = doc.data();
-            const name = (data?.username as string | undefined) ?? '(unknown)';
-            entries.push([other, name]);
-          } catch {
-            entries.push([other, '(unknown)']);
-          }
-        }),
-      );
+      const map = await getUsernamesForUids(needed);
       setUsernamesByUid((prev) => ({
         ...prev,
-        ...Object.fromEntries(entries),
+        ...map,
       }));
     }
     void load();
-  }, [allOtherUids, uid, usernamesByUid]);
+  }, [accepted, incoming, outgoing, uid, usernamesByUid]);
 
   /**
    * Accepts a pending incoming friend request.
@@ -178,10 +95,7 @@ export function Friends() {
    */
   const acceptRequest = async (f: FriendshipDoc): Promise<void> => {
     try {
-      await firestore()
-        .collection('friendships')
-        .doc(f.id)
-        .update({ status: 'accepted' as FriendshipStatus });
+      await acceptFriendship(f.id);
     } catch (e) {
       Alert.alert('Error', 'Failed to accept request.');
       console.warn('Accept request failed', e);
@@ -195,7 +109,7 @@ export function Friends() {
    */
   const declineRequest = async (f: FriendshipDoc): Promise<void> => {
     try {
-      await firestore().collection('friendships').doc(f.id).delete();
+      await declineFriendship(f.id);
     } catch (e) {
       Alert.alert('Error', 'Failed to decline request.');
       console.warn('Decline request failed', e);
@@ -218,53 +132,26 @@ export function Friends() {
 
     try {
       setBusy(true);
-      const targetUid = await getUidByUsername(name);
-      if (!targetUid) {
-        Alert.alert('Not Found', `No user with username "${name}".`);
-        return;
-      }
-      if (targetUid === uid) {
-        Alert.alert('Oops', 'You cannot friend yourself.');
-        return;
-      }
-      const col = firestore().collection('friendships');
-      const [a, b] = await Promise.all([
-        col
-          .where('user1', '==', uid)
-          .where('user2', '==', targetUid)
-          .limit(1)
-          .get(),
-        col
-          .where('user1', '==', targetUid)
-          .where('user2', '==', uid)
-          .limit(1)
-          .get(),
-      ]);
-      const existing = [...a.docs, ...b.docs];
-      if (existing.length > 0) {
-        const doc = existing[0]!;
-        const data = doc.data() as { status?: FriendshipStatus };
-        const status = data.status ?? 'pending';
-        if (status === 'accepted') {
+      const outcome = await sendFriendRequestByUsername(uid, name);
+      switch (outcome.kind) {
+        case 'created':
+          Alert.alert('Request Sent', `Sent a request to ${name}.`);
+          setIsAdding(false);
+          setInputUsername('');
+          break;
+        case 'not_found':
+          Alert.alert('Not Found', `No user with username "${name}".`);
+          break;
+        case 'self':
+          Alert.alert('Oops', 'You cannot friend yourself.');
+          break;
+        case 'already_friends':
           Alert.alert('Already Friends', 'You are already friends.');
-        } else {
-          Alert.alert(
-            'Already Requested',
-            'A friend request is already pending.',
-          );
-        }
-        return;
+          break;
+        case 'already_pending':
+          Alert.alert('Already Requested', 'A friend request is already pending.');
+          break;
       }
-
-      await col.add({
-        user1: uid,
-        user2: targetUid,
-        status: 'pending' as FriendshipStatus,
-        createdAt: firestore.FieldValue.serverTimestamp(),
-      });
-      Alert.alert('Request Sent', `Sent a request to ${name}.`);
-      setIsAdding(false);
-      setInputUsername('');
     } catch (e) {
       Alert.alert('Error', 'Failed to send request.');
       console.warn('Send friend request failed', e);
