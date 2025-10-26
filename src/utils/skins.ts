@@ -187,6 +187,30 @@ const ROCKET_SKINS: Record<string, Skin> = {
     preview: require('../../assets/skins/Go Birds.png'),
     color: 0x4cbb17,
   },
+  Plaid: {
+    id: 'Plaid',
+    title: 'Plaid',
+    preview: require('../../assets/skins/Plaid.jpg'),
+    color: 0xff0000,
+  },
+  Maryland: {
+    id: 'Maryland',
+    title: 'Maryland',
+    preview: require('../../assets/skins/Maryland.png'),
+    color: 0xffff00,
+  },
+  Dirt: {
+    id: 'Dirt',
+    title: 'Dirt',
+    preview: require('../../assets/skins/Dirt.png'),
+    color: 0x8b4513,
+  },
+  Merriweather: {
+    id: 'Merriweather',
+    title: 'Merriweather',
+    preview: require('../../assets/skins/Merriweather.png'),
+    color: 0x00ff00,
+  },
 };
 
 // Merge registries for consumer convenience
