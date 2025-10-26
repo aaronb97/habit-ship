@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FriendshipDoc, UsersDoc } from '../utils/db';
 import {
   observeFriendshipsAccepted,
@@ -79,28 +79,69 @@ export function useFriendships(uid?: string): FriendshipsData {
     };
   }, [uid]);
 
-  // Fetch friend profiles (users docs) for accepted friendships
+  // Observe friend profiles (users docs) for accepted friendships in real-time
+  const friendProfileUnsubsRef = useRef<Map<string, () => void>>(new Map());
+
   useEffect(() => {
-    if (!uid) return;
-    if (accepted.length === 0) return;
+    // If uid is not available, detach all listeners and clear profiles
+    if (!uid) {
+      friendProfileUnsubsRef.current.forEach((unsub) => {
+        try {
+          unsub();
+        } catch {}
+      });
+      friendProfileUnsubsRef.current.clear();
+      setFriendProfiles({});
+      return;
+    }
+
     const uids = Array.from(new Set(accepted.map((f) => otherUid(f, uid))));
-    const missing = uids.filter((u) => friendProfiles[u] === undefined);
-    if (missing.length === 0) return;
-    void (async () => {
-      const entries: Record<string, UsersDoc | undefined> = {};
-      await Promise.all(
-        missing.map(async (u) => {
-          try {
-            const snap = await userDoc(u).get();
-            entries[u] = snap.data() as UsersDoc | undefined;
-          } catch {
-            entries[u] = undefined;
-          }
-        }),
+
+    // Unsubscribe listeners for friends no longer in the accepted set
+    friendProfileUnsubsRef.current.forEach((unsub, fid) => {
+      if (!uids.includes(fid)) {
+        try {
+          unsub();
+        } catch {}
+        friendProfileUnsubsRef.current.delete(fid);
+        setFriendProfiles((prev) => {
+          const next = { ...prev };
+          delete next[fid];
+          return next;
+        });
+      }
+    });
+
+    // Subscribe to new friends' user docs
+    uids.forEach((fid) => {
+      if (friendProfileUnsubsRef.current.has(fid)) return;
+      const unsub = userDoc(fid).onSnapshot(
+        (snap) => {
+          const data = snap.data() as UsersDoc | undefined;
+          setFriendProfiles((prev) => ({ ...prev, [fid]: data }));
+        },
+        () => {
+          setFriendProfiles((prev) => ({ ...prev, [fid]: undefined }));
+        },
       );
-      setFriendProfiles((prev) => ({ ...prev, ...entries }));
-    })();
-  }, [uid, accepted, friendProfiles]);
+      friendProfileUnsubsRef.current.set(fid, unsub);
+    });
+
+    // Cleanup handled incrementally above; full cleanup on unmount below
+  }, [uid, accepted]);
+
+  // On unmount, ensure all profile listeners are detached
+  useEffect(() => {
+    const mapAtMount = friendProfileUnsubsRef.current;
+    return () => {
+      mapAtMount.forEach((unsub) => {
+        try {
+          unsub();
+        } catch {}
+      });
+      mapAtMount.clear();
+    };
+  }, []);
 
   return {
     accepted,

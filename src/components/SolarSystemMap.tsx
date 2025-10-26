@@ -105,6 +105,10 @@ export function SolarSystemMap({
     Map<string, { key: string; theta: number; yaw: number }>
   >(new Map());
   const friendsRef = useRef<{ uid: string; profile: UsersDoc }[]>([]);
+  const friendAnimStateRef = useRef<
+    Map<string, { key: string; startTs: number; fromAbs: number; toAbs: number }>
+  >(new Map());
+  const friendDisplayedAbsRef = useRef<Map<string, number>>(new Map());
   useEffect(() => {
     friendsRef.current = friends ?? [];
   }, [friends]);
@@ -251,6 +255,11 @@ export function SolarSystemMap({
         } catch {}
         friendRocketsRef.current.delete(uid);
         friendMetaRef.current.delete(uid);
+        friendAnimStateRef.current.delete(uid);
+        friendDisplayedAbsRef.current.delete(uid);
+        if (friendStickyOverridesRef.current.has(uid)) {
+          friendStickyOverridesRef.current.delete(uid);
+        }
       }
     });
 
@@ -1154,6 +1163,85 @@ export function SolarSystemMap({
         if (cam && glCtx) {
           const resH = glCtx.drawingBufferHeight;
           const list = friendsRef.current;
+          const now = getCurrentTime();
+          const friendAnimView = new Map<
+            string,
+            { abs: number; tAlpha: number; traveling: boolean; key: string }
+          >();
+          for (const e of list) {
+            const uid = e.uid;
+            const fp = e.profile.userPosition;
+            const key = fp.target ? `${fp.startingLocation}|${fp.target}` : '';
+            const hasTravel =
+              !!fp.target &&
+              typeof fp.initialDistance === 'number' &&
+              typeof fp.distanceTraveled === 'number' &&
+              fp.initialDistance > 0;
+
+            if (!hasTravel) {
+              // Reset animation state if not traveling
+              const existing = friendAnimStateRef.current.get(uid);
+              if (existing) friendAnimStateRef.current.delete(uid);
+              friendDisplayedAbsRef.current.set(uid, 0);
+              friendAnimView.set(uid, { abs: 0, tAlpha: 0, traveling: false, key });
+              continue;
+            }
+
+            const denom = Math.max(1, fp.initialDistance ?? 1);
+            const newAbs = Math.min(1, Math.max(0, (fp.distanceTraveled ?? 0) / denom));
+            let state = friendAnimStateRef.current.get(uid);
+
+            // If key changed mid-flight, restart from current displayed value
+            if (state && state.key !== key) {
+              const elapsed = Math.max(0, now - state.startTs);
+              const t = Math.min(1, elapsed / HABIT_TRAVEL_ANIM_MS);
+              const ease = easeInOutCubic(t);
+              const currAbs = state.fromAbs + (state.toAbs - state.fromAbs) * ease;
+              friendDisplayedAbsRef.current.set(uid, currAbs);
+              state = undefined;
+              friendAnimStateRef.current.delete(uid);
+            }
+
+            const lastAbs = friendDisplayedAbsRef.current.get(uid) ?? newAbs;
+            const delta = Math.abs(newAbs - (state ? state.toAbs : lastAbs));
+            if (!state && delta > 1e-9) {
+              // Start a new animation from last displayed to new value
+              const fromAbs = lastAbs;
+              friendAnimStateRef.current.set(uid, {
+                key,
+                startTs: now,
+                fromAbs,
+                toAbs: newAbs,
+              });
+              state = friendAnimStateRef.current.get(uid)!;
+            } else if (state && Math.abs(newAbs - state.toAbs) > 1e-9) {
+              // Update running animation to head toward latest value
+              const elapsed = Math.max(0, now - state.startTs);
+              const t = Math.min(1, elapsed / HABIT_TRAVEL_ANIM_MS);
+              const ease = easeInOutCubic(t);
+              const currAbs = state.fromAbs + (state.toAbs - state.fromAbs) * ease;
+              state.fromAbs = currAbs;
+              state.toAbs = newAbs;
+              state.startTs = now;
+            }
+
+            let displayAbs = newAbs;
+            let tAlpha = 0;
+            if (state) {
+              const elapsed = Math.max(0, now - state.startTs);
+              const t = Math.min(1, elapsed / HABIT_TRAVEL_ANIM_MS);
+              tAlpha = t;
+              const ease = easeInOutCubic(t);
+              displayAbs = state.fromAbs + (state.toAbs - state.fromAbs) * ease;
+              if (t >= 1) {
+                // Settle and clear
+                friendAnimStateRef.current.delete(uid);
+              }
+            }
+            friendDisplayedAbsRef.current.set(uid, displayAbs);
+            const traveling = displayAbs > 0 + 1e-9 && displayAbs < 1 - 1e-9;
+            friendAnimView.set(uid, { abs: displayAbs, tAlpha, traveling, key });
+          }
           const userNow = useStore.getState().userPosition;
           const userTravelKey =
             userNow.target && typeof userNow.initialDistance === 'number' &&
@@ -1215,9 +1303,27 @@ export function SolarSystemMap({
 
               // Compute per-friend base position along centerline then offset
               const prof = list.find((x) => x.uid === entry.uid)?.profile;
-              const basePos = prof
-                ? computeFriendDisplayPos(prof.userPosition)
-                : new THREE.Vector3();
+              let basePos = new THREE.Vector3();
+              if (prof) {
+                const fp = prof.userPosition;
+                // Start with non-animated base for safety
+                basePos = computeFriendDisplayPos(fp);
+                // If anim view is available, lerp along path using animated fraction
+                const view = friendAnimView.get(entry.uid);
+                if (view && fp.target) {
+                  const startBody = PLANETS.find((b) => b.name === fp.startingLocation) ?? earth;
+                  const targetBody = PLANETS.find((b) => b.name === fp.target) ?? earth;
+                  const startCenter = toVec3(startBody.getVisualPosition());
+                  const targetCenter = toVec3(targetBody.getVisualPosition());
+                  const { startSurface, targetSurface } = Rocket.computeSurfaceEndpoints(
+                    startCenter,
+                    getVisualRadius(startBody.name),
+                    targetCenter,
+                    getVisualRadius(targetBody.name),
+                  );
+                  basePos = startSurface.clone().lerp(targetSurface, view.abs);
+                }
+              }
               const { pos, aim } = computeFriendTravelPosAim(
                 entry.start,
                 entry.target,
@@ -1237,7 +1343,31 @@ export function SolarSystemMap({
             const startOverride = clusterFriendOverrides.get(uid);
             const travelOverride = clusterFriendTravelOverrides.get(uid);
             const clusterKey = fp.target ? `${fp.startingLocation}|${fp.target}` : null;
-            let pos = (travelOverride ?? startOverride)?.pos ?? computeFriendDisplayPos(fp);
+            let pos = (travelOverride ?? startOverride)?.pos;
+            if (!pos) {
+              // Fallback to displayed base position (animated when possible)
+              const fallbackBase = computeFriendDisplayPos(fp);
+              if (fp.target) {
+                const startBody = PLANETS.find((b) => b.name === fp.startingLocation) ?? earth;
+                const targetBody = PLANETS.find((b) => b.name === fp.target) ?? earth;
+                const startCenter = toVec3(startBody.getVisualPosition());
+                const targetCenter = toVec3(targetBody.getVisualPosition());
+                const { startSurface, targetSurface } = Rocket.computeSurfaceEndpoints(
+                  startCenter,
+                  getVisualRadius(startBody.name),
+                  targetCenter,
+                  getVisualRadius(targetBody.name),
+                );
+                const view = friendAnimView.get(uid);
+                const abs = view ? view.abs : undefined;
+                pos =
+                  typeof abs === 'number'
+                    ? startSurface.clone().lerp(targetSurface, abs)
+                    : fallbackBase;
+              } else {
+                pos = fallbackBase;
+              }
+            }
             // Aim toward target surface if traveling; otherwise face current body
             const { startingLocation, target } = fp;
             const startBody =
@@ -1270,8 +1400,11 @@ export function SolarSystemMap({
               }
             }
             const aimPos = (travelOverride ?? startOverride)?.aim ?? defaultAim;
+            const view = friendAnimView.get(uid);
+            const traveling = view ? view.traveling : false;
+            const tAlpha = view ? view.tAlpha : 0;
             fr.setVisible(true);
-            fr.update(pos, aimPos, false, 0);
+            fr.update(pos, aimPos, traveling, tAlpha);
             fr.enforceMinimumApparentSize(cam, resH);
 
             // Clear sticky if the friend cleared target or changed key
