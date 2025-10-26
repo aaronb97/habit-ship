@@ -162,7 +162,8 @@ export function TabNavigator() {
         name="HomeTab"
         component={Home}
         options={{
-          title: '',
+          title:
+            Device.deviceType === Device.DeviceType.TABLET ? 'Dashboard' : '',
           tabBarBadge: homeNeedsSelection ? ' ' : undefined,
           ...(imageSources.homeWhite &&
             imageSources.homePrimary && {
@@ -178,7 +179,7 @@ export function TabNavigator() {
         name="MapTab"
         component={SolarMap}
         options={{
-          title: '',
+          title: Device.deviceType === Device.DeviceType.TABLET ? 'Rocket' : '',
           tabBarBadge: hasFuelAndTarget ? ' ' : undefined,
           ...(imageSources.mapWhite &&
             imageSources.mapPrimary && {
@@ -193,8 +194,10 @@ export function TabNavigator() {
       <Tab.Screen
         name="FriendsTab"
         options={{
-          title: '',
-          tabBarBadge: incoming.length > 0 ? String(incoming.length) : undefined,
+          title:
+            Device.deviceType === Device.DeviceType.TABLET ? 'Friends' : '',
+          tabBarBadge:
+            incoming.length > 0 ? String(incoming.length) : undefined,
           ...(imageSources.friendsWhite &&
             imageSources.friendsPrimary && {
               tabBarIcon: ({ focused }) =>
@@ -223,7 +226,8 @@ export function TabNavigator() {
         name="ProfileTab"
         component={Profile}
         options={{
-          title: '',
+          title:
+            Device.deviceType === Device.DeviceType.TABLET ? 'Profile' : '',
           tabBarBadge: unseenSkins.length > 0 ? ' ' : undefined,
           ...(imageSources.profileWhite &&
             imageSources.profilePrimary && {
@@ -244,7 +248,7 @@ export function TabNavigator() {
           name="DevTab"
           component={Dev}
           options={{
-            title: '',
+            title: Device.deviceType === Device.DeviceType.TABLET ? 'Dev' : '',
             tabBarIcon: () => ({ sfSymbol: 'gear' }),
             ...(imageSources.devWhite &&
               imageSources.devPrimary && {
@@ -275,10 +279,16 @@ export function TabNavigator() {
                 const profile = friendProfiles[fid];
                 return profile ? { uid: fid, profile } : undefined;
               })
-              .filter(Boolean) as { uid: string; profile: import('../utils/db').UsersDoc }[];
+              .filter(Boolean) as {
+              uid: string;
+              profile: import('../utils/db').UsersDoc;
+            }[];
 
             return (
-              <SolarSystemMap interactive={isMapFocused} friends={friendEntries} />
+              <SolarSystemMap
+                interactive={isMapFocused}
+                friends={friendEntries}
+              />
             );
           })()}
         </View>
