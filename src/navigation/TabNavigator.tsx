@@ -132,6 +132,23 @@ export function TabNavigator() {
         }}
       />
       <Tab.Screen
+        name="ProfileTab"
+        component={Profile}
+        options={{
+          title:
+            Device.deviceType === Device.DeviceType.TABLET ? 'Profile' : '',
+          tabBarBadge: unseenSkins.length > 0 ? ' ' : undefined,
+          ...(imageSources.profile && {
+            tabBarIcon: () => imageSources.profile!,
+          }),
+        }}
+        listeners={{
+          focus: () => {
+            setActiveTab('ProfileTab');
+          },
+        }}
+      />
+      <Tab.Screen
         name="FriendsTab"
         options={{
           title:
@@ -158,23 +175,6 @@ export function TabNavigator() {
           />
         )}
       </Tab.Screen>
-      <Tab.Screen
-        name="ProfileTab"
-        component={Profile}
-        options={{
-          title:
-            Device.deviceType === Device.DeviceType.TABLET ? 'Profile' : '',
-          tabBarBadge: unseenSkins.length > 0 ? ' ' : undefined,
-          ...(imageSources.profile && {
-            tabBarIcon: () => imageSources.profile!,
-          }),
-        }}
-        listeners={{
-          focus: () => {
-            setActiveTab('ProfileTab');
-          },
-        }}
-      />
       {isDevelopment && (
         <Tab.Screen
           name="DevTab"
