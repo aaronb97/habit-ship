@@ -10,7 +10,7 @@ import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation';
 import { SolarSystemMap } from '../components/SolarSystemMap';
 import { Dashboard } from '../components/Dashboard';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { AntDesign, Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { Friends } from './screens/Friends';
 import * as Device from 'expo-device';
 import { useFriendships } from '../hooks/useFriendships';
@@ -63,81 +63,22 @@ export function TabNavigator() {
   >({});
 
   useEffect(() => {
-    // Home: FontAwesome5 'tv'
-    void FontAwesome5.getImageSource('tv', ICON_SIZE, colors.white).then(
-      (source: ImageSourcePropType | null) => {
-        if (!source) return;
-        setImageSources((prev) => ({ ...prev, homeWhite: source }));
-      },
-    );
-    void FontAwesome5.getImageSource('tv', ICON_SIZE, colors.primary).then(
-      (source: ImageSourcePropType | null) => {
-        if (!source) return;
-        setImageSources((prev) => ({ ...prev, homePrimary: source }));
-      },
-    );
+    const iconNames = [
+      { key: 'home', name: 'tv-outline' },
+      { key: 'map', name: 'rocket-outline' },
+      { key: 'profile', name: 'person-outline' },
+      { key: 'friends', name: 'people-outline' },
+      { key: 'dev', name: 'cog-outline' },
+    ] as const;
 
-    void Ionicons.getImageSource(
-      'rocket-outline',
-      ICON_SIZE,
-      colors.white,
-    ).then((source: ImageSourcePropType | null) => {
-      if (!source) return;
-      setImageSources((prev) => ({ ...prev, mapWhite: source }));
+    iconNames.forEach(({ key, name }) => {
+      void Ionicons.getImageSource(name, ICON_SIZE, 'inherit').then(
+        (source: ImageSourcePropType | null) => {
+          if (!source) return;
+          setImageSources((prev) => ({ ...prev, [key]: source }));
+        },
+      );
     });
-    void Ionicons.getImageSource(
-      'rocket-outline',
-      ICON_SIZE,
-      colors.primary,
-    ).then((source: ImageSourcePropType | null) => {
-      if (!source) return;
-      setImageSources((prev) => ({ ...prev, mapPrimary: source }));
-    });
-
-    // Profile: FontAwesome5 'user'
-    void FontAwesome5.getImageSource('user', ICON_SIZE, colors.white).then(
-      (source: ImageSourcePropType | null) => {
-        if (!source) return;
-        setImageSources((prev) => ({ ...prev, profileWhite: source }));
-      },
-    );
-    void FontAwesome5.getImageSource('user', ICON_SIZE, colors.primary).then(
-      (source: ImageSourcePropType | null) => {
-        if (!source) return;
-        setImageSources((prev) => ({ ...prev, profilePrimary: source }));
-      },
-    );
-
-    // Friends: FontAwesome5 'user-friends'
-    void FontAwesome5.getImageSource(
-      'user-friends',
-      ICON_SIZE,
-      colors.white,
-    ).then((source: ImageSourcePropType | null) => {
-      if (!source) return;
-      setImageSources((prev) => ({ ...prev, friendsWhite: source }));
-    });
-    void FontAwesome5.getImageSource(
-      'user-friends',
-      ICON_SIZE,
-      colors.primary,
-    ).then((source: ImageSourcePropType | null) => {
-      if (!source) return;
-      setImageSources((prev) => ({ ...prev, friendsPrimary: source }));
-    });
-
-    void AntDesign.getImageSource('setting', ICON_SIZE, colors.white).then(
-      (source: ImageSourcePropType | null) => {
-        if (!source) return;
-        setImageSources((prev) => ({ ...prev, devWhite: source }));
-      },
-    );
-    void AntDesign.getImageSource('setting', ICON_SIZE, colors.primary).then(
-      (source: ImageSourcePropType | null) => {
-        if (!source) return;
-        setImageSources((prev) => ({ ...prev, devPrimary: source }));
-      },
-    );
   }, []);
 
   useEffect(() => {
@@ -165,11 +106,9 @@ export function TabNavigator() {
           title:
             Device.deviceType === Device.DeviceType.TABLET ? 'Dashboard' : '',
           tabBarBadge: homeNeedsSelection ? ' ' : undefined,
-          ...(imageSources.homeWhite &&
-            imageSources.homePrimary && {
-              tabBarIcon: ({ focused }) =>
-                focused ? imageSources.homePrimary! : imageSources.homeWhite!,
-            }),
+          ...(imageSources.home && {
+            tabBarIcon: () => imageSources.home!,
+          }),
         }}
         listeners={{
           focus: () => setActiveTab('HomeTab'),
@@ -181,11 +120,9 @@ export function TabNavigator() {
         options={{
           title: Device.deviceType === Device.DeviceType.TABLET ? 'Rocket' : '',
           tabBarBadge: hasFuelAndTarget ? ' ' : undefined,
-          ...(imageSources.mapWhite &&
-            imageSources.mapPrimary && {
-              tabBarIcon: ({ focused }) =>
-                focused ? imageSources.mapPrimary! : imageSources.mapWhite!,
-            }),
+          ...(imageSources.map && {
+            tabBarIcon: () => imageSources.map!,
+          }),
         }}
         listeners={{
           focus: () => setActiveTab('MapTab'),
@@ -198,13 +135,9 @@ export function TabNavigator() {
             Device.deviceType === Device.DeviceType.TABLET ? 'Friends' : '',
           tabBarBadge:
             incoming.length > 0 ? String(incoming.length) : undefined,
-          ...(imageSources.friendsWhite &&
-            imageSources.friendsPrimary && {
-              tabBarIcon: ({ focused }) =>
-                focused
-                  ? imageSources.friendsPrimary!
-                  : imageSources.friendsWhite!,
-            }),
+          ...(imageSources.friends && {
+            tabBarIcon: () => imageSources.friends!,
+          }),
         }}
         listeners={{
           focus: () => setActiveTab('FriendsTab'),
@@ -229,13 +162,9 @@ export function TabNavigator() {
           title:
             Device.deviceType === Device.DeviceType.TABLET ? 'Profile' : '',
           tabBarBadge: unseenSkins.length > 0 ? ' ' : undefined,
-          ...(imageSources.profileWhite &&
-            imageSources.profilePrimary && {
-              tabBarIcon: ({ focused }) =>
-                focused
-                  ? imageSources.profilePrimary!
-                  : imageSources.profileWhite!,
-            }),
+          ...(imageSources.profile && {
+            tabBarIcon: () => imageSources.profile!,
+          }),
         }}
         listeners={{
           focus: () => {
@@ -250,11 +179,9 @@ export function TabNavigator() {
           options={{
             title: Device.deviceType === Device.DeviceType.TABLET ? 'Dev' : '',
             tabBarIcon: () => ({ sfSymbol: 'gear' }),
-            ...(imageSources.devWhite &&
-              imageSources.devPrimary && {
-                tabBarIcon: ({ focused }) =>
-                  focused ? imageSources.devPrimary! : imageSources.devWhite!,
-              }),
+            ...(imageSources.dev && {
+              tabBarIcon: () => imageSources.dev!,
+            }),
           }}
           listeners={{
             focus: () => setActiveTab('DevTab'),
