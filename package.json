@@ -7,7 +7,7 @@
     "lint:style": "eslint --config eslint.precommit.config.js --fix",
     "lint:fix": "eslint . --fix; npm run lint:style; prettier . --write; npm run lint:style",
     "tsc:watch": "tsc --watch",
-    "start": "concurrently \"tsc --watch\" \"expo start --dev-client\"",
+    "start": "APP_VARIANT=development concurrently \"tsc --watch\" \"expo start --dev-client\"",
     "web": "expo start --web",
     "android": "expo run:android",
     "ios": "expo run:ios",
