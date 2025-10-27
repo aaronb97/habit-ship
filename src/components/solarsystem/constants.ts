@@ -70,7 +70,7 @@ export const INERTIA_STOP_EPSILON = 1e-6;
 
 // Renderer & scene
 // Clear color for the WebGL renderer.
-export const RENDERER_CLEAR_COLOR = 0x101018;
+export const RENDERER_CLEAR_COLOR = 0x000000;
 // Clear alpha for the renderer background.
 export const RENDERER_CLEAR_ALPHA = 1;
 // Pixel ratio for the renderer (1 keeps things predictable across devices in GLView).

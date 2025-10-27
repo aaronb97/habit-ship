@@ -56,6 +56,7 @@ export default {
     'react-native-edge-to-edge',
     '@react-native-firebase/app',
     '@react-native-firebase/auth',
+    '@react-native-firebase/crashlytics',
     'react-native-bottom-tabs',
     [
       'expo-build-properties',

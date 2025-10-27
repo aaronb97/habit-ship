@@ -49,6 +49,8 @@ export class CelestialBodyNode {
   private disposed = false;
   private outlineGlobalEnabled = true;
   private unsubOutlines?: () => void;
+  // Optional mesh for planetary rings (e.g., Saturn)
+  private ringMesh?: THREE.Mesh;
 
   // Cache visual radius on creation (in scene units before mesh scaling)
   private readonly visualRadiusBase: number;
@@ -94,6 +96,7 @@ export class CelestialBodyNode {
         this.mesh.add(ringMesh);
       } catch {}
     }
+    this.ringMesh = ringMesh;
 
     // Orientation: align equator horizontally, then apply axial tilt about X
     this.mesh.rotation.x = PLANET_MESH_X_ROTATION;
@@ -185,6 +188,79 @@ export class CelestialBodyNode {
         this.trail = line;
       }
     }
+  }
+
+  /**
+   * Applies or clears the body surface texture by swapping the mesh material.
+   * When a texture is provided, planets/moons use a Lambert material with the
+   * map; the Sun uses a Basic material to appear self-lit. When null, materials
+   * revert to untextured colored variants.
+   *
+   * Parameters:
+   * - texture: Texture to apply to the body surface, or null to clear.
+   */
+  setBodyTexture(texture: THREE.Texture | null): void {
+    if (this.disposed) return;
+    const name = this.body.name;
+
+    // Dispose previous material but do not dispose shared texture maps
+    const old = this.mesh.material as MappedMaterial | MappedMaterial[];
+    if (Array.isArray(old)) {
+      old.forEach((m) => (m as THREE.Material).dispose());
+    } else {
+      (old as THREE.Material).dispose();
+    }
+
+    let mat: MappedMaterial;
+    if (texture) {
+      mat =
+        name === 'Sun'
+          ? new THREE.MeshBasicMaterial({ map: texture })
+          : new THREE.MeshLambertMaterial({ map: texture });
+    } else {
+      mat =
+        name === 'Sun'
+          ? new THREE.MeshBasicMaterial({ color: this.body.color })
+          : new THREE.MeshLambertMaterial({ color: this.body.color });
+    }
+
+    this.mesh.material = mat;
+  }
+
+  /**
+   * Applies or updates the ring texture for ringed bodies (e.g., Saturn).
+   * Lazily creates the ring mesh if it is not present.
+   *
+   * Parameters:
+   * - texture: Ring texture with transparency to apply.
+   */
+  setRingTexture(texture: THREE.Texture): void {
+    if (this.disposed) return;
+    if (this.body.name !== 'Saturn') return;
+
+    if (!this.ringMesh) {
+      try {
+        const ring = createSaturnRings(this.visualRadiusBase, texture);
+        this.mesh.add(ring);
+        this.ringMesh = ring;
+      } catch {}
+      return;
+    }
+
+    // Replace material on existing ring mesh
+    try {
+      const prev = this.ringMesh.material as THREE.Material;
+      prev.dispose();
+    } catch {}
+
+    const newMat = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      alphaTest: 0.3,
+    });
+    this.ringMesh.material = newMat;
   }
 
   setResolution(res: THREE.Vector2) {

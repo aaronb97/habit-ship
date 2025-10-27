@@ -17,6 +17,11 @@ import { calculateLevel, getDailyDistanceForLevel } from './experience';
 import { hasSkinForBody, ALL_SKIN_IDS, ROCKET_SKIN_IDS } from './skins';
 // username is assigned during initial Firestore sync to ensure uniqueness
 import { signOutForDevResets } from './firebaseAuth';
+import crashlytics from '@react-native-firebase/crashlytics';
+
+// =================================================================
+// HELPER FUNCTIONS
+// =================================================================
 
 // =================================================================
 // TYPES
@@ -59,10 +64,6 @@ export type Habit = {
   completions: string[];
   timerLength?: number; // in seconds
 };
-
-// =================================================================
-// HELPER FUNCTIONS
-// =================================================================
 
 export function calculateDistance(a: Coordinates, b: Coordinates): number {
   return Math.sqrt(
@@ -445,7 +446,10 @@ export const useStore = create<Store>()(
       hideLevelUp: () =>
         set({ isLevelUpModalVisible: false, levelUpInfo: undefined }),
       setLastLevelUpSeenLevel: (level) => set({ lastLevelUpSeenLevel: level }),
-      setActiveTab: (tab) => set({ activeTab: tab }),
+      setActiveTab: (tab) => {
+        set({ activeTab: tab });
+        crashlytics().log(`Active tab changed to ${tab}`);
+      },
       // Skins
       setSelectedSkinId: (skinId) => {
         set((state) => {
@@ -882,6 +886,8 @@ export const useStore = create<Store>()(
       storage: createJSONStorage(() => AsyncStorage),
       version: 4,
       migrate: (persistedState, version) => {
+        crashlytics().log(`Migrating store from version ${version}`);
+
         if (version === 3) {
           const store = persistedState as Store;
           if (store.totalXP > 0) store.totalXP += 200;

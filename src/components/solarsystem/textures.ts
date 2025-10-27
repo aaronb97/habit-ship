@@ -8,6 +8,14 @@ import { SKINS } from '../../utils/skins';
 const skinTextureCache = new Map<string, THREE.Texture>();
 const skinTexturePending = new Map<string, Promise<THREE.Texture>>();
 
+// Caches for individual body textures to allow incremental async loading
+const bodyTextureCache = new Map<string, THREE.Texture>();
+const bodyTexturePending = new Map<string, Promise<THREE.Texture>>();
+
+// Caches for individual ring textures (e.g., Saturn)
+const ringTextureCache = new Map<string, THREE.Texture>();
+const ringTexturePending = new Map<string, Promise<THREE.Texture>>();
+
 // Map planet/star names to their texture assets in assets/cbodies
 // We use require() so Metro bundles the images and Expo Asset can resolve to a local URI.
 const BODY_TEXTURE_REQUIRE: Record<string, number> = {
@@ -35,6 +43,55 @@ const BODY_TEXTURE_REQUIRE: Record<string, number> = {
 const RING_TEXTURE_REQUIRE: Record<string, number> = {
   Saturn: require('../../../assets/cbodies/saturn_rings.png'),
 };
+
+/**
+ * Loads a single celestial body texture asynchronously with caching.
+ * If the texture is already cached or in-flight, it will reuse it.
+ *
+ * Parameters:
+ * - name: Body name (e.g., 'Earth', 'Mars'). Must exist in BODY_TEXTURE_REQUIRE.
+ *
+ * Returns: Promise resolving to the loaded THREE.Texture.
+ */
+export async function loadBodyTexture(name: string): Promise<THREE.Texture> {
+  const req = BODY_TEXTURE_REQUIRE[name];
+  if (!req) {
+    throw new Error(`[textures] No texture mapping found for body ${name}`);
+  }
+
+  const cached = bodyTextureCache.get(name);
+  if (cached) return cached;
+
+  let pending = bodyTexturePending.get(name);
+  if (!pending) {
+    pending = (async () => {
+      const asset = Asset.fromModule(req);
+      try {
+        await asset.downloadAsync();
+      } catch (err) {
+        console.warn(
+          `[textures] downloadAsync failed for ${name}, using uri fallback`,
+          err,
+        );
+      }
+      const src = asset.localUri ?? asset.uri;
+      const loader = new TextureLoader();
+      const tex = await loader.loadAsync(src);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = TEXTURE_ANISOTROPY;
+      bodyTextureCache.set(name, tex);
+      return tex;
+    })();
+    bodyTexturePending.set(name, pending);
+  }
+
+  try {
+    const tex = await pending;
+    return tex;
+  } finally {
+    bodyTexturePending.delete(name);
+  }
+}
 
 export async function loadBodyTextures(
   names: string[],
@@ -65,6 +122,58 @@ export async function loadBodyTextures(
   }
 
   return textures;
+}
+
+/**
+ * Loads a single ring texture asynchronously with caching.
+ * If the texture is already cached or in-flight, it will reuse it.
+ *
+ * Parameters:
+ * - name: Name of the body with a ring texture mapping (e.g., 'Saturn').
+ *
+ * Returns: Promise resolving to the loaded THREE.Texture.
+ */
+export async function loadRingTexture(name: string): Promise<THREE.Texture> {
+  const req = RING_TEXTURE_REQUIRE[name];
+  if (!req) {
+    throw new Error(`[textures] No ring texture mapping found for body ${name}`);
+  }
+
+  const cached = ringTextureCache.get(name);
+  if (cached) return cached;
+
+  let pending = ringTexturePending.get(name);
+  if (!pending) {
+    pending = (async () => {
+      const asset = Asset.fromModule(req);
+      try {
+        await asset.downloadAsync();
+      } catch (err) {
+        console.warn(
+          `[textures] downloadAsync failed for ring ${name}, using uri fallback`,
+          err,
+        );
+      }
+
+      const src = asset.localUri ?? asset.uri;
+      const loader = new TextureLoader();
+      const tex = await loader.loadAsync(src);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = TEXTURE_ANISOTROPY;
+      tex.wrapS = THREE.ClampToEdgeWrapping;
+      tex.wrapT = THREE.ClampToEdgeWrapping;
+      ringTextureCache.set(name, tex);
+      return tex;
+    })();
+    ringTexturePending.set(name, pending);
+  }
+
+  try {
+    const tex = await pending;
+    return tex;
+  } finally {
+    ringTexturePending.delete(name);
+  }
 }
 
 /**

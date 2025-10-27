@@ -27,8 +27,8 @@ import { useDebugValues } from '../hooks/useDebugValues';
 import { toVec3 } from './solarsystem/helpers';
 import { type MappedMaterial } from './solarsystem/builders';
 import {
-  loadBodyTextures,
-  loadRingTextures,
+  loadBodyTexture,
+  loadRingTexture,
   loadSkinTextures,
 } from './solarsystem/textures';
 import { createSky } from './solarsystem/sky';
@@ -66,6 +66,7 @@ import {
 import { getSkinById } from '../utils/skins';
 import { DebugOverlay } from './DebugOverlay';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import analytics from '@react-native-firebase/analytics';
 
 // [moved] Helpers moved to './solarsystem/helpers'.
 
@@ -95,6 +96,8 @@ export function SolarSystemMap({
   const loopFnRef = useRef<(() => void) | null>(null);
   const isAppActiveRef = useRef<boolean>(true);
   const lastFrameTsRef = useRef<number>(0);
+  const firstRenderStartRef = useRef<number>(0);
+  const firstRenderLoggedRef = useRef<boolean>(false);
 
   const rocketRef = useRef<Rocket | null>(null);
   const displayUserPosRef = useRef<THREE.Vector3>(new THREE.Vector3());
@@ -769,6 +772,7 @@ export function SolarSystemMap({
 
   const onContextCreate = async (gl: ExpoWebGLRenderingContext) => {
     glRef.current = gl;
+    firstRenderStartRef.current = performance.now();
 
     // Renderer
     const renderer = new Renderer({ gl });
@@ -789,22 +793,16 @@ export function SolarSystemMap({
     scene.background = new THREE.Color(colors.background);
     sceneRef.current = scene;
 
-    // Sky sphere: wrap the scene with a starfield texture
+    // Sky sphere: wrap the scene with a starfield texture (loads texture async)
     try {
-      const skyMesh = await createSky();
+      const skyMesh = createSky();
       skyRef.current = skyMesh;
       scene.add(skyMesh);
     } catch (e) {
-      console.warn('[SolarSystemMap] Failed to load sky texture', e);
+      console.warn('[SolarSystemMap] Failed to initialize sky', e);
     }
 
-    // Conditionally preload textures (initial setting only)
-    const texturesByName = showTextures
-      ? await loadBodyTextures(PLANETS.map((p) => p.name))
-      : {};
-    const ringTexturesByName = showTextures
-      ? await loadRingTextures(PLANETS.map((p) => p.name))
-      : {};
+    // Do not preload textures here; first render should not wait on IO.
 
     const camera = new THREE.PerspectiveCamera(
       CAMERA_FOV,
@@ -908,115 +906,6 @@ export function SolarSystemMap({
     // Lights
     addDefaultLights(scene);
 
-    // Preload heavy assets used by rockets to avoid repeated OBJ parsing
-    try {
-      await Rocket.preloadModel();
-    } catch (e) {
-      console.warn('[SolarSystemMap] Rocket.preloadModel failed', e);
-    }
-
-    // Create Rocket instance (with outline matching rocket color)
-    try {
-      const resolution = new THREE.Vector2(
-        drawingBufferWidth,
-        drawingBufferHeight,
-      );
-
-      const rocket = await Rocket.create({
-        color: rocketColorFromStore,
-        scene,
-        camera,
-        composer,
-        resolution,
-      });
-
-      rocketRef.current = rocket;
-      scene.add(rocket.group);
-      // Hide rocket until a target is set
-      const hasTarget = !!useStore.getState().userPosition.target;
-      rocket.setVisible(hasTarget);
-
-      // Apply any persisted selected skin immediately on creation
-      try {
-        const persistedSkinId = useStore.getState().selectedSkinId;
-        if (persistedSkinId) {
-          const texMap = await loadSkinTextures([persistedSkinId]);
-          const tex = texMap[persistedSkinId] ?? null;
-          const skin = getSkinById(persistedSkinId);
-          rocket.setBodyTexture(tex, skin?.color);
-        } else {
-          rocket.setBodyTexture(null);
-        }
-      } catch {
-        // ignore
-      }
-    } catch (e) {
-      console.warn('[SolarSystemMap] Failed to create Rocket, skipping model');
-      console.warn(e);
-    }
-
-    // Initialize friend rockets for the current friends list (parallelized + batched skins)
-    try {
-      const glCtx = glRef.current;
-      const resolution = new THREE.Vector2(
-        glCtx.drawingBufferWidth,
-        glCtx.drawingBufferHeight,
-      );
-      const list = friendsRef.current;
-      const missing = list.filter((e) => !friendRocketsRef.current.has(e.uid));
-
-      const skinIds = Array.from(
-        new Set(
-          list
-            .map((e) => e.profile.selectedSkinId)
-            .filter((v): v is string => typeof v === 'string' && v.length > 0),
-        ),
-      );
-
-      const skinPromise = loadSkinTextures(skinIds);
-      const createPromises = missing.map(async ({ uid, profile }) => {
-        try {
-          const fr = await Rocket.create({
-            color: profile.rocketColor,
-            scene,
-            camera,
-            composer,
-            resolution,
-            withoutOutline: true,
-            useBasicMaterials: true,
-          });
-          friendRocketsRef.current.set(uid, fr);
-          scene.add(fr.group);
-          friendMetaRef.current.set(uid, {
-            rocketColor: profile.rocketColor,
-            selectedSkinId: profile.selectedSkinId,
-          });
-        } catch {}
-      });
-
-      const [skinMap] = await Promise.all([
-        skinPromise,
-        Promise.all(createPromises),
-      ]);
-
-      // Apply skins after both creations and skin loads complete
-      for (const { uid, profile } of list) {
-        const fr = friendRocketsRef.current.get(uid);
-        if (!fr) continue;
-        if (profile.selectedSkinId) {
-          const tex = skinMap[profile.selectedSkinId] ?? null;
-          const skin = getSkinById(profile.selectedSkinId);
-          try {
-            fr.setBodyTexture(tex, skin?.color);
-          } catch {}
-        } else {
-          try {
-            fr.setBodyTexture(null);
-          } catch {}
-        }
-      }
-    } catch {}
-
     const relevantSystems = getRelevantPlanetSystems();
     const unlockedBodies = getUnlockedBodies();
     const visitedBodies = getVisitedBodies();
@@ -1031,16 +920,14 @@ export function SolarSystemMap({
     );
 
     PLANETS.forEach((p) => {
-      const texture = showTextures ? texturesByName[p.name] : undefined;
-      const ringTexture = showTextures ? ringTexturesByName[p.name] : undefined;
       const node = new CelestialBodyNode({
         body: p,
         scene,
         camera,
         composer,
         resolution,
-        texture,
-        ringTexture,
+        texture: undefined,
+        ringTexture: undefined,
         initialTrailsEnabled: useStore.getState().showTrails,
       });
 
@@ -1635,11 +1522,87 @@ export function SolarSystemMap({
       }
 
       gl.endFrameEXP();
+
+      // Log time-to-first-render once, right after the first frame is submitted
+      if (!firstRenderLoggedRef.current) {
+        firstRenderLoggedRef.current = true;
+        const ttfrMs = Math.max(0, Math.round(performance.now() - firstRenderStartRef.current));
+        try {
+          void analytics().logEvent('time_to_first_render', { ms: ttfrMs });
+        } catch {}
+      }
       frameRef.current = requestAnimationFrame(renderLoop);
     };
 
     loopFnRef.current = renderLoop;
     frameRef.current = requestAnimationFrame(renderLoop);
+
+    // After the loop has started, load textures asynchronously and apply to nodes
+    if (showTextures) {
+      for (const p of PLANETS) {
+        const name = p.name;
+        void loadBodyTexture(name)
+          .then((tex) => {
+            const node = bodyRegistryRef.current.get(name);
+            if (node) node.setBodyTexture(tex);
+          })
+          .catch((e) => {
+            console.warn(`[SolarSystemMap] Failed to load body texture for ${name}`, e);
+          });
+      }
+
+      // Saturn rings (if present)
+      const saturn = PLANETS.find((b) => b.name === 'Saturn');
+      if (saturn) {
+        void loadRingTexture('Saturn')
+          .then((tex) => {
+            const node = bodyRegistryRef.current.get('Saturn');
+            if (node) node.setRingTexture(tex);
+          })
+          .catch((e) => {
+            console.warn('[SolarSystemMap] Failed to load Saturn ring texture', e);
+          });
+      }
+    }
+
+    // Preload and create the user's rocket asynchronously to avoid blocking first frame
+    void (async () => {
+      try {
+        await Rocket.preloadModel();
+      } catch (e) {
+        console.warn('[SolarSystemMap] Rocket.preloadModel failed', e);
+      }
+
+      try {
+        const rocketRes = new THREE.Vector2(
+          drawingBufferWidth,
+          drawingBufferHeight,
+        );
+        const rocket = await Rocket.create({
+          color: rocketColorFromStore,
+          scene,
+          camera,
+          composer,
+          resolution: rocketRes,
+        });
+        rocketRef.current = rocket;
+        scene.add(rocket.group);
+        // Hide rocket until a target is set
+        const hasTarget = !!useStore.getState().userPosition.target;
+        rocket.setVisible(hasTarget);
+
+        // Apply any persisted selected skin
+        try {
+          const persistedSkinId = useStore.getState().selectedSkinId;
+          if (persistedSkinId) {
+            const texMap = await loadSkinTextures([persistedSkinId]);
+            const tex = texMap[persistedSkinId] ?? null;
+            const skin = getSkinById(persistedSkinId);
+            rocket.setBodyTexture(tex, skin?.color);
+          }
+        } catch {}
+      } catch {}
+    })();
   };
 
   useEffect(() => {
