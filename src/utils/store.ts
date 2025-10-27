@@ -120,6 +120,8 @@ type Store = {
   showDebugOverlay: boolean;
   outlinesBodiesEnabled: boolean;
   outlinesRocketEnabled: boolean;
+  // When enabled, Dev screen shows all rockets from DB instead of just friends
+  showAllRockets: boolean;
 
   username: string | null;
 
@@ -202,6 +204,7 @@ type Store = {
   setShowDebugOverlay: (value: boolean) => void;
   setOutlinesBodiesEnabled: (value: boolean) => void;
   setOutlinesRocketEnabled: (value: boolean) => void;
+  setShowAllRockets: (value: boolean) => void;
   setLevelUpModalVisible: (value: boolean) => void;
   /**
    * Show the inline Level Up content with provided details and set
@@ -271,10 +274,6 @@ type Store = {
   setUsername: (name: string | null | undefined) => void;
 };
 
-type StoreV1 = Omit<Store, 'target'> & {
-  target: { name: string };
-};
-
 const initialData = {
   isSetupFinished: false,
   habits: [],
@@ -305,6 +304,7 @@ const initialData = {
   showDebugOverlay: false,
   outlinesBodiesEnabled: false,
   outlinesRocketEnabled: true,
+  showAllRockets: false,
   skipRocketAnimation: false,
   showJourneyRemaining: false,
   showFuelCapacity: false,
@@ -438,6 +438,7 @@ export const useStore = create<Store>()(
         set({ outlinesBodiesEnabled: value }),
       setOutlinesRocketEnabled: (value) =>
         set({ outlinesRocketEnabled: value }),
+      setShowAllRockets: (value) => set({ showAllRockets: value }),
       setLevelUpModalVisible: (value) => set({ isLevelUpModalVisible: value }),
       showLevelUp: (info) =>
         set({ isLevelUpModalVisible: true, levelUpInfo: info }),
@@ -503,6 +504,7 @@ export const useStore = create<Store>()(
           showTrails,
           outlinesBodiesEnabled,
           outlinesRocketEnabled,
+          showAllRockets,
           skipRocketAnimation,
           tiltShiftEnabled,
           tiltShiftFocus,
@@ -524,6 +526,7 @@ export const useStore = create<Store>()(
           showTrails,
           outlinesBodiesEnabled,
           outlinesRocketEnabled,
+          showAllRockets,
           skipRocketAnimation,
           tiltShiftEnabled,
           tiltShiftFocus,
@@ -877,49 +880,18 @@ export const useStore = create<Store>()(
     {
       name: 'space-explorer-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 3,
+      version: 4,
       migrate: (persistedState, version) => {
-        // v1 -> v2 migration (existing)
-        if (version === 1) {
-          const v1State = persistedState as StoreV1;
-          const migrated = {
-            ...v1State,
-            target: v1State.target.name,
-            version: 2,
-          } as unknown as Record<string, unknown>;
-          // Fall through to v2->v3 migration by updating version variable
-          persistedState = migrated as unknown as typeof persistedState;
-          version = 2;
-        }
+        if (version === 3) {
+          const store = persistedState as Store;
+          if (store.totalXP > 0) store.totalXP += 200;
 
-        // v2 -> v3 migration: normalize unset fields to null for network serialization
-        if (version === 2) {
-          const s = persistedState as Record<string, unknown> & {
-            userPosition?: Partial<UserPosition>;
-            selectedSkinId?: string | null;
-            username?: string | null;
-          };
-          const up = { ...(s.userPosition ?? {}) } as Partial<UserPosition> &
-            Record<string, unknown>;
-          // Ensure nested fields exist as null when not set
-          if (typeof up.target !== 'string') up.target = null;
-          if (typeof up.launchTime !== 'string') up.launchTime = null;
-          if (typeof up.initialDistance !== 'number') up.initialDistance = null;
-          if (typeof up.distanceTraveled !== 'number')
-            up.distanceTraveled = null;
-          if (typeof up.previousDistanceTraveled !== 'number')
-            up.previousDistanceTraveled = null;
-
-          const next = {
-            ...s,
-            userPosition: { ...(s.userPosition ?? {}), ...up },
-            selectedSkinId:
-              s.selectedSkinId === undefined ? null : s.selectedSkinId,
-            username: s.username === undefined ? null : s.username,
-            version: 3,
-          } as unknown;
-
-          return next as typeof persistedState;
+          const { userPosition } = store;
+          if (
+            userPosition.distanceTraveled &&
+            userPosition.distanceTraveled > 0
+          )
+            userPosition.distanceTraveled += 26_000_000;
         }
 
         return persistedState;

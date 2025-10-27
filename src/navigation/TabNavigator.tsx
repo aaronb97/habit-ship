@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Friends } from './screens/Friends';
 import * as Device from 'expo-device';
 import { useFriendships } from '../hooks/useFriendships';
+import { useAllUsers } from '../hooks/useAllUsers';
 
 const ICON_SIZE = 24;
 
@@ -40,6 +41,7 @@ export function TabNavigator() {
   const unseenSkins = useStore((s) => s.unseenUnlockedSkins);
   const isSetupFinished = useStore((s) => s.isSetupFinished);
   const uid = useStore((s) => s.firebaseId);
+  const showAllRockets = useStore((s) => s.showAllRockets);
   const {
     accepted,
     incoming,
@@ -49,6 +51,7 @@ export function TabNavigator() {
     loadingOutgoing,
     friendProfiles,
   } = useFriendships(uid);
+  const { profiles: allProfiles } = useAllUsers(!!showAllRockets);
   // Inline flows now manage destination prompts; no need to read userPosition or level-up modal here.
   const isMapFocused = activeTab === 'MapTab';
 
@@ -198,18 +201,29 @@ export function TabNavigator() {
         <View style={styles.mapOverlay} pointerEvents={'none'}>
           {(() => {
             // Build friend entries (uid + profile) without useMemo for React compiler compatibility
-            const friendUids = new Set(
-              accepted.map((f) => (f.user1 === uid ? f.user2 : f.user1)),
-            );
-            const friendEntries = Array.from(friendUids)
-              .map((fid) => {
-                const profile = friendProfiles[fid];
-                return profile ? { uid: fid, profile } : undefined;
-              })
-              .filter(Boolean) as {
-              uid: string;
-              profile: import('../utils/db').UsersDoc;
-            }[];
+            const friendEntries = (() => {
+              if (showAllRockets) {
+                return Object.entries(allProfiles)
+                  .filter(([id, profile]) => !!profile && id !== uid)
+                  .map(([id, profile]) => ({
+                    uid: id,
+                    profile: profile as import('../utils/db').UsersDoc,
+                  }));
+              }
+
+              const friendUids = new Set(
+                accepted.map((f) => (f.user1 === uid ? f.user2 : f.user1)),
+              );
+              return Array.from(friendUids)
+                .map((fid) => {
+                  const profile = friendProfiles[fid];
+                  return profile ? { uid: fid, profile } : undefined;
+                })
+                .filter(Boolean) as {
+                uid: string;
+                profile: import('../utils/db').UsersDoc;
+              }[];
+            })();
 
             return (
               <SolarSystemMap

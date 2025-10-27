@@ -75,6 +75,7 @@ export const RENDERER_CLEAR_COLOR = 0x101018;
 export const RENDERER_CLEAR_ALPHA = 1;
 // Pixel ratio for the renderer (1 keeps things predictable across devices in GLView).
 export const RENDERER_PIXEL_RATIO = 1;
+export const RENDER_MAX_FPS = 120;
 // MSAA samples for GLView; 0 disables to avoid unsupported configurations on some devices.
 export const GL_MSAA_SAMPLES = 0;
 // Camera projection parameters.

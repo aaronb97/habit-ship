@@ -146,6 +146,13 @@ export function Dev() {
             />
           </View>
           <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Show All Rockets (DB)</Text>
+            <Switch
+              value={!!store.showAllRockets}
+              onValueChange={(v) => store.setShowAllRockets(v)}
+            />
+          </View>
+          <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Skip Rocket Animation</Text>
             <Switch
               value={!!store.skipRocketAnimation}

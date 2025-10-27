@@ -4,6 +4,10 @@ import { Asset } from 'expo-asset';
 import { TEXTURE_ANISOTROPY } from './constants';
 import { SKINS } from '../../utils/skins';
 
+// Simple in-memory caches for skin textures to avoid redundant loads/decodes
+const skinTextureCache = new Map<string, THREE.Texture>();
+const skinTexturePending = new Map<string, Promise<THREE.Texture>>();
+
 // Map planet/star names to their texture assets in assets/cbodies
 // We use require() so Metro bundles the images and Expo Asset can resolve to a local URI.
 const BODY_TEXTURE_REQUIRE: Record<string, number> = {
@@ -74,30 +78,63 @@ export async function loadSkinTextures(
   names: string[],
 ): Promise<Record<string, THREE.Texture>> {
   const textures: Record<string, THREE.Texture> = {};
-  const loader = new TextureLoader();
+  const unique = Array.from(new Set(names));
+  const tasks: Promise<void>[] = [];
 
-  for (const id of names) {
+  for (const id of unique) {
     const skin = SKINS[id];
-    if (!skin) continue;
-    try {
-      const asset = Asset.fromModule(skin.preview);
-      try {
-        await asset.downloadAsync();
-      } catch (err) {
-        console.warn(
-          `[textures] downloadAsync failed for skin ${id}, using uri fallback`,
-          err,
-        );
-      }
-      const src = asset.localUri ?? asset.uri;
-      const tex = await loader.loadAsync(src);
-      tex.name = id;
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.anisotropy = TEXTURE_ANISOTROPY;
-      textures[id] = tex;
-    } catch (e) {
-      console.warn(`[textures] Failed to load texture for skin ${id}`, e);
+    if (!skin) {
+      continue;
     }
+
+    // If already cached, reuse immediately
+    const cached = skinTextureCache.get(id);
+    if (cached) {
+      textures[id] = cached;
+      continue;
+    }
+
+    // If a load is in-flight, await it
+    let pending = skinTexturePending.get(id);
+    if (!pending) {
+      pending = (async () => {
+        const asset = Asset.fromModule(skin.preview);
+        try {
+          await asset.downloadAsync();
+        } catch (err) {
+          console.warn(
+            `[textures] downloadAsync failed for skin ${id}, using uri fallback`,
+            err,
+          );
+        }
+        const src = asset.localUri ?? asset.uri;
+        const loader = new TextureLoader();
+        const tex = await loader.loadAsync(src);
+        tex.name = id;
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.anisotropy = TEXTURE_ANISOTROPY;
+        return tex;
+      })();
+      skinTexturePending.set(id, pending);
+    }
+
+    tasks.push(
+      pending
+        .then((tex) => {
+          skinTextureCache.set(id, tex);
+          textures[id] = tex;
+        })
+        .catch((e) => {
+          console.warn(`[textures] Failed to load texture for skin ${id}`, e);
+        })
+        .finally(() => {
+          skinTexturePending.delete(id);
+        }),
+    );
+  }
+
+  if (tasks.length > 0) {
+    await Promise.all(tasks);
   }
 
   return textures;

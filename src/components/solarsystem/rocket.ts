@@ -243,25 +243,10 @@ export class Rocket {
     withoutOutline = false,
     useBasicMaterials = false,
   }: CreateArgs): Promise<Rocket> {
-    const rocketAsset = Asset.fromModule(
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      require('../../../assets/Rocket.obj'),
-    );
-
-    try {
-      await rocketAsset.downloadAsync();
-    } catch (err) {
-      console.warn(
-        '[rocket] downloadAsync failed for Rocket.obj, using uri fallback',
-        err,
-      );
-    }
-    const loader = new OBJLoader();
-    const uri = rocketAsset.localUri ?? rocketAsset.uri;
-    const obj: THREE.Group = await new Promise((resolve, reject) => {
-      loader.load(uri, resolve, undefined, reject);
-    });
-
+    // Ensure base model is preloaded once, then clone it for this instance
+    await Rocket.preloadModel();
+    const obj = Rocket.cloneBaseModel();
+    // Apply default orientation expected by the scene (nose along +Z)
     obj.rotation.x = THREE.MathUtils.degToRad(-90);
 
     applyRocketMaterials(obj, color, Boolean(useBasicMaterials));
@@ -303,11 +288,7 @@ export class Rocket {
     );
   }
 
-  setResolution(v: THREE.Vector2) {
-    if (this.outlinePass) {
-      this.outlinePass.resolution.copy(v);
-    }
-  }
+  setResolution(v: THREE.Vector2) {}
 
   setVisible(visible: boolean) {
     this.group.visible = visible;
@@ -344,8 +325,7 @@ export class Rocket {
    * accentColor: Optional 24-bit integer color used for the outline while textured.
    */
   setBodyTexture(texture: THREE.Texture | null, accentColor?: number) {
-    // Dispose previous texture (if any) and clear maps when null
-    const prev = this.currentTexture;
+    // Clear maps when null and update current texture reference
     this.currentTexture = texture;
 
     // Ensure we have consistent UVs across the hull parts
@@ -412,11 +392,7 @@ export class Rocket {
       applyRocketMaterials(this.hull, this.baseColor, this.useBasicMaterials);
     }
 
-    if (prev && prev !== texture) {
-      try {
-        prev.dispose();
-      } catch {}
-    }
+    // Do not dispose textures here; textures may be shared via a global cache.
   }
 
   getOrbitCenter(): THREE.Vector3 {
@@ -644,5 +620,65 @@ export class Rocket {
       );
 
     return { startSurface, targetSurface };
+  }
+
+  // ==========================
+  // Static model cache / cloning
+  // ==========================
+  private static baseModelPromise?: Promise<THREE.Group>;
+  private static baseModel?: THREE.Group;
+
+  /**
+   * Preloads and parses the Rocket OBJ model once, caching the base THREE.Group.
+   * Subsequent `create()` calls will clone this cached group instead of reparsing.
+   */
+  static async preloadModel(): Promise<void> {
+    if (Rocket.baseModel) return;
+    if (!Rocket.baseModelPromise) {
+      Rocket.baseModelPromise = (async () => {
+        const rocketAsset = Asset.fromModule(
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          require('../../../assets/Rocket.obj'),
+        );
+        try {
+          await rocketAsset.downloadAsync();
+        } catch (err) {
+          console.warn(
+            '[rocket] downloadAsync failed for Rocket.obj, using uri fallback',
+            err,
+          );
+        }
+        const loader = new OBJLoader();
+        const uri = rocketAsset.localUri ?? rocketAsset.uri;
+        const group: THREE.Group = await new Promise((resolve, reject) => {
+          loader.load(uri, resolve, undefined, reject);
+        });
+        return group;
+      })();
+    }
+
+    try {
+      Rocket.baseModel = await Rocket.baseModelPromise;
+    } catch (e) {
+      // On failure, clear promise so future attempts can retry
+      Rocket.baseModelPromise = undefined;
+      throw e;
+    }
+  }
+
+  /**
+   * Returns a deep clone of the cached base model. Materials are intentionally
+   * left as-is so instance creation can re-apply desired materials/colors.
+   */
+  private static cloneBaseModel(): THREE.Group {
+    if (!Rocket.baseModel) {
+      throw new Error(
+        'Rocket base model not loaded. Call preloadModel() first.',
+      );
+    }
+    // Deep clone hierarchy; geometry references are shared which is desired.
+    // Materials will be replaced per-instance by applyRocketMaterials()/setBodyTexture().
+    const cloned = Rocket.baseModel.clone(true);
+    return cloned;
   }
 }

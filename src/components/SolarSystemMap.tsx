@@ -49,6 +49,7 @@ import {
   RENDERER_CLEAR_COLOR,
   RENDERER_CLEAR_ALPHA,
   RENDERER_PIXEL_RATIO,
+  RENDER_MAX_FPS,
   GL_MSAA_SAMPLES,
   CAMERA_FOV,
   CAMERA_NEAR,
@@ -93,6 +94,7 @@ export function SolarSystemMap({
   const bodyRegistryRef = useRef<BodyNodesRegistry>(new BodyNodesRegistry());
   const loopFnRef = useRef<(() => void) | null>(null);
   const isAppActiveRef = useRef<boolean>(true);
+  const lastFrameTsRef = useRef<number>(0);
 
   const rocketRef = useRef<Rocket | null>(null);
   const displayUserPosRef = useRef<THREE.Vector3>(new THREE.Vector3());
@@ -106,7 +108,10 @@ export function SolarSystemMap({
   >(new Map());
   const friendsRef = useRef<{ uid: string; profile: UsersDoc }[]>([]);
   const friendAnimStateRef = useRef<
-    Map<string, { key: string; startTs: number; fromAbs: number; toAbs: number }>
+    Map<
+      string,
+      { key: string; startTs: number; fromAbs: number; toAbs: number }
+    >
   >(new Map());
   const friendDisplayedAbsRef = useRef<Map<string, number>>(new Map());
   useEffect(() => {
@@ -263,42 +268,55 @@ export function SolarSystemMap({
       }
     });
 
-    // Create or update rockets for current users
+    // Create or update rockets for current users (parallelized + batched skins)
     const run = async () => {
-      for (const { uid, profile } of list) {
-        let fr = friendRocketsRef.current.get(uid);
-        if (!fr) {
-          try {
-            fr = await Rocket.create({
-              color: profile.rocketColor,
-              scene,
-              camera,
-              composer,
-              resolution,
-              withoutOutline: true,
-              useBasicMaterials: true,
-            });
-            friendRocketsRef.current.set(uid, fr);
-            scene.add(fr.group);
-          } catch {
-            continue;
-          }
-        }
+      const missing = list.filter((e) => !friendRocketsRef.current.has(e.uid));
+      const skinIds = Array.from(
+        new Set(
+          list
+            .map((e) => e.profile.selectedSkinId)
+            .filter((v): v is string => typeof v === 'string' && v.length > 0),
+        ),
+      );
 
-        // Update base color if changed
+      const skinPromise = loadSkinTextures(skinIds);
+      const createPromises = missing.map(async ({ uid, profile }) => {
+        try {
+          const fr = await Rocket.create({
+            color: profile.rocketColor,
+            scene,
+            camera,
+            composer,
+            resolution,
+            withoutOutline: true,
+            useBasicMaterials: true,
+          });
+          friendRocketsRef.current.set(uid, fr);
+          scene.add(fr.group);
+        } catch {}
+      });
+
+      const [skinMap] = await Promise.all([
+        skinPromise,
+        Promise.all(createPromises),
+      ]);
+
+      // Apply appearance updates for all friends
+      for (const { uid, profile } of list) {
+        const fr = friendRocketsRef.current.get(uid);
+        if (!fr) continue;
         const prevMeta = friendMetaRef.current.get(uid);
+
         if (!prevMeta || prevMeta.rocketColor !== profile.rocketColor) {
           try {
             fr.setColor(profile.rocketColor);
           } catch {}
         }
 
-        // Update skin if changed
         if (!prevMeta || prevMeta.selectedSkinId !== profile.selectedSkinId) {
           try {
             if (profile.selectedSkinId) {
-              const texMap = await loadSkinTextures([profile.selectedSkinId]);
-              const tex = texMap[profile.selectedSkinId] ?? null;
+              const tex = skinMap[profile.selectedSkinId] ?? null;
               const skin = getSkinById(profile.selectedSkinId);
               fr.setBodyTexture(tex, skin?.color);
             } else {
@@ -607,7 +625,10 @@ export function SolarSystemMap({
       .clone()
       .multiplyScalar(Math.cos(theta))
       .add(u.clone().multiplyScalar(Math.sin(theta)));
-    const newDir = dirN.clone().add(offsetDir.multiplyScalar(alpha)).normalize();
+    const newDir = dirN
+      .clone()
+      .add(offsetDir.multiplyScalar(alpha))
+      .normalize();
     const pos = startCenter.clone().add(newDir.multiplyScalar(startRadius));
 
     const aimDir = baseAimDir.clone().applyAxisAngle(dirN, yaw);
@@ -648,7 +669,8 @@ export function SolarSystemMap({
       .clone()
       .multiplyScalar(Math.cos(theta))
       .add(u.clone().multiplyScalar(Math.sin(theta)));
-    const lateralMag = Math.max(0, ROCKET_LANDING_SPREAD_FRACTION) *
+    const lateralMag =
+      Math.max(0, ROCKET_LANDING_SPREAD_FRACTION) *
       getVisualRadius(startBody.name);
     const pos = basePos.clone().add(lateralDir.multiplyScalar(lateralMag));
 
@@ -886,6 +908,13 @@ export function SolarSystemMap({
     // Lights
     addDefaultLights(scene);
 
+    // Preload heavy assets used by rockets to avoid repeated OBJ parsing
+    try {
+      await Rocket.preloadModel();
+    } catch (e) {
+      console.warn('[SolarSystemMap] Rocket.preloadModel failed', e);
+    }
+
     // Create Rocket instance (with outline matching rocket color)
     try {
       const resolution = new THREE.Vector2(
@@ -926,7 +955,7 @@ export function SolarSystemMap({
       console.warn(e);
     }
 
-    // Initialize friend rockets for the current friends list
+    // Initialize friend rockets for the current friends list (parallelized + batched skins)
     try {
       const glCtx = glRef.current;
       const resolution = new THREE.Vector2(
@@ -934,9 +963,18 @@ export function SolarSystemMap({
         glCtx.drawingBufferHeight,
       );
       const list = friendsRef.current;
-      for (const entry of list) {
-        const { uid, profile } = entry;
-        if (friendRocketsRef.current.has(uid)) continue;
+      const missing = list.filter((e) => !friendRocketsRef.current.has(e.uid));
+
+      const skinIds = Array.from(
+        new Set(
+          list
+            .map((e) => e.profile.selectedSkinId)
+            .filter((v): v is string => typeof v === 'string' && v.length > 0),
+        ),
+      );
+
+      const skinPromise = loadSkinTextures(skinIds);
+      const createPromises = missing.map(async ({ uid, profile }) => {
         try {
           const fr = await Rocket.create({
             color: profile.rocketColor,
@@ -949,20 +987,33 @@ export function SolarSystemMap({
           });
           friendRocketsRef.current.set(uid, fr);
           scene.add(fr.group);
-          // Apply selected skin (if any)
-          if (profile.selectedSkinId) {
-            try {
-              const texMap = await loadSkinTextures([profile.selectedSkinId]);
-              const tex = texMap[profile.selectedSkinId] ?? null;
-              const skin = getSkinById(profile.selectedSkinId);
-              fr.setBodyTexture(tex, skin?.color);
-            } catch {}
-          }
           friendMetaRef.current.set(uid, {
             rocketColor: profile.rocketColor,
             selectedSkinId: profile.selectedSkinId,
           });
         } catch {}
+      });
+
+      const [skinMap] = await Promise.all([
+        skinPromise,
+        Promise.all(createPromises),
+      ]);
+
+      // Apply skins after both creations and skin loads complete
+      for (const { uid, profile } of list) {
+        const fr = friendRocketsRef.current.get(uid);
+        if (!fr) continue;
+        if (profile.selectedSkinId) {
+          const tex = skinMap[profile.selectedSkinId] ?? null;
+          const skin = getSkinById(profile.selectedSkinId);
+          try {
+            fr.setBodyTexture(tex, skin?.color);
+          } catch {}
+        } else {
+          try {
+            fr.setBodyTexture(null);
+          } catch {}
+        }
       }
     } catch {}
 
@@ -1016,11 +1067,25 @@ export function SolarSystemMap({
 
     // (Final copy pass is added in createComposer)
 
+    const minFrameMs = 1000 / RENDER_MAX_FPS;
+
     // Animation loop
     const renderLoop = () => {
       if (!isAppActiveRef.current) {
         return;
       }
+
+      const nowTs = performance.now();
+      const lastTs = lastFrameTsRef.current;
+      let frameDeltaMs = 0;
+      if (lastTs > 0) {
+        frameDeltaMs = nowTs - lastTs;
+        if (frameDeltaMs < minFrameMs) {
+          frameRef.current = requestAnimationFrame(renderLoop);
+          return;
+        }
+      }
+      lastFrameTsRef.current = nowTs;
 
       const { showTrails } = useStore.getState();
 
@@ -1088,9 +1153,13 @@ export function SolarSystemMap({
 
           clusters.forEach((arr, key) => {
             const n = arr.length;
-            const shouldOffset = n > 1 || (userKey && key === userKey && n >= 1);
+            const shouldOffset =
+              n > 1 || (userKey && key === userKey && n >= 1);
             if (!shouldOffset) return;
-            const angStep = Math.min(Math.PI / 4, (2 * Math.PI) / Math.max(3, n + 1));
+            const angStep = Math.min(
+              Math.PI / 4,
+              (2 * Math.PI) / Math.max(3, n + 1),
+            );
             const sorted = [...arr].sort((a, b) => (a.uid < b.uid ? -1 : 1));
             sorted.forEach((entry, idx) => {
               const rel = idx - (n - 1) / 2;
@@ -1187,12 +1256,20 @@ export function SolarSystemMap({
               const existing = friendAnimStateRef.current.get(uid);
               if (existing) friendAnimStateRef.current.delete(uid);
               friendDisplayedAbsRef.current.set(uid, 0);
-              friendAnimView.set(uid, { abs: 0, tAlpha: 0, traveling: false, key });
+              friendAnimView.set(uid, {
+                abs: 0,
+                tAlpha: 0,
+                traveling: false,
+                key,
+              });
               continue;
             }
 
             const denom = Math.max(1, fp.initialDistance ?? 1);
-            const newAbs = Math.min(1, Math.max(0, (fp.distanceTraveled ?? 0) / denom));
+            const newAbs = Math.min(
+              1,
+              Math.max(0, (fp.distanceTraveled ?? 0) / denom),
+            );
             let state = friendAnimStateRef.current.get(uid);
 
             // If key changed mid-flight, restart from current displayed value
@@ -1200,7 +1277,8 @@ export function SolarSystemMap({
               const elapsed = Math.max(0, now - state.startTs);
               const t = Math.min(1, elapsed / HABIT_TRAVEL_ANIM_MS);
               const ease = easeInOutCubic(t);
-              const currAbs = state.fromAbs + (state.toAbs - state.fromAbs) * ease;
+              const currAbs =
+                state.fromAbs + (state.toAbs - state.fromAbs) * ease;
               friendDisplayedAbsRef.current.set(uid, currAbs);
               state = undefined;
               friendAnimStateRef.current.delete(uid);
@@ -1223,7 +1301,8 @@ export function SolarSystemMap({
               const elapsed = Math.max(0, now - state.startTs);
               const t = Math.min(1, elapsed / HABIT_TRAVEL_ANIM_MS);
               const ease = easeInOutCubic(t);
-              const currAbs = state.fromAbs + (state.toAbs - state.fromAbs) * ease;
+              const currAbs =
+                state.fromAbs + (state.toAbs - state.fromAbs) * ease;
               state.fromAbs = currAbs;
               state.toAbs = newAbs;
               state.startTs = now;
@@ -1244,14 +1323,21 @@ export function SolarSystemMap({
             }
             friendDisplayedAbsRef.current.set(uid, displayAbs);
             const traveling = displayAbs > 0 + 1e-9 && displayAbs < 1 - 1e-9;
-            friendAnimView.set(uid, { abs: displayAbs, tAlpha, traveling, key });
+            friendAnimView.set(uid, {
+              abs: displayAbs,
+              tAlpha,
+              traveling,
+              key,
+            });
           }
           const userNow = useStore.getState().userPosition;
           const userTravelKey =
-            userNow.target && typeof userNow.initialDistance === 'number' &&
+            userNow.target &&
+            typeof userNow.initialDistance === 'number' &&
             typeof userNow.distanceTraveled === 'number' &&
             (userNow.distanceTraveled ?? 0) > 1e-9 &&
-            (userNow.initialDistance ?? 0) - (userNow.distanceTraveled ?? 0) > 1e-9
+            (userNow.initialDistance ?? 0) - (userNow.distanceTraveled ?? 0) >
+              1e-9
               ? `${userNow.startingLocation}|${userNow.target}`
               : null;
           type Entry = { uid: string; start: string; target: string };
@@ -1271,7 +1357,11 @@ export function SolarSystemMap({
                 arr = [];
                 travelClusters.set(key, arr);
               }
-              arr.push({ uid: e.uid, start: fp.startingLocation, target: fp.target });
+              arr.push({
+                uid: e.uid,
+                start: fp.startingLocation,
+                target: fp.target,
+              });
             }
           }
 
@@ -1283,7 +1373,10 @@ export function SolarSystemMap({
             const n = arr.length;
             if (n <= 0) return;
             const includeUser = userTravelKey === key;
-            const angStep = Math.min(Math.PI / 4, (2 * Math.PI) / Math.max(3, (includeUser ? n + 1 : n)));
+            const angStep = Math.min(
+              Math.PI / 4,
+              (2 * Math.PI) / Math.max(3, includeUser ? n + 1 : n),
+            );
             const sorted = [...arr].sort((a, b) => (a.uid < b.uid ? -1 : 1));
             sorted.forEach((entry, idx) => {
               let rel = idx - (n - 1) / 2;
@@ -1315,16 +1408,20 @@ export function SolarSystemMap({
                 // If anim view is available, lerp along path using animated fraction
                 const view = friendAnimView.get(entry.uid);
                 if (view && fp.target) {
-                  const startBody = PLANETS.find((b) => b.name === fp.startingLocation) ?? earth;
-                  const targetBody = PLANETS.find((b) => b.name === fp.target) ?? earth;
+                  const startBody =
+                    PLANETS.find((b) => b.name === fp.startingLocation) ??
+                    earth;
+                  const targetBody =
+                    PLANETS.find((b) => b.name === fp.target) ?? earth;
                   const startCenter = toVec3(startBody.getVisualPosition());
                   const targetCenter = toVec3(targetBody.getVisualPosition());
-                  const { startSurface, targetSurface } = Rocket.computeSurfaceEndpoints(
-                    startCenter,
-                    getVisualRadius(startBody.name),
-                    targetCenter,
-                    getVisualRadius(targetBody.name),
-                  );
+                  const { startSurface, targetSurface } =
+                    Rocket.computeSurfaceEndpoints(
+                      startCenter,
+                      getVisualRadius(startBody.name),
+                      targetCenter,
+                      getVisualRadius(targetBody.name),
+                    );
                   basePos = startSurface.clone().lerp(targetSurface, view.abs);
                 }
               }
@@ -1346,22 +1443,27 @@ export function SolarSystemMap({
             const fp = prof.userPosition;
             const startOverride = clusterFriendOverrides.get(uid);
             const travelOverride = clusterFriendTravelOverrides.get(uid);
-            const clusterKey = fp.target ? `${fp.startingLocation}|${fp.target}` : null;
+            const clusterKey = fp.target
+              ? `${fp.startingLocation}|${fp.target}`
+              : null;
             let pos = (travelOverride ?? startOverride)?.pos;
             if (!pos) {
               // Fallback to displayed base position (animated when possible)
               const fallbackBase = computeFriendDisplayPos(fp);
               if (fp.target) {
-                const startBody = PLANETS.find((b) => b.name === fp.startingLocation) ?? earth;
-                const targetBody = PLANETS.find((b) => b.name === fp.target) ?? earth;
+                const startBody =
+                  PLANETS.find((b) => b.name === fp.startingLocation) ?? earth;
+                const targetBody =
+                  PLANETS.find((b) => b.name === fp.target) ?? earth;
                 const startCenter = toVec3(startBody.getVisualPosition());
                 const targetCenter = toVec3(targetBody.getVisualPosition());
-                const { startSurface, targetSurface } = Rocket.computeSurfaceEndpoints(
-                  startCenter,
-                  getVisualRadius(startBody.name),
-                  targetCenter,
-                  getVisualRadius(targetBody.name),
-                );
+                const { startSurface, targetSurface } =
+                  Rocket.computeSurfaceEndpoints(
+                    startCenter,
+                    getVisualRadius(startBody.name),
+                    targetCenter,
+                    getVisualRadius(targetBody.name),
+                  );
                 const view = friendAnimView.get(uid);
                 const abs = view ? view.abs : undefined;
                 pos =
@@ -1391,7 +1493,11 @@ export function SolarSystemMap({
               // If we have a sticky start override, apply it
               if (!startOverride && clusterKey) {
                 const sticky = friendStickyOverridesRef.current.get(uid);
-                if (sticky && sticky.key === clusterKey && (fp.distanceTraveled ?? 0) <= 1e-9) {
+                if (
+                  sticky &&
+                  sticky.key === clusterKey &&
+                  (fp.distanceTraveled ?? 0) <= 1e-9
+                ) {
                   const res = computeFriendSurfacePosAim(
                     startingLocation,
                     target ?? startingLocation,
