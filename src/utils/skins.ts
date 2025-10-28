@@ -241,6 +241,12 @@ const ROCKET_SKINS: Record<string, Skin> = {
     preview: require('../../assets/skins/Rate Chart.png'),
     color: 0xfdf1cb,
   },
+  Retro: {
+    id: 'Retro',
+    title: 'Retro',
+    preview: require('../../assets/skins/Retro.png'),
+    color: 0xffffff,
+  },
 };
 
 // Merge registries for consumer convenience
