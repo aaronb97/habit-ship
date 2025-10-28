@@ -1,9 +1,8 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-// Metro configuration for Expo
-// Adds support for bundling OBJ model files as static assets
-const { getDefaultConfig } = require('expo/metro-config');
+const {
+  getSentryExpoConfig
+} = require("@sentry/react-native/metro");
 
-const config = getDefaultConfig(__dirname);
+const config = getSentryExpoConfig(__dirname);
 
 // Ensure .obj files are treated as assets
 config.resolver.assetExts = [...config.resolver.assetExts, 'obj'];

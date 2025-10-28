@@ -66,7 +66,7 @@ import {
 import { getSkinById } from '../utils/skins';
 import { DebugOverlay } from './DebugOverlay';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import analytics from '@react-native-firebase/analytics';
+import * as Sentry from '@sentry/react-native';
 
 // [moved] Helpers moved to './solarsystem/helpers'.
 
@@ -1526,10 +1526,14 @@ export function SolarSystemMap({
       // Log time-to-first-render once, right after the first frame is submitted
       if (!firstRenderLoggedRef.current) {
         firstRenderLoggedRef.current = true;
-        const ttfrMs = Math.max(0, Math.round(performance.now() - firstRenderStartRef.current));
-        try {
-          void analytics().logEvent('time_to_first_render', { ms: ttfrMs });
-        } catch {}
+        const ttfrMs = Math.max(
+          0,
+          Math.round(performance.now() - firstRenderStartRef.current),
+        );
+
+        Sentry.logger.info(`Time to first render: ${ttfrMs}ms`, {
+          user: useStore.getState().username,
+        });
       }
       frameRef.current = requestAnimationFrame(renderLoop);
     };
@@ -1547,7 +1551,10 @@ export function SolarSystemMap({
             if (node) node.setBodyTexture(tex);
           })
           .catch((e) => {
-            console.warn(`[SolarSystemMap] Failed to load body texture for ${name}`, e);
+            console.warn(
+              `[SolarSystemMap] Failed to load body texture for ${name}`,
+              e,
+            );
           });
       }
 
@@ -1560,7 +1567,10 @@ export function SolarSystemMap({
             if (node) node.setRingTexture(tex);
           })
           .catch((e) => {
-            console.warn('[SolarSystemMap] Failed to load Saturn ring texture', e);
+            console.warn(
+              '[SolarSystemMap] Failed to load Saturn ring texture',
+              e,
+            );
           });
       }
     }

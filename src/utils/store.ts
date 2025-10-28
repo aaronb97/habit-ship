@@ -17,15 +17,7 @@ import { calculateLevel, getDailyDistanceForLevel } from './experience';
 import { hasSkinForBody, ALL_SKIN_IDS, ROCKET_SKIN_IDS } from './skins';
 // username is assigned during initial Firestore sync to ensure uniqueness
 import { signOutForDevResets } from './firebaseAuth';
-import crashlytics from '@react-native-firebase/crashlytics';
-
-// =================================================================
-// HELPER FUNCTIONS
-// =================================================================
-
-// =================================================================
-// TYPES
-// =================================================================
+import * as Sentry from '@sentry/react-native';
 
 export type HabitId = string & { __habitId: true };
 
@@ -448,7 +440,6 @@ export const useStore = create<Store>()(
       setLastLevelUpSeenLevel: (level) => set({ lastLevelUpSeenLevel: level }),
       setActiveTab: (tab) => {
         set({ activeTab: tab });
-        crashlytics().log(`Active tab changed to ${tab}`);
       },
       // Skins
       setSelectedSkinId: (skinId) => {
@@ -886,7 +877,9 @@ export const useStore = create<Store>()(
       storage: createJSONStorage(() => AsyncStorage),
       version: 4,
       migrate: (persistedState, version) => {
-        crashlytics().log(`Migrating store from version ${version}`);
+        Sentry.logger.info(`Migrating store from version ${version}`, {
+          user: (persistedState as Store).username,
+        });
 
         if (version === 3) {
           const store = persistedState as Store;

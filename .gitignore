@@ -41,3 +41,5 @@ src/positionSources/*
 
 ios/
 android/
+
+.env.local

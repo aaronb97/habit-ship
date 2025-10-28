@@ -23,6 +23,26 @@ import { getCurrentDate } from './utils/time';
 import { useStore } from './utils/store';
 import { ensureFirebaseId } from './utils/firebaseAuth';
 import { startFirestoreSync } from './utils/firestoreSync';
+import * as Sentry from '@sentry/react-native';
+
+Sentry.init({
+  dsn: 'https://d78e59ce600be87378215f012a6376e6@o4510264180670464.ingest.us.sentry.io/4510264180932608',
+
+  // Adds more context data to events (IP address, cookies, user, etc.)
+  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
+  sendDefaultPii: true,
+
+  // Enable Logs
+  enableLogs: true,
+
+  // Configure Session Replay
+  replaysSessionSampleRate: 0.1,
+  replaysOnErrorSampleRate: 1,
+  integrations: [Sentry.mobileReplayIntegration()],
+
+  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
+  // spotlight: __DEV__,
+});
 
 const prefix = createURL('/');
 
@@ -53,7 +73,7 @@ const customTheme = {
   },
 };
 
-export function App() {
+function App() {
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
     Poppins_500Medium,
@@ -215,3 +235,5 @@ async function registerForPushNotificationsAsync() {
 
   return token;
 }
+
+export default Sentry.wrap(App);

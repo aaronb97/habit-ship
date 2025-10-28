@@ -67,6 +67,14 @@ export default {
         },
       },
     ],
+    [
+      '@sentry/react-native/expo',
+      {
+        url: 'https://sentry.io/',
+        project: 'react-native',
+        organization: 'space-game-llc',
+      },
+    ],
   ],
   experiments: {
     reactCompiler: true,
