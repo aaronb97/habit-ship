@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { getCurrentDate } from './time';
+import * as Sentry from '@sentry/react-native';
 
 /**
  * Data payload for daily reminder notifications to allow selective cancellation.
@@ -217,8 +218,8 @@ export async function logScheduledNotifications(): Promise<void> {
       };
     });
 
-    console.log('Scheduled notifications:', summary);
+    Sentry.logger.info('Scheduled notifications', { messages: summary });
   } catch (e) {
-    console.warn('logScheduledNotifications failed', e);
+    Sentry.captureException(e);
   }
 }

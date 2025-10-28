@@ -721,8 +721,6 @@ export const useStore = create<Store>()(
             state.userPosition.previousDistanceTraveled =
               state.userPosition.distanceTraveled;
           }
-
-          console.log('Synced travel visuals');
         });
       },
 

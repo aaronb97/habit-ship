@@ -393,13 +393,6 @@ export class CelestialBodyNode {
             this.trail = line;
             this.trail.visible = this.mesh.visible && opts.showTrails;
             this.trailComputedAtPos = currentPos.clone();
-            console.log(
-              `[CelestialBodyNode] Rebuilt trail for ${
-                this.body.name
-              } (dist=${dist.toFixed(4)}, threshold=${threshold.toFixed(
-                4,
-              )}) @ ${new Date().toISOString()}`,
-            );
           } else {
             this.trail = undefined;
             this.trailComputedAtPos = undefined;

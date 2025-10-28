@@ -47,7 +47,6 @@ export function startFirestoreSync(firebaseId: string): () => void {
     const MAX_TRIES = 8;
     for (let i = 0; i < MAX_TRIES; i++) {
       const candidate = generateName();
-      console.log('Checking username', candidate);
       try {
         const exists = await usernameExists(candidate);
         if (!exists) {
