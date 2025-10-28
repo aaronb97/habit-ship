@@ -147,12 +147,6 @@ export function SolarSystemMap({
     finalizeLandingAfterAnimation,
   ]);
 
-  useEffect(() => {
-    return () => {
-      console.log('SolarSystemMap unmounted');
-    };
-  }, []);
-
   /**
    * Computes the display position of a friend's rocket based on their UserPosition.
    * Places the rocket on the surface-to-surface segment between start and target when traveling,
@@ -777,11 +771,6 @@ export function SolarSystemMap({
     // Renderer
     const renderer = new Renderer({ gl });
     const { drawingBufferWidth, drawingBufferHeight } = gl;
-    console.log(
-      '[SolarSystemMap] onContextCreate',
-      drawingBufferWidth,
-      drawingBufferHeight,
-    );
 
     renderer.setSize(drawingBufferWidth, drawingBufferHeight);
     renderer.setClearColor(RENDERER_CLEAR_COLOR, RENDERER_CLEAR_ALPHA);
@@ -1618,7 +1607,6 @@ export function SolarSystemMap({
   useEffect(() => {
     const handler = (state: AppStateStatus) => {
       const isActive = state === 'active';
-      console.log('AppState', state);
       isAppActiveRef.current = isActive;
       if (!isActive) {
         if (frameRef.current) {
@@ -1678,7 +1666,6 @@ export function SolarSystemMap({
 
   // Cleanup
   useEffect(() => {
-    console.log('[SolarSystemMap] mounted');
     const registryAtMount = bodyRegistryRef.current;
     return () => {
       // Unregister controller on unmount
