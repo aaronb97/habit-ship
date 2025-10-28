@@ -18,7 +18,6 @@ import {
   ROCKET_MATERIAL_MIX_FULL_SCALE,
 } from './constants';
 import { useStore } from '../../utils/store';
-import { getSkinById } from '../../utils/skins';
 
 // NOTE: Material application is handled by Rocket.setupDualMaterials().
 
@@ -45,15 +44,14 @@ export class Rocket {
   private unsubOutlines?: () => void;
   private baseColor: number;
   private currentTexture?: THREE.Texture | null;
-  private uvsApplied = false;
   private centerOffset: THREE.Vector3 = new THREE.Vector3();
   private baseBoundingRadius: number = 0;
-  
-  private dualPairs: Array<{
+
+  private dualPairs: {
     standardMesh: THREE.Mesh;
     basicMesh: THREE.Mesh;
     isBody: boolean;
-  }> = [];
+  }[] = [];
 
   // exhaust sprites
   private sprites: THREE.Sprite[] = [];
@@ -121,11 +119,11 @@ export class Rocket {
     const hours = new Date().getHours();
     const isDaytime = hours >= 8 && hours <= 20;
 
-    const pairs: Array<{
+    const pairs: {
       standardMesh: THREE.Mesh;
       basicMesh: THREE.Mesh;
       isBody: boolean;
-    }> = [];
+    }[] = [];
 
     this.hull.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return;
@@ -216,86 +214,7 @@ export class Rocket {
     }
   }
 
-  private ensureCylindricalUVsApplied() {
-    if (this.uvsApplied) return;
-
-    // Compute global bounds over all Body meshes to normalize V consistently
-    const bounds = {
-      min: new THREE.Vector3(+Infinity, +Infinity, +Infinity),
-      max: new THREE.Vector3(-Infinity, -Infinity, -Infinity),
-    };
-    const bodyMeshes: THREE.Mesh[] = [];
-    // Make sure world matrices are up-to-date
-    this.hull.updateWorldMatrix(true, true);
-    this.hull.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        const name = child.name || '';
-        if (name.includes('Body')) {
-          bodyMeshes.push(child);
-          const geom = child.geometry as THREE.BufferGeometry;
-          const pos = geom.attributes.position as THREE.BufferAttribute;
-          const arr = pos.array as ArrayLike<number>;
-          for (let i = 0; i < pos.count; i++) {
-            const lx = arr[i * 3 + 0]!;
-            const ly = arr[i * 3 + 1]!;
-            const lz = arr[i * 3 + 2]!;
-            const wp = new THREE.Vector3(lx, ly, lz).applyMatrix4(
-              child.matrixWorld,
-            );
-            if (wp.x < bounds.min.x) bounds.min.x = wp.x;
-            if (wp.y < bounds.min.y) bounds.min.y = wp.y;
-            if (wp.z < bounds.min.z) bounds.min.z = wp.z;
-            if (wp.x > bounds.max.x) bounds.max.x = wp.x;
-            if (wp.y > bounds.max.y) bounds.max.y = wp.y;
-            if (wp.z > bounds.max.z) bounds.max.z = wp.z;
-          }
-        }
-      }
-    });
-
-    // Choose height axis as the largest extent
-    const extents = new THREE.Vector3().subVectors(bounds.max, bounds.min);
-    let heightAxis = 1; // y by default
-    if (extents.x >= extents.y && extents.x >= extents.z) heightAxis = 0;
-    else if (extents.z >= extents.y && extents.z >= extents.x) heightAxis = 2;
-
-    const radialA = (heightAxis + 1) % 3;
-    const radialB = (heightAxis + 2) % 3;
-    const minH = [bounds.min.x, bounds.min.y, bounds.min.z][heightAxis]!;
-    const rangeH = Math.max(
-      1e-6,
-      [extents.x, extents.y, extents.z][heightAxis]!,
-    );
-
-    // Apply cylindrical UVs per body mesh
-    for (const mesh of bodyMeshes) {
-      const geom = mesh.geometry as THREE.BufferGeometry;
-      const pos = geom.attributes.position as THREE.BufferAttribute;
-      const arr = pos.array as ArrayLike<number>;
-      const uvs = new Float32Array(pos.count * 2);
-      for (let i = 0; i < pos.count; i++) {
-        const lx = arr[i * 3 + 0]!;
-        const ly = arr[i * 3 + 1]!;
-        const lz = arr[i * 3 + 2]!;
-        const wp = new THREE.Vector3(lx, ly, lz).applyMatrix4(mesh.matrixWorld);
-        const comp = [wp.x, wp.y, wp.z] as const;
-        const ra = comp[radialA]!;
-        const rb = comp[radialB]!;
-        const h = comp[heightAxis]!;
-        const theta = Math.atan2(rb, ra);
-        let u = theta / (Math.PI * 2) + 0.5;
-        if (u < 0) u += 1; // wrap
-        const v = (h - minH) / rangeH;
-        uvs[i * 2 + 0] = u;
-        uvs[i * 2 + 1] = v;
-      }
-      const uvAttr = new THREE.BufferAttribute(uvs, 2);
-      geom.setAttribute('uv', uvAttr);
-      uvAttr.needsUpdate = true;
-    }
-
-    this.uvsApplied = true;
-  }
+  // Removed custom UV generation. The rocket now relies on the model's authored UVs.
 
   /**
    * Creates a Rocket instance and optionally configures an OutlinePass.
@@ -347,13 +266,7 @@ export class Rocket {
       composer.addPass(outline);
     }
 
-    return new Rocket(
-      root,
-      obj,
-      exhaust,
-      outline,
-      color,
-    );
+    return new Rocket(root, obj, exhaust, outline, color);
   }
 
   setResolution(v: THREE.Vector2) {}
@@ -383,11 +296,12 @@ export class Rocket {
   }
 
   /**
-   * Applies a texture to all rocket meshes except windows. Body meshes render the
-   * texture at full brightness; non-body meshes render the same texture darkened
-   * to preserve part contrast. While a texture is active, the outline pass uses
-   * the provided accentColor if specified; when clearing the texture, the
-   * outline reverts to the baseColor.
+   * Applies or clears a texture on all rocket meshes except windows.
+   * This method assumes the rocket model has proper UVs and does not modify UVs
+   * or texture transforms. Existing material colors are preserved (no special
+   * brightening/darkening). While a texture is active, the outline pass uses the
+   * provided accentColor if specified; when clearing the texture, the outline
+   * reverts to the baseColor.
    *
    * texture: THREE.Texture to apply, or null to clear the texture from all parts.
    * accentColor: Optional 24-bit integer color used for the outline while textured.
@@ -395,27 +309,6 @@ export class Rocket {
   setBodyTexture(texture: THREE.Texture | null, accentColor?: number) {
     // Clear maps when null and update current texture reference
     this.currentTexture = texture;
-
-    // Ensure we have consistent UVs across the hull parts
-    this.ensureCylindricalUVsApplied();
-
-    // Configure texture sampling once
-    if (texture) {
-      const skinId = texture.name;
-      const skin = skinId ? getSkinById(skinId) : undefined;
-      const halfWrap = skin?.wrap === 'half';
-      // const rot90 = Boolean(skin?.rotate90);
-
-      texture.wrapS = THREE.RepeatWrapping;
-      texture.wrapT = THREE.ClampToEdgeWrapping;
-
-      texture.center.set(0.5, 0.5);
-      // texture.rotation = rot90 ? -Math.PI / 2 : 0;
-
-      texture.repeat.set(halfWrap ? 2 : 1, 1);
-      texture.offset.x = halfWrap ? 0.5 : 0.25;
-      texture.needsUpdate = true;
-    }
 
     // Apply to both layers for all non-window parts
     for (const pair of this.dualPairs) {
