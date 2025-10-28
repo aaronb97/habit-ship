@@ -211,6 +211,36 @@ const ROCKET_SKINS: Record<string, Skin> = {
     preview: require('../../assets/skins/Merriweather.png'),
     color: 0x00ff00,
   },
+  Chicago: {
+    id: 'Chicago',
+    title: 'Chicago',
+    preview: require('../../assets/skins/Chicago.png'),
+    color: 0xffffff,
+  },
+  Cork: {
+    id: 'Cork',
+    title: 'Cork',
+    preview: require('../../assets/skins/Cork.png'),
+    color: 0xcd9e67,
+  },
+  JD: {
+    id: 'JD',
+    title: 'JD',
+    preview: require('../../assets/skins/JD.png'),
+    color: 0x0102f0,
+  },
+  Pizza: {
+    id: 'Pizza',
+    title: 'Pizza',
+    preview: require('../../assets/skins/Pizza.png'),
+    color: 0xe28758,
+  },
+  'Rate Chart': {
+    id: 'Rate Chart',
+    title: 'Rate Chart',
+    preview: require('../../assets/skins/Rate Chart.png'),
+    color: 0xfdf1cb,
+  },
 };
 
 // Merge registries for consumer convenience
