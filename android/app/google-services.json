@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "676503401047",
+    "project_id": "habitship-10cc2",
+    "storage_bucket": "habitship-10cc2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676503401047:android:7e078815d65a1ef3dae912",
+        "android_client_info": {
+          "package_name": "habit.ship"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCFQKm47vhtdLZq1r5WqohM1l8Jv9bNrc0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

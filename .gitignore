@@ -39,7 +39,4 @@ app-example
 
 src/positionSources/*
 
-ios/
-android/
-
 .env.local
