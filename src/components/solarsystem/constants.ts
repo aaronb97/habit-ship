@@ -154,8 +154,8 @@ export const ROCKET_EXHAUST_SCALE = 0.5;
 export const ROCKET_MIN_SCREEN_PIXELS = 64;
 // Rocket material blend thresholds: when the enforced scale exceeds START, begin
 // transitioning from standard to basic; by FULL the rocket is fully basic.
-export const ROCKET_MATERIAL_MIX_START_SCALE = 1.2;
-export const ROCKET_MATERIAL_MIX_FULL_SCALE = 1.8;
+export const ROCKET_MATERIAL_MIX_START_SCALE = 1;
+export const ROCKET_MATERIAL_MIX_FULL_SCALE = 10;
 export const ROCKET_LANDING_SPREAD_FRACTION = 0.35;
 export const FRIEND_AIM_YAW_OFFSET_STEP_RAD = Math.PI / 36;
 
