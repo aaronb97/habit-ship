@@ -2,6 +2,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { Planet, Moon } from '../planets';
 import { useUserLevel } from '../utils/store';
+import { lightenHex } from '../utils/colorUtils';
 
 interface PlanetListItemProps {
   planet: Planet | Moon;
@@ -54,7 +55,13 @@ export function PlanetListItem({
       onPress={isDisabled ? undefined : onPress}
     >
       <View style={styles.nameContainer}>
-        <Text style={[styles.planetName, isDisabled && styles.lockedText]}>
+        <Text
+          style={[
+            styles.planetName,
+            { color: lightenHex(planet.color, 0.2) },
+            isDisabled && styles.lockedText,
+          ]}
+        >
           {planet.name}
         </Text>
         {isVisited && <Text style={styles.visitedBadge}>✓ Visited</Text>}
@@ -96,20 +103,13 @@ export function PlanetListItem({
 
 const styles = StyleSheet.create({
   planetBox: {
-    backgroundColor: colors.card,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     padding: 20,
     marginVertical: 8,
     borderRadius: 16,
-    shadowColor: colors.accent,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
     elevation: 3,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   selectedPlanetBox: {
     borderColor: colors.primary,

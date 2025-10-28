@@ -133,9 +133,11 @@ export function Profile() {
               <View style={styles.square}>
                 <Image source={item.preview} style={styles.image} />
               </View>
-              <Text style={styles.cardTitle} numberOfLines={1}>
-                {item.title}
-              </Text>
+              <View style={styles.cardTitleContainer}>
+                <Text style={styles.cardTitle} numberOfLines={2}>
+                  {item.title}
+                </Text>
+              </View>
             </TouchableOpacity>
           );
         }}
@@ -198,7 +200,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     padding: 6,
-    backgroundColor: colors.card,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
 
     // minHeight: 80,
     // minWidth: 80,
@@ -239,9 +241,17 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: fontSizes.small,
   },
+  cardTitleContainer: {
+    minHeight: 24,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   cardTitle: {
     fontFamily: fonts.regular,
     fontSize: fontSizes.small,
     color: colors.text,
+    textAlign: 'center',
   },
 });
