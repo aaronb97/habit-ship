@@ -185,7 +185,7 @@ const ROCKET_SKINS: Record<string, Skin> = {
     id: 'Go Birds',
     title: 'Go Birds',
     preview: require('../../assets/skins/Go Birds.png'),
-    color: 0x4cbb17,
+    color: 0x4db368,
   },
   Plaid: {
     id: 'Plaid',
@@ -209,7 +209,7 @@ const ROCKET_SKINS: Record<string, Skin> = {
     id: 'Merriweather',
     title: 'Merriweather',
     preview: require('../../assets/skins/Merriweather.png'),
-    color: 0x00ff00,
+    color: 0x6245ba,
   },
   Chicago: {
     id: 'Chicago',
