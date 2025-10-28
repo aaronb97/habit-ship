@@ -14,51 +14,13 @@ import {
   OUTLINE_EDGE_STRENGTH,
   ROCKET_EXHAUST_SCALE,
   ROCKET_MIN_SCREEN_PIXELS,
+  ROCKET_MATERIAL_MIX_START_SCALE,
+  ROCKET_MATERIAL_MIX_FULL_SCALE,
 } from './constants';
 import { useStore } from '../../utils/store';
 import { getSkinById } from '../../utils/skins';
 
-// Apply per-part materials/colors to the loaded rocket model
-// useBasic: If true, uses MeshBasicMaterial for all non-window parts to avoid lighting cost.
-function applyRocketMaterials(
-  obj: THREE.Group,
-  baseColor: number,
-  useBasic: boolean,
-) {
-  const base = new THREE.Color(baseColor);
-  const hsl = { h: 0, s: 0, l: 0 };
-  base.getHSL(hsl);
-  // Darker variant for non-body, non-window parts
-  const altL = Math.max(0, Math.min(1, hsl.l - 0.2));
-
-  const hours = new Date().getHours();
-  const isDaytime = hours >= 8 && hours <= 20;
-
-  obj.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
-      const name = child.name || '';
-      if (name.includes('Window')) {
-        const mat = new THREE.MeshBasicMaterial();
-        mat.color.set(isDaytime ? 0xfff8e3 : 0x000000);
-        child.material = mat;
-      } else if (name.includes('Body')) {
-        const mat = useBasic
-          ? new THREE.MeshBasicMaterial()
-          : new THREE.MeshStandardMaterial();
-        mat.color.set(base);
-        child.material = mat;
-      } else {
-        const mat = useBasic
-          ? new THREE.MeshBasicMaterial()
-          : new THREE.MeshStandardMaterial();
-        const other = new THREE.Color();
-        other.setHSL(hsl.h, hsl.s, altL);
-        mat.color.set(other);
-        child.material = mat;
-      }
-    }
-  });
-}
+// NOTE: Material application is handled by Rocket.setupDualMaterials().
 
 // ==========================
 // Rocket class (encapsulated)
@@ -71,8 +33,6 @@ type CreateArgs = {
   resolution: THREE.Vector2;
   /** If true, do not create an OutlinePass for this rocket. Defaults to false. */
   withoutOutline?: boolean;
-  /** If true, use MeshBasicMaterial for hull/parts instead of lit materials. Defaults to false. */
-  useBasicMaterials?: boolean;
 };
 
 export class Rocket {
@@ -88,7 +48,12 @@ export class Rocket {
   private uvsApplied = false;
   private centerOffset: THREE.Vector3 = new THREE.Vector3();
   private baseBoundingRadius: number = 0;
-  private readonly useBasicMaterials: boolean;
+  
+  private dualPairs: Array<{
+    standardMesh: THREE.Mesh;
+    basicMesh: THREE.Mesh;
+    isBody: boolean;
+  }> = [];
 
   // exhaust sprites
   private sprites: THREE.Sprite[] = [];
@@ -101,14 +66,12 @@ export class Rocket {
     exhaustGroup: THREE.Group,
     outlinePass: OutlinePass | undefined,
     baseColor: number,
-    useBasicMaterials: boolean,
   ) {
     this.group = group;
     this.hull = hull;
     this.exhaustGroup = exhaustGroup;
     this.outlinePass = outlinePass;
     this.baseColor = baseColor;
-    this.useBasicMaterials = useBasicMaterials;
     this.outlineGlobalEnabled = Boolean(
       useStore.getState().outlinesRocketEnabled,
     );
@@ -141,6 +104,116 @@ export class Rocket {
     this.group.updateWorldMatrix(true, false);
     const ctrLocal = this.group.worldToLocal(ctrWorld.clone());
     this.centerOffset.copy(ctrLocal);
+
+    // Initialize materials (dual standard/basic layers) and apply base color
+    this.setupDualMaterials();
+    this.applyBaseColors();
+    this.updateMaterialBlend(0);
+  }
+
+  /**
+   * Builds dual-material layers for each non-window mesh: a MeshStandardMaterial
+   * and a MeshBasicMaterial clone stacked at the same transform, allowing a
+   * crossfade between lit and unlit rendering for visibility at distance.
+   * Windows remain MeshBasicMaterial only.
+   */
+  private setupDualMaterials(): void {
+    const hours = new Date().getHours();
+    const isDaytime = hours >= 8 && hours <= 20;
+
+    const pairs: Array<{
+      standardMesh: THREE.Mesh;
+      basicMesh: THREE.Mesh;
+      isBody: boolean;
+    }> = [];
+
+    this.hull.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      const name = child.name || '';
+
+      // Windows: force basic only, no dual layers
+      if (name.includes('Window')) {
+        const win = new THREE.MeshBasicMaterial();
+        win.color.set(isDaytime ? 0xfff8e3 : 0x000000);
+        child.material = win;
+        return;
+      }
+
+      // For all non-window parts, ensure we have a standard layer and add a basic layer clone
+      const stdMat = new THREE.MeshStandardMaterial();
+      const basicMat = new THREE.MeshBasicMaterial();
+      // Transparency and slight polygon offset to avoid z-fighting during crossfade
+      stdMat.transparent = true;
+      basicMat.transparent = true;
+      stdMat.depthWrite = true;
+      basicMat.depthWrite = true;
+      stdMat.polygonOffset = true;
+      basicMat.polygonOffset = true;
+      stdMat.polygonOffsetFactor = -1;
+      basicMat.polygonOffsetFactor = 1;
+
+      child.material = stdMat;
+      const basicMesh = new THREE.Mesh(child.geometry, basicMat);
+      basicMesh.position.copy(child.position);
+      basicMesh.quaternion.copy(child.quaternion);
+      basicMesh.scale.copy(child.scale);
+      child.parent?.add(basicMesh);
+
+      pairs.push({
+        standardMesh: child,
+        basicMesh,
+        isBody: name.includes('Body'),
+      });
+    });
+
+    this.dualPairs = pairs;
+  }
+
+  /**
+   * Applies the rocket's base color across both material layers for each part.
+   * Body parts use the exact base color; other parts use a darker variant for contrast.
+   */
+  private applyBaseColors(): void {
+    const base = new THREE.Color(this.baseColor);
+    const hsl = { h: 0, s: 0, l: 0 };
+    base.getHSL(hsl);
+    const altL = Math.max(0, Math.min(1, hsl.l - 0.2));
+
+    const other = new THREE.Color();
+    other.setHSL(hsl.h, hsl.s, altL);
+
+    // Non-window parts: set on both standard/basic materials
+    for (const pair of this.dualPairs) {
+      const std = pair.standardMesh.material as THREE.MeshStandardMaterial;
+      const bas = pair.basicMesh.material as THREE.MeshBasicMaterial;
+      const c = pair.isBody ? base : other;
+      std.color.copy(c);
+      bas.color.copy(c);
+      std.map = this.currentTexture ?? null;
+      bas.map = this.currentTexture ?? null;
+      std.needsUpdate = true;
+      bas.needsUpdate = true;
+    }
+  }
+
+  /**
+   * Sets the crossfade between standard (0) and basic (1) materials for all parts.
+   * @param t Blend factor in [0,1]; 0 = fully standard, 1 = fully basic.
+   */
+  private updateMaterialBlend(t: number): void {
+    const clamped = Math.max(0, Math.min(1, t));
+    for (const pair of this.dualPairs) {
+      const std = pair.standardMesh.material as THREE.MeshStandardMaterial;
+      const bas = pair.basicMesh.material as THREE.MeshBasicMaterial;
+      std.opacity = 1 - clamped;
+      bas.opacity = clamped;
+      std.visible = std.opacity > 0.001;
+      bas.visible = bas.opacity > 0.001;
+      // Prefer depth writes from the more opaque layer to maintain occlusion with the scene
+      const stdDominant = std.opacity >= bas.opacity;
+      std.depthWrite = stdDominant;
+      bas.depthWrite = !stdDominant;
+    }
   }
 
   private ensureCylindricalUVsApplied() {
@@ -232,7 +305,6 @@ export class Rocket {
    * @param composer EffectComposer where the OutlinePass (if any) will be added.
    * @param resolution Current renderer resolution in pixels.
    * @param withoutOutline When true, skips creating an OutlinePass (useful for friend rockets).
-   * @param useBasicMaterials When true, uses MeshBasicMaterial for hull/parts (unlit, cheaper).
    */
   static async create({
     color,
@@ -241,15 +313,12 @@ export class Rocket {
     composer,
     resolution,
     withoutOutline = false,
-    useBasicMaterials = false,
   }: CreateArgs): Promise<Rocket> {
     // Ensure base model is preloaded once, then clone it for this instance
     await Rocket.preloadModel();
     const obj = Rocket.cloneBaseModel();
     // Apply default orientation expected by the scene (nose along +Z)
     obj.rotation.x = THREE.MathUtils.degToRad(-90);
-
-    applyRocketMaterials(obj, color, Boolean(useBasicMaterials));
 
     obj.scale.setScalar(ROCKET_MODEL_SCALE);
 
@@ -284,7 +353,6 @@ export class Rocket {
       exhaust,
       outline,
       color,
-      Boolean(useBasicMaterials),
     );
   }
 
@@ -300,9 +368,9 @@ export class Rocket {
   setColor(color: number) {
     // Re-apply materials on hull meshes
     this.baseColor = color;
-    // If no texture is set, recolor the hull materials; otherwise only update outline
+    // If no texture is set, recolor the hull materials on both layers
     if (!this.currentTexture) {
-      applyRocketMaterials(this.hull, color, this.useBasicMaterials);
+      this.applyBaseColors();
     }
     if (this.outlinePass) {
       try {
@@ -349,30 +417,27 @@ export class Rocket {
       texture.needsUpdate = true;
     }
 
-    this.hull.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) return;
-      const name = child.name || '';
-      // Skip windows entirely
-      if (name.includes('Window')) return;
-
-      const mat = child.material as
-        | THREE.MeshStandardMaterial
-        | THREE.MeshBasicMaterial;
+    // Apply to both layers for all non-window parts
+    for (const pair of this.dualPairs) {
+      const std = pair.standardMesh.material as THREE.MeshStandardMaterial;
+      const bas = pair.basicMesh.material as THREE.MeshBasicMaterial;
       if (texture) {
-        // Apply texture to all parts; darker multiplier for non-body parts
-        mat.map = texture;
-        if (name.includes('Body')) {
-          mat.color.set(0xffffff);
+        std.map = texture;
+        bas.map = texture;
+        if (pair.isBody) {
+          std.color.set(0xffffff);
+          bas.color.set(0xffffff);
         } else {
-          // Darken non-body parts to distinguish paneling/fins
-          mat.color.setScalar(0.6);
+          std.color.setScalar(0.6);
+          bas.color.setScalar(0.6);
         }
       } else {
-        // Clear texture maps; colors restored below via applyRocketMaterials
-        mat.map = null;
+        std.map = null;
+        bas.map = null;
       }
-      mat.needsUpdate = true;
-    });
+      std.needsUpdate = true;
+      bas.needsUpdate = true;
+    }
 
     // Keep outline color aligned with accent while textured; revert when cleared
     if (this.outlinePass) {
@@ -389,7 +454,7 @@ export class Rocket {
 
     // When clearing the texture, restore original materials/colors
     if (!texture) {
-      applyRocketMaterials(this.hull, this.baseColor, this.useBasicMaterials);
+      this.applyBaseColors();
     }
 
     // Do not dispose textures here; textures may be shared via a global cache.
@@ -468,6 +533,15 @@ export class Rocket {
     if (Math.abs(this.group.scale.x - targetScale) > 1e-4) {
       this.group.scale.setScalar(targetScale);
     }
+
+    // Crossfade materials based on enforced scale so distant rockets favor basic
+    const startS = Math.max(1, ROCKET_MATERIAL_MIX_START_SCALE);
+    const fullS = Math.max(startS + 1e-6, ROCKET_MATERIAL_MIX_FULL_SCALE);
+    let t = 0;
+    if (targetScale <= startS) t = 0;
+    else if (targetScale >= fullS) t = 1;
+    else t = (targetScale - startS) / (fullS - startS);
+    this.updateMaterialBlend(t);
   }
 
   private updateExhaust(emit: boolean) {

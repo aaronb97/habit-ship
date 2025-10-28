@@ -286,7 +286,6 @@ export function SolarSystemMap({
             composer,
             resolution,
             withoutOutline: true,
-            useBasicMaterials: true,
           });
           friendRocketsRef.current.set(uid, fr);
           scene.add(fr.group);
@@ -891,6 +890,7 @@ export function SolarSystemMap({
     );
 
     composerRef.current = composer;
+
 
     // Lights
     addDefaultLights(scene);
