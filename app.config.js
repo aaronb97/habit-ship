@@ -3,7 +3,7 @@ const IS_DEV = process.env.APP_VARIANT === 'development';
 export default {
   name: IS_DEV ? 'HabitShip (Dev)' : 'HabitShip',
   slug: 'habit-ship',
-  version: '0.2.0',
+  version: '0.3.0',
   icon: './assets/icon.png',
   userInterfaceStyle: 'automatic',
   newArchEnabled: true,
