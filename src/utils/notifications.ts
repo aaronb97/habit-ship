@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { getCurrentDate } from './time';
 import * as Sentry from '@sentry/react-native';
+import { useStore, type Habit } from './store';
 
 /**
  * Data payload for daily reminder notifications to allow selective cancellation.
@@ -26,32 +27,77 @@ function formatDateKey(date: Date): string {
 }
 
 /**
- * Returns a Date set to 9:00 PM local time on the same calendar day as the input.
+ * Returns true if and only if every habit has at least one completion on the
+ * given local calendar day. If there are no habits, returns false so that we
+ * continue to include today's reminder by default.
  *
- * date: The base date.
+ * habits: List of habits to evaluate.
+ * now: Local reference date (usually current time).
+ * Returns: True when all habits are completed today; false otherwise.
  */
-function atNinePmLocal(date: Date): Date {
+export function areAllHabitsCompletedToday(habits: readonly Habit[], now: Date): boolean {
+  if (habits.length === 0) {
+    return false;
+  }
+
+  const todayKey = now.toDateString();
+  return habits.every((h) => h.completions.some((ts) => new Date(ts).toDateString() === todayKey));
+}
+
+/**
+ * Determines if we should include a reminder for today (i.e., schedule one for
+ * the remaining part of today), based on whether all habits are already
+ * completed today.
+ *
+ * habits: List of habits.
+ * now: Local reference date.
+ * Returns: True if we should include today's reminder; false if all habits are done.
+ */
+export function shouldIncludeTodayReminder(habits: readonly Habit[], now: Date): boolean {
+  return !areAllHabitsCompletedToday(habits, now);
+}
+
+/**
+ * Returns a Date set to a specific local time (hours:minutes) on the same
+ * calendar day as the input.
+ *
+ * date: Base date to copy calendar fields from.
+ * minutesSinceMidnight: Time-of-day to set, in local minutes since midnight (0..1439).
+ * Returns: New Date instance at the requested local time for the same day.
+ */
+function atLocalTime(date: Date, minutesSinceMidnight: number): Date {
   const d = new Date(date);
-  d.setHours(21, 0, 0, 0);
+  const hours = Math.floor(minutesSinceMidnight / 60);
+  const minutes = minutesSinceMidnight % 60;
+  d.setHours(hours, minutes, 0, 0);
   return d;
 }
 
 /**
- * Compute a list of upcoming 9PM occurrences.
- * If includeToday is true and 9PM is still in the future, today is included; otherwise start from tomorrow.
+ * Compute a list of upcoming local-time occurrences.
+ * If includeToday is true and the local time is still in the future, today is
+ * included; otherwise start from tomorrow.
  *
- * count: Number of 9PM dates to produce.
+ * minutesSinceMidnight: Target local time in minutes since midnight.
+ * count: Number of dates to produce.
  * now: Reference time (usually current time).
- * includeToday: Whether to include today's 9pm if it's still upcoming.
+ * includeToday: Whether to include today's occurrence if it's still upcoming.
+ * Returns: List of Date objects at the requested time for consecutive days.
  */
-function getUpcomingNinePmDates(count: number, now: Date, includeToday: boolean): Date[] {
+function getUpcomingLocalTimeDates(
+  minutesSinceMidnight: number,
+  count: number,
+  now: Date,
+  includeToday: boolean,
+): Date[] {
   const results: Date[] = [];
-  const todayNine = atNinePmLocal(now);
-  const tomorrowNine = atNinePmLocal(
+  const todayAt = atLocalTime(now, minutesSinceMidnight);
+  const tomorrowAt = atLocalTime(
     new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1),
+    minutesSinceMidnight,
   );
 
-  const startDate = includeToday && todayNine.getTime() > now.getTime() ? todayNine : tomorrowNine;
+  const startDate = includeToday && todayAt.getTime() > now.getTime() ? todayAt : tomorrowAt;
 
   for (let i = 0; i < count; i++) {
     const d = new Date(startDate);
@@ -66,7 +112,13 @@ function getUpcomingNinePmDates(count: number, now: Date, includeToday: boolean)
  * Cancel all scheduled notifications created by the daily reminder system.
  * Uses the content.data.type discriminator to avoid touching unrelated notifications.
  */
-async function cancelAllDailyReminders(): Promise<void> {
+/**
+ * Cancel all scheduled notifications created by the daily reminder system.
+ * Uses the content.data.type discriminator to avoid touching unrelated notifications.
+ *
+ * Returns: Promise that resolves after cancellations complete.
+ */
+export async function cancelAllDailyReminders(): Promise<void> {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   const daily = scheduled.filter((req) => {
     const data = req.content.data as unknown;
@@ -112,21 +164,28 @@ export async function cancelTodayDailyReminder(): Promise<void> {
 }
 
 /**
- * Schedule daily reminder notifications for up to the next four days at 9PM local time.
- * If includeToday is true and it's before 9PM, includes today; otherwise starts from tomorrow.
+ * Schedule daily reminder notifications for the next few days at a specific local time.
+ * If includeToday is true and the time is in the future, today is included; otherwise start from tomorrow.
  *
  * destination: Destination name to include in the notification body.
- * includeToday: Whether to include today's 9PM reminder (if it's still in the future).
+ * minutesSinceMidnight: Local minutes since midnight [0..1439] for when the reminder should fire.
+ * includeToday: Whether to include today's occurrence if still upcoming.
  */
-export async function scheduleDailyReminders(
+export async function scheduleDailyRemindersAtLocalTime(
   destination: string,
+  minutesSinceMidnight: number,
   includeToday: boolean,
 ): Promise<void> {
   const title = 'Complete your habits today?';
   const body = `Mark your habits as complete to continue your journey to ${destination}!`;
 
   const count = includeToday ? 4 : 3;
-  const dates = getUpcomingNinePmDates(count, getCurrentDate(), includeToday);
+  const dates = getUpcomingLocalTimeDates(
+    minutesSinceMidnight,
+    count,
+    getCurrentDate(),
+    includeToday,
+  );
   for (const date of dates) {
     const data: DailyReminderData = {
       type: 'dailyReminder',
@@ -150,20 +209,23 @@ export async function scheduleDailyReminders(
 }
 
 /**
- * Clear all existing daily reminders and schedule fresh ones, then log scheduled notifications.
+ * Clear all existing daily reminders and schedule fresh ones at the provided local time,
+ * then log scheduled notifications.
  *
  * destination: Destination name to include in the notification body.
- * includeToday: Whether to include today's 9PM reminder (if it's still in the future).
+ * minutesSinceMidnight: Local minutes since midnight [0..1439] for when the reminder should fire.
+ * includeToday: Whether to include today's occurrence if still upcoming.
  */
-export async function rescheduleDailyReminders(
+export async function rescheduleDailyRemindersAtLocalTime(
   destination: string,
+  minutesSinceMidnight: number,
   includeToday: boolean,
 ): Promise<void> {
   try {
     await cancelAllDailyReminders();
-    await scheduleDailyReminders(destination, includeToday);
+    await scheduleDailyRemindersAtLocalTime(destination, minutesSinceMidnight, includeToday);
   } catch (e) {
-    console.warn('rescheduleDailyReminders failed', e);
+    console.warn('rescheduleDailyRemindersAtLocalTime failed', e);
   } finally {
     await logScheduledNotifications();
   }
@@ -218,7 +280,10 @@ export async function logScheduledNotifications(): Promise<void> {
       };
     });
 
-    Sentry.logger.info('Scheduled notifications', { messages: summary });
+    Sentry.logger.info('Scheduled notifications', {
+      messages: summary,
+      user: useStore.getState().username,
+    });
   } catch (e) {
     Sentry.captureException(e);
   }

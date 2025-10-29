@@ -1,23 +1,26 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useLayoutEffect, useMemo } from 'react';
 import { Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useIsFocused } from '@react-navigation/native';
+import { NavigationProp, useIsFocused, useNavigation } from '@react-navigation/native';
 import { colors, fonts, fontSizes } from '../../styles/theme';
 import { useStore } from '../../utils/store';
 import { SKINS, getSkinById } from '../../utils/skins';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Device from 'expo-device';
+import type { ProfileStackParamList } from '../stacks/ProfileStack';
 
 export function Profile() {
   const isFocused = useIsFocused();
-  const unlockedSkins = useStore((s) => s.unlockedSkins);
-  const unseenUnlockedSkins = useStore((s) => s.unseenUnlockedSkins);
-  const selectedSkinId = useStore((s) => s.selectedSkinId);
-  const setSelectedSkinId = useStore((s) => s.setSelectedSkinId);
-  const markSkinsSeen = useStore((s) => s.markSkinsSeen);
-  const money = useStore((s) => s.money);
-  const username = useStore((s) => s.username);
+  const navigation = useNavigation<NavigationProp<ProfileStackParamList>>();
+  const {
+    unlockedSkins,
+    unseenUnlockedSkins,
+    selectedSkinId,
+    setSelectedSkinId,
+    markSkinsSeen,
+    money,
+    username,
+  } = useStore();
 
   const allSkins = useMemo(() => Object.values(SKINS), []);
   const visibleSkins = useMemo(
@@ -33,6 +36,26 @@ export function Profile() {
       markSkinsSeen();
     }
   }, [isFocused, unseenUnlockedSkins, markSkinsSeen]);
+
+  // Add a settings gear button to the header on this screen
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Open settings"
+          style={{ paddingHorizontal: 12, paddingVertical: 6 }}
+          onPress={() => navigation.navigate('Settings')}
+        >
+          <FontAwesome5
+            name="cog"
+            size={18}
+            color={colors.accent}
+          />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   /**
    * Handles skin card selection. If the skin is locked, shows an info alert.
@@ -89,10 +112,7 @@ export function Profile() {
   };
 
   return (
-    <SafeAreaView
-      style={styles.container}
-      edges={['top']}
-    >
+    <View style={styles.container}>
       <View style={styles.balanceRow}>
         <Text style={styles.balanceLabel}>Username</Text>
 
@@ -157,7 +177,7 @@ export function Profile() {
           );
         }}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

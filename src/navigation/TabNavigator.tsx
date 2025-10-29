@@ -2,7 +2,6 @@ import { View, StyleSheet, Animated, ImageSourcePropType } from 'react-native';
 import { useRef, useEffect, useState } from 'react';
 import { Home } from './screens/Home';
 import { SolarMap } from './screens/SolarMap';
-import { Profile } from './screens/Profile';
 import { Dev } from './screens/Dev';
 import { colors } from '../styles/theme';
 import { useStore } from '../utils/store';
@@ -12,6 +11,7 @@ import { Dashboard } from '../components/Dashboard';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Ionicons } from '@expo/vector-icons';
 import { Friends } from './screens/Friends';
+import { ProfileStack } from './stacks/ProfileStack';
 import * as Device from 'expo-device';
 import { useFriendships } from '../hooks/useFriendships';
 import { useAllUsers } from '../hooks/useAllUsers';
@@ -133,7 +133,7 @@ export function TabNavigator() {
 
       <Tab.Screen
         name="ProfileTab"
-        component={Profile}
+        component={ProfileStack}
         options={{
           title: Device.deviceType === Device.DeviceType.TABLET ? 'Profile' : '',
           tabBarBadge: unseenSkins.length > 0 ? ' ' : undefined,

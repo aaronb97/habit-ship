@@ -3,8 +3,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { colors, fonts } from '../styles/theme';
 import { TabNavigator } from './TabNavigator';
 import { NotFound } from './screens/NotFound';
-import { WelcomeTransition } from './screens/WelcomeTransition';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { Settings } from './screens/Settings';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -40,18 +40,18 @@ export function Navigation({ theme, linking, onReady }: NavigationProps) {
           />
 
           <Stack.Screen
-            name="WelcomeTransition"
-            component={WelcomeTransition}
-            options={{
-              headerShown: false,
-            }}
-          />
-
-          <Stack.Screen
             name="NotFound"
             component={NotFound}
             options={{
               title: '404',
+            }}
+          />
+
+          <Stack.Screen
+            name="Settings"
+            component={Settings}
+            options={{
+              title: 'Settings',
             }}
           />
         </Stack.Navigator>
@@ -64,6 +64,7 @@ export type RootStackParamList = {
   WelcomeTransition: undefined;
   Home: undefined;
   NotFound: undefined;
+  Settings: undefined;
 };
 
 declare global {

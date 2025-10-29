@@ -6,7 +6,12 @@ import { immer } from 'zustand/middleware/immer';
 
 import { earth, moon, cBodies } from '../planets';
 import { schedulePushNotification } from './schedulePushNotification';
-import { cancelTodayDailyReminder, rescheduleDailyReminders } from './notifications';
+import {
+  cancelTodayDailyReminder,
+  rescheduleDailyRemindersAtLocalTime,
+  cancelAllDailyReminders,
+  shouldIncludeTodayReminder,
+} from './notifications';
 import { getCurrentTime, getCurrentDate, setTimeOffsetProvider } from './time';
 import { Coordinates, UserPosition, XPGain } from '../types';
 import { useShallow } from 'zustand/shallow';
@@ -247,6 +252,22 @@ type Store = {
    * name: Username string to persist, or null to clear.
    */
   setUsername: (name: string | null | undefined) => void;
+
+  // Daily reminders
+  /** Minutes since midnight local for daily reminder time, or null if disabled. */
+  dailyReminderMinutesLocal: number | null;
+  /**
+   * Whether the user has explicitly opted into daily reminders in-app.
+   * null indicates no explicit choice recorded yet.
+   */
+  notificationsOptedIn: boolean | null;
+  /**
+   * Enables/disables daily reminders at a specific local time and immediately
+   * applies scheduling changes. Pass null to disable and cancel all reminders.
+   *
+   * value: Minutes since midnight local [0..1439], or null to disable.
+   */
+  setDailyReminderMinutesLocal: (value: number | null) => Promise<void>;
 };
 
 const initialData = {
@@ -311,6 +332,8 @@ const initialData = {
   lastLandingReward: undefined,
   username: null,
   firebaseId: undefined,
+  dailyReminderMinutesLocal: null,
+  notificationsOptedIn: null,
 } satisfies Partial<Store>;
 
 export const useStore = create<Store>()(
@@ -322,6 +345,27 @@ export const useStore = create<Store>()(
       setIsSetupFinished: (value) => set({ isSetupFinished: value }),
       setFirebaseId: (id) => set({ firebaseId: id }),
       setUsername: (name) => set({ username: name ?? null }),
+      /**
+       * Set the local daily reminder time (minutes since midnight) or disable when null,
+       * then schedule/cancel notifications accordingly.
+       */
+      setDailyReminderMinutesLocal: async (value) => {
+        set({ dailyReminderMinutesLocal: value, notificationsOptedIn: value != null });
+
+        try {
+          const s = get();
+          const dest = s.userPosition.target ?? s.userPosition.startingLocation;
+          const includeToday = shouldIncludeTodayReminder(s.habits, getCurrentDate());
+
+          if (value == null) {
+            await cancelAllDailyReminders();
+          } else {
+            await rescheduleDailyRemindersAtLocalTime(dest, value, includeToday);
+          }
+        } catch (e) {
+          console.warn('setDailyReminderMinutesLocal scheduling failed', e);
+        }
+      },
       addHabit: (habit) => {
         set((state) => {
           state.habits.push({
@@ -375,15 +419,16 @@ export const useStore = create<Store>()(
           state.lastUpdateTime = undefined;
         });
 
-        // Keep reminders' copy in sync with destination and skip today's reminder if already completed
+        // Keep reminders' copy/time in sync with destination and setting
         {
           const s = get();
-          const todayKey = getCurrentDate().toDateString();
-          const anyCompletedToday = s.habits.some((h) =>
-            h.completions.some((ts) => new Date(ts).toDateString() === todayKey),
-          );
-
-          void rescheduleDailyReminders(planetName, !anyCompletedToday);
+          const includeToday = shouldIncludeTodayReminder(s.habits, getCurrentDate());
+          const mins = s.dailyReminderMinutesLocal;
+          if (mins == null) {
+            void cancelAllDailyReminders();
+          } else {
+            void rescheduleDailyRemindersAtLocalTime(planetName, mins, includeToday);
+          }
         }
       },
       warpTo: (planetName) => {
@@ -836,7 +881,7 @@ export const useStore = create<Store>()(
     {
       name: 'space-explorer-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 4,
+      version: 5,
       migrate: (persistedState, version) => {
         Sentry.logger.info(`Migrating store from version ${version}`, {
           user: (persistedState as Store).username,
@@ -851,6 +896,14 @@ export const useStore = create<Store>()(
           const { userPosition } = store;
           if (userPosition.distanceTraveled && userPosition.distanceTraveled > 0) {
             userPosition.distanceTraveled += 26_000_000;
+          }
+        }
+
+        // v5: introduce dailyReminderMinutesLocal with default null
+        if (version < 5) {
+          const store = persistedState as Partial<Store>;
+          if (store.dailyReminderMinutesLocal === undefined) {
+            (store as Store).dailyReminderMinutesLocal = null;
           }
         }
 

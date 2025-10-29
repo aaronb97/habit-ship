@@ -18,7 +18,11 @@ import Constants from 'expo-constants';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Navigation } from './navigation';
 import { colors } from './styles/theme';
-import { rescheduleDailyReminders } from './utils/notifications';
+import {
+  cancelAllDailyReminders,
+  rescheduleDailyRemindersAtLocalTime,
+  shouldIncludeTodayReminder,
+} from './utils/notifications';
 import { getCurrentDate } from './utils/time';
 import { useStore } from './utils/store';
 import { ensureFirebaseId } from './utils/firebaseAuth';
@@ -38,7 +42,12 @@ Sentry.init({
   // Configure Session Replay
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1,
-  integrations: [Sentry.mobileReplayIntegration()],
+  integrations: [
+    Sentry.mobileReplayIntegration(),
+    Sentry.consoleLoggingIntegration({
+      levels: ['error'],
+    }),
+  ],
 
   // uncomment the line below to enable Spotlight (https://spotlightjs.com)
   // spotlight: __DEV__,
@@ -141,12 +150,14 @@ function App() {
       if (state === 'active') {
         const s = useStore.getState();
         const dest = s.userPosition.target ?? s.userPosition.startingLocation;
-        const todayKey = getCurrentDate().toDateString();
-        const anyCompletedToday = s.habits.some((h) =>
-          h.completions.some((ts) => new Date(ts).toDateString() === todayKey),
-        );
+        const includeToday = shouldIncludeTodayReminder(s.habits, getCurrentDate());
 
-        void rescheduleDailyReminders(dest, !anyCompletedToday);
+        const mins = s.dailyReminderMinutesLocal;
+        if (mins == null) {
+          void cancelAllDailyReminders();
+        } else {
+          void rescheduleDailyRemindersAtLocalTime(dest, mins, includeToday);
+        }
       }
     });
 
@@ -154,12 +165,23 @@ function App() {
     const s = useStore.getState();
     const initialDest = s.userPosition.target ?? s.userPosition.startingLocation;
 
-    const todayKey = getCurrentDate().toDateString();
-    const anyCompletedToday = s.habits.some((h) =>
-      h.completions.some((ts) => new Date(ts).toDateString() === todayKey),
-    );
+    const includeToday = shouldIncludeTodayReminder(s.habits, getCurrentDate());
 
-    void rescheduleDailyReminders(initialDest, !anyCompletedToday);
+    // If the user explicitly opted in but has no time set, default to 9:00 PM.
+    if (s.notificationsOptedIn === true && s.dailyReminderMinutesLocal == null) {
+      void Notifications.getPermissionsAsync().then((p) => {
+        if (p.status === 'granted') {
+          void s.setDailyReminderMinutesLocal(21 * 60);
+        }
+      });
+    }
+
+    const mins = s.dailyReminderMinutesLocal;
+    if (mins == null) {
+      void cancelAllDailyReminders();
+    } else {
+      void rescheduleDailyRemindersAtLocalTime(initialDest, mins, includeToday);
+    }
     return () => sub.remove();
   }, []);
 
@@ -222,6 +244,12 @@ async function registerForPushNotificationsAsync() {
     if (finalStatus !== 'granted') {
       alert('Failed to get push token for push notification!');
       return;
+    }
+
+    // Permission granted: only default reminders if the user explicitly opted in.
+    const s = useStore.getState();
+    if (s.notificationsOptedIn === true && s.dailyReminderMinutesLocal == null) {
+      void s.setDailyReminderMinutesLocal(21 * 60);
     }
 
     try {
