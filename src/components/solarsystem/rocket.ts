@@ -128,9 +128,10 @@ export class Rocket {
     this.hull.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return;
       const name = child.name || '';
+      const upper = name.toUpperCase();
 
       // Windows: force basic only, no dual layers
-      if (name.includes('Window')) {
+      if (upper.includes('WINDOW')) {
         const win = new THREE.MeshBasicMaterial();
         win.color.set(isDaytime ? 0xfff8e3 : 0x000000);
         child.material = win;
@@ -160,7 +161,7 @@ export class Rocket {
       pairs.push({
         standardMesh: child,
         basicMesh,
-        isBody: name.includes('Body'),
+        isBody: upper.includes('BODY_MAIN'),
       });
     });
 
@@ -321,8 +322,8 @@ export class Rocket {
           std.color.set(0xffffff);
           bas.color.set(0xffffff);
         } else {
-          std.color.setScalar(0.6);
-          bas.color.setScalar(0.6);
+          std.color.setScalar(0.25);
+          bas.color.setScalar(0.25);
         }
       } else {
         std.map = null;
