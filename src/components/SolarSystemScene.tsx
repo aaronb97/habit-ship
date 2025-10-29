@@ -315,7 +315,7 @@ export function SolarSystemScene({ cameraController, interactive, friends }: Pro
     };
 
     void run();
-  }, [friends]);
+  }, [cameraController.camera, friends]);
 
   // Determine which planet systems are relevant for rendering moons
   const getRelevantPlanetSystems = (): Set<string> => {
@@ -1524,7 +1524,7 @@ export function SolarSystemScene({ cameraController, interactive, friends }: Pro
         fr.setResolution(new THREE.Vector2(drawingBufferWidth, drawingBufferHeight)),
       );
     }
-  }, [width, height]);
+  }, [width, height, cameraController.camera]);
 
   // Cleanup
   useEffect(() => {
