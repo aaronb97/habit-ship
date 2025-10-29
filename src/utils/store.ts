@@ -236,7 +236,7 @@ type Store = {
   cancelTimer: () => Promise<void>;
   expireTimer: () => void; // Sync action is sufficient here
 
-  // Finalize landing after the SolarSystemMap finishes animating the last step
+  // Finalize landing after the SolarSystemScene finishes animating the last step
   finalizeLandingAfterAnimation: () => void;
   // Clear the justLanded flag after Home acknowledged the landing
   acknowledgeLandingOnHome: () => void;

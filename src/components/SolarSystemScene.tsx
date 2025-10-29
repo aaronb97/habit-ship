@@ -65,7 +65,7 @@ import { computeSurfaceEndpoints, computeAimPosition } from './solarsystem/paths
 
 // [moved] Mesh builders moved to './solarsystem/builders'.
 
-export function SolarSystemMap({
+export function SolarSystemScene({
   interactive,
   friends,
 }: {
@@ -643,7 +643,7 @@ export function SolarSystemMap({
       skyRef.current = skyMesh;
       scene.add(skyMesh);
     } catch (e) {
-      console.warn('[SolarSystemMap] Failed to initialize sky', e);
+      console.warn('[SolarSystemScene] Failed to initialize sky', e);
     }
 
     // Do not preload textures here; first render should not wait on IO.
@@ -1444,7 +1444,7 @@ export function SolarSystemMap({
             }
           })
           .catch((e) => {
-            console.warn('[SolarSystemMap] Failed to load Saturn ring texture', e);
+            console.warn('[SolarSystemScene] Failed to load Saturn ring texture', e);
           });
       }
     }
@@ -1454,7 +1454,7 @@ export function SolarSystemMap({
       try {
         await Rocket.preloadModel();
       } catch (e) {
-        console.warn('[SolarSystemMap] Rocket.preloadModel failed', e);
+        console.warn('[SolarSystemScene] Rocket.preloadModel failed', e);
       }
 
       try {

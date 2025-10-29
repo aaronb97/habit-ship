@@ -6,7 +6,7 @@ import { Dev } from './screens/Dev';
 import { colors } from '../styles/theme';
 import { useStore } from '../utils/store';
 import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation';
-import { SolarSystemMap } from '../components/SolarSystemMap';
+import { SolarSystemScene } from '../components/SolarSystemScene';
 import { Dashboard } from '../components/Dashboard';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Ionicons } from '@expo/vector-icons';
@@ -195,7 +195,7 @@ export function TabNavigator() {
 
   return (
     <View style={styles.container}>
-      {/* SolarSystemMap doesn't work on emulators */}
+      {/* SolarSystemScene doesn't work on emulators */}
       {Device.isDevice && (
         <View
           style={styles.mapOverlay}
@@ -229,7 +229,7 @@ export function TabNavigator() {
             })();
 
             return (
-              <SolarSystemMap
+              <SolarSystemScene
                 interactive={isMapFocused}
                 friends={friendEntries}
               />
