@@ -1,7 +1,7 @@
 import { View, StyleSheet, Animated, ImageSourcePropType } from 'react-native';
 import { useRef, useEffect, useState } from 'react';
 import { Home } from './screens/Home';
-import { SolarMap } from './screens/SolarMap';
+import { SolarSystemSceneControls } from './screens/SolarSystemSceneControls';
 import { Dev } from './screens/Dev';
 import { colors } from '../styles/theme';
 import { useStore } from '../utils/store';
@@ -118,7 +118,7 @@ export function TabNavigator() {
 
       <Tab.Screen
         name="MapTab"
-        component={SolarMap}
+        component={SolarSystemSceneControls}
         options={{
           title: Device.deviceType === Device.DeviceType.TABLET ? 'Rocket' : '',
           tabBarBadge: hasFuelAndTarget ? ' ' : undefined,

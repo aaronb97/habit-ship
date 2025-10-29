@@ -8,7 +8,7 @@ import type { CameraController } from '../../components/solarsystem/camera';
 import { getController } from '../../components/solarsystem/controllerRegistry';
 import { HSButton } from '../../components/HSButton';
 
-export function SolarMap() {
+export function SolarSystemSceneControls() {
   const isFocused = useIsFocused();
   const { width, height } = useWindowDimensions();
   const { justLanded, userPosition } = useStore();
