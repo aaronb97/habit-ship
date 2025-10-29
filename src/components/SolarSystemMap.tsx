@@ -62,6 +62,7 @@ import {
   ZOOM_MAX_RADIUS,
   ROCKET_LANDING_SPREAD_FRACTION,
   FRIEND_AIM_YAW_OFFSET_STEP_RAD,
+  ORBIT_INITIAL_RADIUS,
 } from './solarsystem/constants';
 import { getSkinById } from '../utils/skins';
 import { DebugOverlay } from './DebugOverlay';
@@ -102,6 +103,8 @@ export function SolarSystemMap({
   const rocketRef = useRef<Rocket | null>(null);
   const displayUserPosRef = useRef<THREE.Vector3>(new THREE.Vector3());
   const skyRef = useRef<THREE.Mesh | null>(null);
+  const ambientRef = useRef<THREE.AmbientLight | null>(null);
+  const ambientBaseRef = useRef<number>(1);
   const friendRocketsRef = useRef<Map<string, Rocket>>(new Map());
   const friendMetaRef = useRef<
     Map<string, { rocketColor: number; selectedSkinId?: string | null }>
@@ -892,7 +895,11 @@ export function SolarSystemMap({
     composerRef.current = composer;
 
     // Lights
-    addDefaultLights(scene);
+    {
+      const { ambient } = addDefaultLights(scene);
+      ambientRef.current = ambient;
+      ambientBaseRef.current = ambient.intensity;
+    }
 
     const relevantSystems = getRelevantPlanetSystems();
     const unlockedBodies = getUnlockedBodies();
@@ -1467,6 +1474,18 @@ export function SolarSystemMap({
         const glCtx = glRef.current;
         if (rocket && cam && glCtx) {
           rocket.enforceMinimumApparentSize(cam, glCtx.drawingBufferHeight);
+        }
+      }
+
+      // Scale ambient light intensity with camera radius to keep distant rockets visible
+      {
+        const controller = cameraControllerRef.current;
+        const amb = ambientRef.current;
+        if (controller && amb) {
+          const rel = Math.max(0, controller.radius / Math.max(1e-6, ORBIT_INITIAL_RADIUS));
+          // Log-style growth with a cap to avoid blowing out the scene
+          const factor = Math.min(6, 1 + Math.log(1 + rel) * 0.8);
+          amb.intensity = ambientBaseRef.current * factor;
         }
       }
 
