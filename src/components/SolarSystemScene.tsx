@@ -34,7 +34,6 @@ import { getRelevantPlanetSystemsFor } from './solarsystem/relevance';
 import { createComposer } from './solarsystem/postprocessing';
 import { useComposedGesture } from './solarsystem/gestures';
 import { addDefaultLights } from './solarsystem/lights';
-import { registerController } from './solarsystem/controllerRegistry';
 import {
   RENDERER_CLEAR_COLOR,
   RENDERER_CLEAR_ALPHA,
@@ -65,21 +64,18 @@ import { computeSurfaceEndpoints, computeAimPosition } from './solarsystem/paths
 
 // [moved] Mesh builders moved to './solarsystem/builders'.
 
-export function SolarSystemScene({
-  interactive,
-  friends,
-}: {
+interface Props {
+  cameraController: CameraController;
   interactive?: boolean;
-  /** Optional list of friend entries to render rockets for. */
   friends?: { uid: string; profile: UsersDoc }[];
-} = {}) {
+}
+
+export function SolarSystemScene({ cameraController, interactive, friends }: Props) {
   const { width, height } = useWindowDimensions();
 
   // Refs for scene graph
   const rendererRef = useRef<Renderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const cameraControllerRef = useRef<CameraController | null>(null);
   const frameRef = useRef<number | null>(null);
   const glRef = useRef<ExpoWebGLRenderingContext | null>(null);
   const composerRef = useRef<EffectComposer | null>(null);
@@ -225,7 +221,7 @@ export function SolarSystemScene({
    */
   useEffect(() => {
     const scene = sceneRef.current;
-    const camera = cameraRef.current;
+    const camera = cameraController.camera;
     const composer = composerRef.current;
     const gl = glRef.current;
     if (!scene || !camera || !composer || !gl) {
@@ -395,26 +391,28 @@ export function SolarSystemScene({
           return;
         }
 
-        const controller = cameraControllerRef.current;
-        if (controller) {
-          controller.startScriptedCameraFromProgress(start, controller.state, fromAbs, toAbs, {
+        cameraController.startScriptedCameraFromProgress(
+          start,
+          cameraController.state,
+          fromAbs,
+          toAbs,
+          {
             lockSideOnYaw: lockSideOn,
-          });
-        } else {
-          pendingScriptedStartRef.current = {
-            nowTs: start,
-            fromAbs,
-            toAbs,
-            lockSideOn,
-          };
-        }
+          },
+        );
       } else {
         pendingScriptedStartRef.current = null;
       }
     } else {
       focusAnimStartRef.current = null;
     }
-  }, [finalizeLandingAfterAnimation, interactiveEffective, skipRocketAnimation, syncTravelVisuals]);
+  }, [
+    cameraController,
+    finalizeLandingAfterAnimation,
+    interactiveEffective,
+    skipRocketAnimation,
+    syncTravelVisuals,
+  ]);
 
   // Reset animation start when distance updates while focused
   const prevDistanceRef = useRef<{ prev?: number; curr?: number }>({});
@@ -460,19 +458,15 @@ export function SolarSystemScene({
       const separation = startCenter.distanceTo(targetCenter);
       const lockSideOn = separation < YAW_SIDE_ON_DISTANCE_CUTOFF;
       // Configure controller policies for short-hop
-      const controller = cameraControllerRef.current;
-      if (controller) {
-        controller.startScriptedCameraFromProgress(start, controller.state, fromAbs, toAbs, {
+      cameraController.startScriptedCameraFromProgress(
+        start,
+        cameraController.state,
+        fromAbs,
+        toAbs,
+        {
           lockSideOnYaw: lockSideOn,
-        });
-      } else {
-        pendingScriptedStartRef.current = {
-          nowTs: start,
-          fromAbs,
-          toAbs,
-          lockSideOn,
-        };
-      }
+        },
+      );
     }
 
     // If values differ, an animation is pending; if equal, batch already synced
@@ -487,6 +481,7 @@ export function SolarSystemScene({
     skipRocketAnimation,
     syncTravelVisuals,
     finalizeLandingAfterAnimation,
+    cameraController,
   ]);
 
   useEffect(() => {
@@ -602,17 +597,12 @@ export function SolarSystemScene({
 
   // Double-tap: delegate to controller's configurable cycle
   const zoomCamera = () => {
-    const controller = cameraControllerRef.current;
-    if (!controller) {
-      return;
-    }
-
-    controller.cycleDoubleTap();
+    cameraController.cycleDoubleTap();
   };
 
   // Gesture composition via hook (persists pan accumulators internally)
   const gesture = useComposedGesture({
-    controllerRef: cameraControllerRef,
+    cameraController,
     width,
     height,
     onDoubleTap: zoomCamera,
@@ -655,9 +645,8 @@ export function SolarSystemScene({
       CAMERA_FAR,
     );
 
-    cameraRef.current = camera;
-    // Create camera controller and start any pending scripted sequence
-    cameraControllerRef.current = new CameraController(camera);
+    cameraController.registerCamera(camera);
+
     // Install collision resolver to prevent camera from entering body geometry
     {
       /**
@@ -719,16 +708,14 @@ export function SolarSystemScene({
         return safe;
       };
 
-      cameraControllerRef.current.setCollisionResolver(resolver);
+      cameraController.setCollisionResolver(resolver);
     }
 
-    // Expose controller to screens for gesture forwarding when overlay is behind
-    registerController(cameraControllerRef.current);
     if (pendingScriptedStartRef.current) {
       const p = pendingScriptedStartRef.current;
-      cameraControllerRef.current.startScriptedCameraFromProgress(
+      cameraController.startScriptedCameraFromProgress(
         p.nowTs,
-        cameraControllerRef.current.state,
+        cameraController.state,
         p.fromAbs,
         p.toAbs,
         { lockSideOnYaw: p.lockSideOn },
@@ -971,7 +958,7 @@ export function SolarSystemScene({
 
       // Update friend rockets (positions, visibility, minimum size)
       {
-        const cam = cameraRef.current as THREE.PerspectiveCamera | null;
+        const cam = cameraController.camera;
         const glCtx = glRef.current;
         if (cam && glCtx) {
           const resH = glCtx.drawingBufferHeight;
@@ -1312,9 +1299,8 @@ export function SolarSystemScene({
 
       // CameraController: compute center/target and tick
       {
-        const controller = cameraControllerRef.current;
-        const cam = cameraRef.current;
-        if (controller && cam) {
+        const cam = cameraController.camera;
+        if (cam) {
           const { target: targetState } = useStore.getState().userPosition;
 
           const targetBody = PLANETS.find((b) => b.name === targetState) ?? earth;
@@ -1334,13 +1320,13 @@ export function SolarSystemScene({
           // If the target is The Moon, force the orbit plane normal to Y-up (align to XZ plane)
           const planeOverride = targetState === 'The Moon' ? new THREE.Vector3(0, 0, 1) : undefined;
 
-          controller.tick(center, targetVisual, planeOverride);
+          cameraController.tick(center, targetVisual, planeOverride);
         }
       }
 
       // Enforce a minimum apparent size for the rocket regardless of zoom
       {
-        const cam = cameraRef.current;
+        const cam = cameraController.camera;
         const rocket = rocketRef.current;
         const glCtx = glRef.current;
         if (rocket && cam && glCtx) {
@@ -1350,10 +1336,9 @@ export function SolarSystemScene({
 
       // Scale ambient light intensity with camera radius to keep distant rockets visible
       {
-        const controller = cameraControllerRef.current;
         const amb = ambientRef.current;
-        if (controller && amb) {
-          const rel = Math.max(0, controller.radius / Math.max(1e-6, ORBIT_INITIAL_RADIUS));
+        if (amb) {
+          const rel = Math.max(0, cameraController.radius / Math.max(1e-6, ORBIT_INITIAL_RADIUS));
           // Log-style growth with a cap to avoid blowing out the scene
           const factor = Math.min(6, 1 + Math.log(1 + rel) * 0.8);
           amb.intensity = ambientBaseRef.current * factor;
@@ -1362,7 +1347,7 @@ export function SolarSystemScene({
 
       // Keep sky centered on the camera to avoid parallax and clipping
       {
-        const cam = cameraRef.current;
+        const cam = cameraController.camera;
         const sky = skyRef.current;
         if (cam && sky) {
           sky.position.copy(cam.position);
@@ -1382,21 +1367,18 @@ export function SolarSystemScene({
 
       // Collect debug metrics and publish via single function
       {
-        const controller = cameraControllerRef.current;
-        const state = controller?.state;
-        const yaw = state?.yaw ?? 0;
-        const pitch = state?.pitch ?? 0;
+        const state = cameraController.state;
+        const yaw = state.yaw;
+        const pitch = state.pitch;
         const animAlpha = animAlphaRef.current;
-        if (cameraControllerRef.current) {
-          publishDebug({
-            fps,
-            yaw,
-            pitch,
-            radius: cameraControllerRef.current.radius,
-            animAlpha,
-            cameraPhase: cameraControllerRef.current.getCameraPhase(),
-          });
-        }
+        publishDebug({
+          fps,
+          yaw,
+          pitch,
+          radius: cameraController.radius,
+          animAlpha,
+          cameraPhase: cameraController.getCameraPhase(),
+        });
       }
 
       gl.endFrameEXP();
@@ -1514,7 +1496,7 @@ export function SolarSystemScene({
   // Resize handling
   useEffect(() => {
     const renderer = rendererRef.current;
-    const camera = cameraRef.current;
+    const camera = cameraController.camera;
     const gl = glRef.current;
     if (renderer && camera && gl) {
       const { drawingBufferWidth, drawingBufferHeight } = gl;
@@ -1548,8 +1530,6 @@ export function SolarSystemScene({
   useEffect(() => {
     const registryAtMount = bodyRegistryRef.current;
     return () => {
-      // Unregister controller on unmount
-      registerController(null);
       if (frameRef.current) {
         cancelAnimationFrame(frameRef.current);
       }

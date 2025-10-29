@@ -5,10 +5,13 @@ import { useEffect, useRef } from 'react';
 import { GestureDetector } from 'react-native-gesture-handler';
 import { useComposedGesture } from '../../components/solarsystem/gestures';
 import type { CameraController } from '../../components/solarsystem/camera';
-import { getController } from '../../components/solarsystem/controllerRegistry';
 import { HSButton } from '../../components/HSButton';
 
-export function SolarSystemSceneControls() {
+interface Props {
+  cameraController: CameraController;
+}
+
+export function SolarSystemSceneControls({ cameraController }: Props) {
   const isFocused = useIsFocused();
   const { width, height } = useWindowDimensions();
   const { justLanded, userPosition } = useStore();
@@ -16,12 +19,6 @@ export function SolarSystemSceneControls() {
   const lastLandingReward = useStore((s) => s.lastLandingReward);
   const applyFuelToTravel = useStore((s) => s.applyFuelToTravel);
   const shownForLocationRef = useRef<string | null>(null);
-  const controllerRef = useRef<CameraController | null>(null);
-
-  // Refresh controller reference on focus changes (and initially)
-  useEffect(() => {
-    controllerRef.current = getController();
-  }, [isFocused]);
 
   useEffect(() => {
     if (!isFocused) {
@@ -56,10 +53,10 @@ export function SolarSystemSceneControls() {
 
   // Compose a gesture layer that forwards to the global map controller
   const gesture = useComposedGesture({
-    controllerRef,
+    cameraController,
     width,
     height,
-    onDoubleTap: () => controllerRef.current?.cycleDoubleTap(),
+    onDoubleTap: () => cameraController.cycleDoubleTap(),
     enabled: isFocused,
   });
 

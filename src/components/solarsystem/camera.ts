@@ -226,7 +226,7 @@ function updateOrbitCamera(
 // CameraController encapsulates camera orbit state, gesture interactions,
 // scripted camera sequencing, and per-frame updates.
 export class CameraController {
-  public camera: THREE.PerspectiveCamera;
+  public camera?: THREE.PerspectiveCamera;
 
   // Current orbit state (spherical around the user/center)
   private yaw = ORBIT_INITIAL_YAW;
@@ -292,7 +292,11 @@ export class CameraController {
    * Create a controller for an orbit camera.
    * @param camera The THREE.PerspectiveCamera to control.
    */
-  constructor(camera: THREE.PerspectiveCamera) {
+  constructor(camera?: THREE.PerspectiveCamera) {
+    this.camera = camera;
+  }
+
+  registerCamera(camera: THREE.PerspectiveCamera) {
     this.camera = camera;
   }
 
@@ -750,6 +754,10 @@ export class CameraController {
    * aligns the orbit plane accordingly regardless of center/target relationship.
    */
   tick(center: THREE.Vector3, target: THREE.Vector3, planeNormalOverride?: THREE.Vector3) {
+    if (!this.camera) {
+      return;
+    }
+
     this._nowTs = getCurrentTime();
 
     const phase = this.getCameraPhase();

@@ -1,5 +1,5 @@
 import { View, StyleSheet, Animated, ImageSourcePropType } from 'react-native';
-import { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Home } from './screens/Home';
 import { SolarSystemSceneControls } from './screens/SolarSystemSceneControls';
 import { Dev } from './screens/Dev';
@@ -15,6 +15,7 @@ import { ProfileStack } from './stacks/ProfileStack';
 import * as Device from 'expo-device';
 import { useFriendships } from '../hooks/useFriendships';
 import { useAllUsers } from '../hooks/useAllUsers';
+import { CameraController } from '../components/solarsystem/camera';
 
 const ICON_SIZE = 24;
 
@@ -32,13 +33,18 @@ export function TabNavigator() {
 
   const hasFuelAndTarget = useStore((s) => s.fuelKm > 0 && !!s.userPosition.target);
 
-  const homeNeedsSelection = useStore((s) => s.justLanded);
-  const activeTab = useStore((s) => s.activeTab);
-  const setActiveTab = useStore((s) => s.setActiveTab);
-  const unseenSkins = useStore((s) => s.unseenUnlockedSkins);
-  const isSetupFinished = useStore((s) => s.isSetupFinished);
-  const uid = useStore((s) => s.firebaseId);
-  const showAllRockets = useStore((s) => s.showAllRockets);
+  const cameraController = useRef(new CameraController());
+
+  const {
+    justLanded: homeNeedsSelection,
+    activeTab,
+    setActiveTab,
+    unseenUnlockedSkins: unseenSkins,
+    isSetupFinished,
+    firebaseId: uid,
+    showAllRockets,
+  } = useStore();
+
   const {
     accepted,
     incoming,
@@ -118,7 +124,6 @@ export function TabNavigator() {
 
       <Tab.Screen
         name="MapTab"
-        component={SolarSystemSceneControls}
         options={{
           title: Device.deviceType === Device.DeviceType.TABLET ? 'Rocket' : '',
           tabBarBadge: hasFuelAndTarget ? ' ' : undefined,
@@ -129,7 +134,9 @@ export function TabNavigator() {
         listeners={{
           focus: () => setActiveTab('MapTab'),
         }}
-      />
+      >
+        {() => <SolarSystemSceneControls cameraController={cameraController.current} />}
+      </Tab.Screen>
 
       <Tab.Screen
         name="ProfileTab"
@@ -232,6 +239,7 @@ export function TabNavigator() {
               <SolarSystemScene
                 interactive={isMapFocused}
                 friends={friendEntries}
+                cameraController={cameraController.current}
               />
             );
           })()}
