@@ -7,7 +7,6 @@ import {
   DEFAULT_ROCKET_FORWARD,
   ROCKET_MODEL_SCALE,
   ROCKET_SPIN_SPEED,
-  ROCKET_LANDING_CLEARANCE,
   OUTLINE_EDGE_GLOW,
   OUTLINE_EDGE_THICKNESS,
   OUTLINE_PULSE_PERIOD,
@@ -456,37 +455,6 @@ export class Rocket {
 
       this.unsubOutlines = undefined;
     }
-  }
-
-  static computeAimPosition(
-    startCenter: THREE.Vector3,
-    targetCenter: THREE.Vector3,
-    targetVisualRadius: number,
-  ): THREE.Vector3 {
-    const dir = targetCenter.clone().sub(startCenter);
-    const dirN = dir.clone().normalize();
-    return targetCenter
-      .clone()
-      .sub(dirN.clone().multiplyScalar(targetVisualRadius + ROCKET_LANDING_CLEARANCE));
-  }
-
-  static computeSurfaceEndpoints(
-    startCenter: THREE.Vector3,
-    startVisualRadius: number,
-    targetCenter: THREE.Vector3,
-    targetVisualRadius: number,
-  ): { startSurface: THREE.Vector3; targetSurface: THREE.Vector3 } {
-    const dir = targetCenter.clone().sub(startCenter);
-    const dirLen = Math.max(1e-9, dir.length());
-    const dirN = dir.clone().divideScalar(dirLen);
-
-    const startSurface = startCenter.clone().add(dirN.clone().multiplyScalar(startVisualRadius));
-
-    const targetSurface = targetCenter
-      .clone()
-      .sub(dirN.clone().multiplyScalar(targetVisualRadius + ROCKET_LANDING_CLEARANCE));
-
-    return { startSurface, targetSurface };
   }
 
   // ==========================

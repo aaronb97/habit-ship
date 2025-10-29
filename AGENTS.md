@@ -20,3 +20,5 @@ const selectedSkinId = useStore((s) => s.selectedSkinId);
 ```
 
 Rather than using void with promises prefer to catch with an error logged to sentry
+
+For functions with three or more arguments, prefer to use an object

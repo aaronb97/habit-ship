@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { getCurrentDate } from '../../utils/time';
-import { cBodies as PLANETS, Planet, Moon, type CBody } from '../../planets';
+import { cBodies as PLANETS, Planet, Moon, type CBody, earth } from '../../planets';
 import type { Coordinates } from '../../types';
 import {
   KM_TO_SCENE,
@@ -9,6 +9,7 @@ import {
   SIZE_EXPONENT,
   MIN_SCALE_RATIO,
 } from './constants';
+import { computeFriendSurfacePosAim, computeFriendTravelPosAim } from './paths';
 
 export function toVec3([x, y, z]: Coordinates): THREE.Vector3 {
   return new THREE.Vector3(x * KM_TO_SCENE, y * KM_TO_SCENE, z * KM_TO_SCENE);
@@ -111,4 +112,73 @@ export function adjustPositionForOrbits(body: CBody, basePosition: THREE.Vector3
   }
 
   return basePosition;
+}
+
+/**
+ * Computes a friend's surface position and aim vector given start/target planet names.
+ * Resolves planet centers and visual radii using the provided getter, then delegates to
+ * computeFriendSurfacePosAim to apply tangent-plane spread and yaw offsets.
+ *
+ * Parameters:
+ * - startName: Name of the start body.
+ * - targetName: Name of the target body.
+ * - getVisualRadius: Callback returning visual radius (scene units) for a body name.
+ * - theta: Tangent-plane angle in radians for lateral spread around the start.
+ * - yaw: Yaw offset in radians applied to the aim direction about the path axis.
+ * - spreadAlpha: 0..1 lateral spread fraction relative to start body's visual radius.
+ *
+ * Returns: Object containing pos (surface position) and aim (look-at target).
+ */
+export function computeFriendSurfacePosAimByNames(
+  startName: string,
+  targetName: string,
+  getVisualRadius: (name: string) => number,
+  theta: number,
+  yaw: number,
+): { pos: THREE.Vector3; aim: THREE.Vector3 } {
+  const startBody = PLANETS.find((b) => b.name === startName) ?? earth;
+  const targetBody = PLANETS.find((b) => b.name === targetName) ?? earth;
+  const startCenter = toVec3(startBody.getVisualPosition());
+  const targetCenter = toVec3(targetBody.getVisualPosition());
+  const startVisualRadius = getVisualRadius(startBody.name);
+  const targetVisualRadius = getVisualRadius(targetBody.name);
+
+  return computeFriendSurfacePosAim(
+    startCenter,
+    targetCenter,
+    startVisualRadius,
+    targetVisualRadius,
+    theta,
+    yaw,
+  );
+}
+
+/**
+ * Computes a friend's in-flight position and aim given start/target names
+ * and a base centerline position.
+ *
+ * Parameters:
+ * - startName: Name of the start body.
+ * - targetName: Name of the target body.
+ * - basePos: Centerline-interpolated position along the path.
+ * - getVisualRadius: Callback returning visual radius (scene units) for a body name.
+ * - theta: Tangent-plane angle in radians for lateral spread around the path.
+ * - spreadAlpha: 0..1 lateral spread fraction relative to start body's visual radius.
+ *
+ * Returns: Object containing pos (offset from centerline) and aim (look-at target).
+ */
+export function computeFriendTravelPosAimByNames(
+  startName: string,
+  targetName: string,
+  basePos: THREE.Vector3,
+  getVisualRadius: (name: string) => number,
+  theta: number,
+): { pos: THREE.Vector3; aim: THREE.Vector3 } {
+  const startBody = PLANETS.find((b) => b.name === startName) ?? earth;
+  const targetBody = PLANETS.find((b) => b.name === targetName) ?? earth;
+  const startCenter = toVec3(startBody.getVisualPosition());
+  const targetCenter = toVec3(targetBody.getVisualPosition());
+  const startVisualRadius = getVisualRadius(startBody.name);
+
+  return computeFriendTravelPosAim(startCenter, targetCenter, basePos, startVisualRadius, theta);
 }

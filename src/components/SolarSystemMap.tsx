@@ -18,7 +18,11 @@ import type { UserPosition } from '../types';
 import { useDebugValues } from '../hooks/useDebugValues';
 
 // Modularized helpers/builders
-import { toVec3 } from './solarsystem/helpers';
+import {
+  toVec3,
+  computeFriendSurfacePosAimByNames,
+  computeFriendTravelPosAimByNames,
+} from './solarsystem/helpers';
 import { type MappedMaterial } from './solarsystem/builders';
 import { loadBodyTexture, loadRingTexture, loadSkinTextures } from './solarsystem/textures';
 import { createSky } from './solarsystem/sky';
@@ -46,7 +50,6 @@ import {
   YAW_SIDE_ON_DISTANCE_CUTOFF,
   CAMERA_COLLISION_CLEARANCE,
   ZOOM_MAX_RADIUS,
-  ROCKET_LANDING_SPREAD_FRACTION,
   FRIEND_AIM_YAW_OFFSET_STEP_RAD,
   ORBIT_INITIAL_RADIUS,
 } from './solarsystem/constants';
@@ -54,6 +57,7 @@ import { getSkinById } from '../utils/skins';
 import { DebugOverlay } from './DebugOverlay';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Sentry from '@sentry/react-native';
+import { computeSurfaceEndpoints, computeAimPosition } from './solarsystem/paths';
 
 // [moved] Helpers moved to './solarsystem/helpers'.
 
@@ -146,7 +150,7 @@ export function SolarSystemMap({
       const targetBody = PLANETS.find((b) => b.name === target) ?? earth;
       const startCenter = toVec3(startBody.getVisualPosition());
       const targetCenter = toVec3(targetBody.getVisualPosition());
-      const { startSurface, targetSurface } = Rocket.computeSurfaceEndpoints(
+      const { startSurface, targetSurface } = computeSurfaceEndpoints(
         startCenter,
         bodyRegistryRef.current.getVisualRadius(startBody.name),
         targetCenter,
@@ -536,108 +540,6 @@ export function SolarSystemMap({
     return bodyRegistryRef.current.getVisualRadius(name);
   };
 
-  /**
-   * Computes a friend's surface position and aim vector on the start body using
-   * a stable tangent basis around the start-target axis.
-   *
-   * Parameters:
-   * - startName: Name of the start celestial body where the friend is landed.
-   * - targetName: Name of the target celestial body the friend is aiming toward.
-   * - theta: Tangent-plane angle in radians for lateral spread around the start.
-   * - yaw: Yaw offset in radians to rotate the aim slightly around the radial axis.
-   *
-   * Returns: Object with pos (surface position) and aim (look-at target) in scene space.
-   */
-  const computeFriendSurfacePosAim = (
-    startName: string,
-    targetName: string,
-    theta: number,
-    yaw: number,
-  ): { pos: THREE.Vector3; aim: THREE.Vector3 } => {
-    const startBody = PLANETS.find((b) => b.name === startName) ?? earth;
-    const targetBody = PLANETS.find((b) => b.name === targetName) ?? earth;
-    const startCenter = toVec3(startBody.getVisualPosition());
-    const targetCenter = toVec3(targetBody.getVisualPosition());
-    const startRadius = getVisualRadius(startBody.name);
-    const dirN = targetCenter.clone().sub(startCenter).normalize();
-    const baseStartSurface = startCenter.clone().add(dirN.clone().multiplyScalar(startRadius));
-    const aimBase = Rocket.computeAimPosition(
-      startCenter,
-      targetCenter,
-      getVisualRadius(targetBody.name),
-    );
-
-    const baseAimDir = aimBase.clone().sub(baseStartSurface);
-
-    let helper = new THREE.Vector3(0, 0, 1);
-    if (Math.abs(dirN.dot(helper)) > 0.98) {
-      helper = new THREE.Vector3(1, 0, 0);
-    }
-
-    const r = dirN.clone().cross(helper).normalize();
-    const u = r.clone().cross(dirN).normalize();
-
-    const alpha = Math.max(0, ROCKET_LANDING_SPREAD_FRACTION);
-    const offsetDir = r
-      .clone()
-      .multiplyScalar(Math.cos(theta))
-      .add(u.clone().multiplyScalar(Math.sin(theta)));
-
-    const newDir = dirN.clone().add(offsetDir.multiplyScalar(alpha)).normalize();
-    const pos = startCenter.clone().add(newDir.multiplyScalar(startRadius));
-
-    const aimDir = baseAimDir.clone().applyAxisAngle(dirN, yaw);
-    const aim = pos.clone().add(aimDir);
-    return { pos, aim };
-  };
-
-  /**
-   * Computes a friend's in-flight position offset next to the centerline and a
-   * matching aim direction so all rockets point the same way while traveling.
-   *
-   * Parameters:
-   * - startName: Name of the start celestial body.
-   * - targetName: Name of the target celestial body.
-   * - basePos: Centerline interpolated position of the friend.
-   * - theta: Tangent-plane angle in radians for lateral spread around the path.
-   *
-   * Returns: Object with pos (offset from centerline) and aim (look-at target).
-   */
-  const computeFriendTravelPosAim = (
-    startName: string,
-    targetName: string,
-    basePos: THREE.Vector3,
-    theta: number,
-  ): { pos: THREE.Vector3; aim: THREE.Vector3 } => {
-    const startBody = PLANETS.find((b) => b.name === startName) ?? earth;
-    const targetBody = PLANETS.find((b) => b.name === targetName) ?? earth;
-    const startCenter = toVec3(startBody.getVisualPosition());
-    const targetCenter = toVec3(targetBody.getVisualPosition());
-    const dir = targetCenter.clone().sub(startCenter);
-    const dirN = dir.clone().normalize();
-    let helper = new THREE.Vector3(0, 0, 1);
-    if (Math.abs(dirN.dot(helper)) > 0.98) {
-      helper = new THREE.Vector3(1, 0, 0);
-    }
-
-    const r = dirN.clone().cross(helper).normalize();
-    const u = r.clone().cross(dirN).normalize();
-
-    const lateralDir = r
-      .clone()
-      .multiplyScalar(Math.cos(theta))
-      .add(u.clone().multiplyScalar(Math.sin(theta)));
-
-    const lateralMag =
-      Math.max(0, ROCKET_LANDING_SPREAD_FRACTION) * getVisualRadius(startBody.name);
-
-    const pos = basePos.clone().add(lateralDir.multiplyScalar(lateralMag));
-
-    // Keep everyone pointing exactly along the path direction
-    const aim = pos.clone().add(dirN);
-    return { pos, aim };
-  };
-
   const computeDisplayUserPos = (): THREE.Vector3 => {
     // If traveling, place user between start and target using distance proportion
     const {
@@ -680,7 +582,7 @@ export function SolarSystemMap({
       const startCenter = toVec3(startBody.getVisualPosition());
       const targetCenter = toVec3(targetBody.getVisualPosition());
 
-      const { startSurface, targetSurface } = Rocket.computeSurfaceEndpoints(
+      const { startSurface, targetSurface } = computeSurfaceEndpoints(
         startCenter,
         getVisualRadius(startBody.name),
         targetCenter,
@@ -1017,14 +919,17 @@ export function SolarSystemMap({
                 });
               }
 
-              const { pos, aim } = computeFriendSurfacePosAim(
-                entry.start,
-                entry.target,
-                theta,
-                yaw,
-              );
+              {
+                const res0 = computeFriendSurfacePosAimByNames(
+                  entry.start,
+                  entry.target,
+                  getVisualRadius,
+                  theta,
+                  yaw,
+                );
 
-              clusterFriendOverrides.set(entry.uid, { pos, aim });
+                clusterFriendOverrides.set(entry.uid, res0);
+              }
             });
           });
         }
@@ -1046,7 +951,7 @@ export function SolarSystemMap({
           const startCenter = toVec3(startBody.getVisualPosition());
           const targetCenter = toVec3(targetBody.getVisualPosition());
 
-          const aimPos = Rocket.computeAimPosition(
+          const aimPos = computeAimPosition(
             startCenter,
             targetCenter,
             getVisualRadius(targetBody.name),
@@ -1258,7 +1163,7 @@ export function SolarSystemMap({
                   const targetBody = PLANETS.find((b) => b.name === fp.target) ?? earth;
                   const startCenter = toVec3(startBody.getVisualPosition());
                   const targetCenter = toVec3(targetBody.getVisualPosition());
-                  const { startSurface, targetSurface } = Rocket.computeSurfaceEndpoints(
+                  const { startSurface, targetSurface } = computeSurfaceEndpoints(
                     startCenter,
                     getVisualRadius(startBody.name),
                     targetCenter,
@@ -1269,14 +1174,17 @@ export function SolarSystemMap({
                 }
               }
 
-              const { pos, aim } = computeFriendTravelPosAim(
-                entry.start,
-                entry.target,
-                basePos,
-                theta,
-              );
+              {
+                const res1 = computeFriendTravelPosAimByNames(
+                  entry.start,
+                  entry.target,
+                  basePos,
+                  getVisualRadius,
+                  theta,
+                );
 
-              clusterFriendTravelOverrides.set(entry.uid, { pos, aim });
+                clusterFriendTravelOverrides.set(entry.uid, res1);
+              }
             });
           });
 
@@ -1304,7 +1212,7 @@ export function SolarSystemMap({
                 const targetBody = PLANETS.find((b) => b.name === fp.target) ?? earth;
                 const startCenter = toVec3(startBody.getVisualPosition());
                 const targetCenter = toVec3(targetBody.getVisualPosition());
-                const { startSurface, targetSurface } = Rocket.computeSurfaceEndpoints(
+                const { startSurface, targetSurface } = computeSurfaceEndpoints(
                   startCenter,
                   getVisualRadius(startBody.name),
                   targetCenter,
@@ -1332,7 +1240,7 @@ export function SolarSystemMap({
             if (travelOverride) {
               defaultAim = travelOverride.aim;
             } else {
-              defaultAim = Rocket.computeAimPosition(
+              defaultAim = computeAimPosition(
                 toVec3(startBody.getVisualPosition()),
                 toVec3(targetBody.getVisualPosition()),
                 getVisualRadius(targetBody.name),
@@ -1342,9 +1250,10 @@ export function SolarSystemMap({
               if (!startOverride && clusterKey) {
                 const sticky = friendStickyOverridesRef.current.get(uid);
                 if (sticky && sticky.key === clusterKey && (fp.distanceTraveled ?? 0) <= 1e-9) {
-                  const res = computeFriendSurfacePosAim(
+                  const res = computeFriendSurfacePosAimByNames(
                     startingLocation,
                     target ?? startingLocation,
+                    getVisualRadius,
                     sticky.theta,
                     sticky.yaw,
                   );
