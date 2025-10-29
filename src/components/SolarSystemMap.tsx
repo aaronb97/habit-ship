@@ -891,7 +891,6 @@ export function SolarSystemMap({
 
     composerRef.current = composer;
 
-
     // Lights
     addDefaultLights(scene);
 
@@ -1539,11 +1538,8 @@ export function SolarSystemMap({
             const node = bodyRegistryRef.current.get(name);
             if (node) node.setBodyTexture(tex);
           })
-          .catch((e) => {
-            console.warn(
-              `[SolarSystemMap] Failed to load body texture for ${name}`,
-              e,
-            );
+          .catch(() => {
+            // noop
           });
       }
 
