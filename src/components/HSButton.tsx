@@ -1,10 +1,5 @@
 import { ReactNode } from 'react';
-import {
-  StyleSheet,
-  TouchableOpacity,
-  TouchableOpacityProps,
-  Text,
-} from 'react-native';
+import { StyleSheet, TouchableOpacity, TouchableOpacityProps, Text } from 'react-native';
 import { fonts, fontSizes, colors } from '../styles/theme';
 
 interface HSButtonProps extends TouchableOpacityProps {
@@ -18,9 +13,7 @@ export function HSButton({ children, ...props }: HSButtonProps) {
       style={[styles.button, props.style, props.disabled && styles.disabled]}
     >
       {typeof children === 'string' ? (
-        <Text style={[styles.text, props.disabled && styles.disabledText]}>
-          {children}
-        </Text>
+        <Text style={[styles.text, props.disabled && styles.disabledText]}>{children}</Text>
       ) : (
         children
       )}

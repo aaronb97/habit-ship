@@ -23,12 +23,7 @@ declare module 'three/examples/jsm/postprocessing/OutlinePass.js' {
   import { Vector2, Scene, Camera, Color, Object3D } from 'three';
 
   export class OutlinePass {
-    constructor(
-      resolution: Vector2,
-      scene: Scene,
-      camera: Camera,
-      selectedObjects?: Object3D[],
-    );
+    constructor(resolution: Vector2, scene: Scene, camera: Camera, selectedObjects?: Object3D[]);
     edgeStrength: number;
     edgeGlow: number;
     edgeThickness: number;

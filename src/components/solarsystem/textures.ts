@@ -60,7 +60,9 @@ export async function loadBodyTexture(name: string): Promise<THREE.Texture> {
   }
 
   const cached = bodyTextureCache.get(name);
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
 
   let pending = bodyTexturePending.get(name);
   if (!pending) {
@@ -69,11 +71,9 @@ export async function loadBodyTexture(name: string): Promise<THREE.Texture> {
       try {
         await asset.downloadAsync();
       } catch (err) {
-        console.warn(
-          `[textures] downloadAsync failed for ${name}, using uri fallback`,
-          err,
-        );
+        console.warn(`[textures] downloadAsync failed for ${name}, using uri fallback`, err);
       }
+
       const src = asset.localUri ?? asset.uri;
       const loader = new TextureLoader();
       const tex = await loader.loadAsync(src);
@@ -82,6 +82,7 @@ export async function loadBodyTexture(name: string): Promise<THREE.Texture> {
       bodyTextureCache.set(name, tex);
       return tex;
     })();
+
     bodyTexturePending.set(name, pending);
   }
 
@@ -93,9 +94,7 @@ export async function loadBodyTexture(name: string): Promise<THREE.Texture> {
   }
 }
 
-export async function loadBodyTextures(
-  names: string[],
-): Promise<Record<string, THREE.Texture>> {
+export async function loadBodyTextures(names: string[]): Promise<Record<string, THREE.Texture>> {
   const textures: Record<string, THREE.Texture> = {};
   const loader = new TextureLoader();
 
@@ -104,6 +103,7 @@ export async function loadBodyTextures(
     if (!req) {
       continue;
     }
+
     try {
       const asset = Asset.fromModule(req);
       try {
@@ -111,6 +111,7 @@ export async function loadBodyTextures(
       } catch (err) {
         console.warn(`[textures] downloadAsync failed for ${name}, using uri fallback`, err);
       }
+
       const src = asset.localUri ?? asset.uri;
       const tex = await loader.loadAsync(src);
       tex.colorSpace = THREE.SRGBColorSpace;
@@ -140,7 +141,9 @@ export async function loadRingTexture(name: string): Promise<THREE.Texture> {
   }
 
   const cached = ringTextureCache.get(name);
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
 
   let pending = ringTexturePending.get(name);
   if (!pending) {
@@ -149,10 +152,7 @@ export async function loadRingTexture(name: string): Promise<THREE.Texture> {
       try {
         await asset.downloadAsync();
       } catch (err) {
-        console.warn(
-          `[textures] downloadAsync failed for ring ${name}, using uri fallback`,
-          err,
-        );
+        console.warn(`[textures] downloadAsync failed for ring ${name}, using uri fallback`, err);
       }
 
       const src = asset.localUri ?? asset.uri;
@@ -165,6 +165,7 @@ export async function loadRingTexture(name: string): Promise<THREE.Texture> {
       ringTextureCache.set(name, tex);
       return tex;
     })();
+
     ringTexturePending.set(name, pending);
   }
 
@@ -183,9 +184,7 @@ export async function loadRingTexture(name: string): Promise<THREE.Texture> {
  * names: Array of skin IDs to load.
  * Returns: Map of id -> THREE.Texture for ids that could be loaded.
  */
-export async function loadSkinTextures(
-  names: string[],
-): Promise<Record<string, THREE.Texture>> {
+export async function loadSkinTextures(names: string[]): Promise<Record<string, THREE.Texture>> {
   const textures: Record<string, THREE.Texture> = {};
   const unique = Array.from(new Set(names));
   const tasks: Promise<void>[] = [];
@@ -211,11 +210,9 @@ export async function loadSkinTextures(
         try {
           await asset.downloadAsync();
         } catch (err) {
-          console.warn(
-            `[textures] downloadAsync failed for skin ${id}, using uri fallback`,
-            err,
-          );
+          console.warn(`[textures] downloadAsync failed for skin ${id}, using uri fallback`, err);
         }
+
         const src = asset.localUri ?? asset.uri;
         const loader = new TextureLoader();
         const tex = await loader.loadAsync(src);
@@ -224,6 +221,7 @@ export async function loadSkinTextures(
         tex.anisotropy = TEXTURE_ANISOTROPY;
         return tex;
       })();
+
       skinTexturePending.set(id, pending);
     }
 
@@ -249,15 +247,16 @@ export async function loadSkinTextures(
   return textures;
 }
 
-export async function loadRingTextures(
-  names: string[],
-): Promise<Record<string, THREE.Texture>> {
+export async function loadRingTextures(names: string[]): Promise<Record<string, THREE.Texture>> {
   const textures: Record<string, THREE.Texture> = {};
   const loader = new TextureLoader();
 
   for (const name of names) {
     const req = RING_TEXTURE_REQUIRE[name];
-    if (!req) continue;
+    if (!req) {
+      continue;
+    }
+
     try {
       const asset = Asset.fromModule(req);
       try {
@@ -265,6 +264,7 @@ export async function loadRingTextures(
       } catch (err) {
         console.warn(`[textures] downloadAsync failed for ring ${name}, using uri fallback`, err);
       }
+
       const src = asset.localUri ?? asset.uri;
       const tex = await loader.loadAsync(src);
       tex.colorSpace = THREE.SRGBColorSpace;

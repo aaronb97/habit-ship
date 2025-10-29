@@ -20,6 +20,7 @@ export function LevelProgressBar() {
       <View style={styles.levelContainer}>
         <Text style={styles.levelText}>Level {level}</Text>
       </View>
+
       <View style={styles.progressContainer}>
         <ProgressBar
           progress={progress}
@@ -27,6 +28,7 @@ export function LevelProgressBar() {
           backgroundColor={colors.backgroundDarker}
           height={8}
         />
+
         <Text style={styles.xpText}>
           {currentXP} / {threshold} XP
         </Text>

@@ -14,10 +14,7 @@ export function toVec3([x, y, z]: Coordinates): THREE.Vector3 {
   return new THREE.Vector3(x * KM_TO_SCENE, y * KM_TO_SCENE, z * KM_TO_SCENE);
 }
 
-export function getTrailForBody(
-  body: Planet | Moon,
-  segments = 500,
-): THREE.Vector3[] {
+export function getTrailForBody(body: Planet | Moon, segments = 500): THREE.Vector3[] {
   const points: THREE.Vector3[] = [];
   const today = getCurrentDate();
   const periodDays = TRAIL_LENGTH_MULTIPLIER * body.orbitalPeriodDays;
@@ -77,11 +74,7 @@ export function getTrailForBody(
     const d = new Date(today.getTime() - i * stepMs);
     const coords = body.getPosition(d);
     points.push(
-      new THREE.Vector3(
-        coords[0] * KM_TO_SCENE,
-        coords[1] * KM_TO_SCENE,
-        coords[2] * KM_TO_SCENE,
-      ),
+      new THREE.Vector3(coords[0] * KM_TO_SCENE, coords[1] * KM_TO_SCENE, coords[2] * KM_TO_SCENE),
     );
   }
 
@@ -89,11 +82,7 @@ export function getTrailForBody(
   {
     const coords = body.getPosition(today);
     points.push(
-      new THREE.Vector3(
-        coords[0] * KM_TO_SCENE,
-        coords[1] * KM_TO_SCENE,
-        coords[2] * KM_TO_SCENE,
-      ),
+      new THREE.Vector3(coords[0] * KM_TO_SCENE, coords[1] * KM_TO_SCENE, coords[2] * KM_TO_SCENE),
     );
   }
 
@@ -108,10 +97,7 @@ export function apparentScaleRatio(ratio: number): number {
 
 // If a body orbits a parent, push it outward along the parent->child direction
 // to avoid visual overlap given our non-physical display radii.
-export function adjustPositionForOrbits(
-  body: CBody,
-  basePosition: THREE.Vector3,
-): THREE.Vector3 {
+export function adjustPositionForOrbits(body: CBody, basePosition: THREE.Vector3): THREE.Vector3 {
   if (body instanceof Moon) {
     const parent = PLANETS.find((b) => b.name === body.orbits);
     if (parent) {
@@ -119,9 +105,7 @@ export function adjustPositionForOrbits(
       const dir = basePosition.clone().sub(parentPos);
 
       return parentPos.add(
-        dir.multiplyScalar(
-          body.orbitOffsetMultiplier ?? ORBIT_OFFSET_MULTIPLIER,
-        ),
+        dir.multiplyScalar(body.orbitOffsetMultiplier ?? ORBIT_OFFSET_MULTIPLIER),
       );
     }
   }

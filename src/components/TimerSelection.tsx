@@ -19,13 +19,8 @@ interface TimerSelectionProps {
   initialTimer?: number;
 }
 
-const TimerSelection: React.FC<TimerSelectionProps> = ({
-  onTimerChange,
-  initialTimer,
-}) => {
-  const [selectedTimer, setSelectedTimer] = useState<number | null>(
-    initialTimer || null,
-  );
+const TimerSelection: React.FC<TimerSelectionProps> = ({ onTimerChange, initialTimer }) => {
+  const [selectedTimer, setSelectedTimer] = useState<number | null>(initialTimer || null);
 
   useEffect(() => {
     setSelectedTimer(initialTimer || null);
@@ -90,10 +85,7 @@ const TimerSelection: React.FC<TimerSelectionProps> = ({
     return false;
   };
 
-  const getButtonLabel = (option: {
-    label: string;
-    value: number | 'custom';
-  }) => {
+  const getButtonLabel = (option: { label: string; value: number | 'custom' }) => {
     if (
       option.value === 'custom' &&
       typeof selectedTimer === 'number' &&
@@ -113,12 +105,7 @@ const TimerSelection: React.FC<TimerSelectionProps> = ({
           style={[styles.button, isSelected(option) && styles.selectedButton]}
           onPress={() => handlePress(option.value)}
         >
-          <Text
-            style={[
-              styles.buttonText,
-              isSelected(option) && styles.selectedButtonText,
-            ]}
-          >
+          <Text style={[styles.buttonText, isSelected(option) && styles.selectedButtonText]}>
             {getButtonLabel(option)}
           </Text>
         </TouchableOpacity>

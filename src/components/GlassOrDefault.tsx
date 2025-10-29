@@ -1,8 +1,4 @@
-import {
-  GlassView,
-  GlassViewProps,
-  isLiquidGlassAvailable,
-} from 'expo-glass-effect';
+import { GlassView, GlassViewProps, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { View } from 'react-native';
 
 export function GlassOrDefault(props: GlassViewProps) {

@@ -13,10 +13,7 @@ export function DebugOverlay(props: {
   const [, setLastRender] = useState<number>(0);
 
   useEffect(() => {
-    const intervalId = setInterval(
-      () => setLastRender((count) => count + 1),
-      500,
-    );
+    const intervalId = setInterval(() => setLastRender((count) => count + 1), 500);
 
     return () => clearInterval(intervalId);
   }, []);
@@ -25,15 +22,25 @@ export function DebugOverlay(props: {
   const entries = Object.entries(values);
 
   return (
-    <GlassView style={styles.glassView} glassEffectStyle="clear">
-      <Pressable style={styles.debugOverlay} onPress={onToggle}>
+    <GlassView
+      style={styles.glassView}
+      glassEffectStyle="clear"
+    >
+      <Pressable
+        style={styles.debugOverlay}
+        onPress={onToggle}
+      >
         {entries.map(([k, v]) => (
-          <View key={k} style={styles.debugRow}>
+          <View
+            key={k}
+            style={styles.debugRow}
+          >
             <Text style={styles.debugText}>
               {k}: {typeof v === 'number' ? v.toFixed(3) : v}
             </Text>
           </View>
         ))}
+
         {expanded ? (
           <View style={styles.debugGraphs}>
             {entries.map(([k]) => {
@@ -41,8 +48,12 @@ export function DebugOverlay(props: {
               const min = stats?.min ?? 0;
               const max = stats?.max ?? 1;
               return (
-                <View key={`g-${k}`} style={styles.debugGraphBlock}>
+                <View
+                  key={`g-${k}`}
+                  style={styles.debugGraphBlock}
+                >
                   <Text style={styles.debugGraphLabel}>{k}</Text>
+
                   <MiniBarGraph
                     data={history[k] ?? []}
                     height={20}
@@ -94,8 +105,10 @@ function MiniBarGraph(props: {
           );
         })}
       </View>
+
       <View style={styles.graphAxisLabels}>
         <Text style={styles.graphAxisText}>{max.toFixed(2)}</Text>
+
         <Text style={styles.graphAxisText}>{min.toFixed(2)}</Text>
       </View>
     </View>

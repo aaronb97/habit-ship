@@ -143,7 +143,10 @@ export function Friends({
    */
   const handleSendFriendRequest = async (targetName: string): Promise<void> => {
     const name = targetName.trim();
-    if (!uid) return;
+    if (!uid) {
+      return;
+    }
+
     if (!name) {
       Alert.alert('Add Friend', 'Please enter a username.');
       return;
@@ -156,12 +159,14 @@ export function Friends({
         Alert.alert('Not Found', `No user with username "${name}".`);
         return;
       }
+
       const outcome = await sendFriendRequest({
         user1: uid,
         user1Name: username ?? '(unknown)',
         user2: targetUid,
         user2Name: name,
       });
+
       switch (outcome.kind) {
         case 'created':
           Alert.alert('Request Sent', `Sent a request to ${name}.`);
@@ -175,10 +180,8 @@ export function Friends({
           Alert.alert('Already Friends', 'You are already friends.');
           break;
         case 'already_pending':
-          Alert.alert(
-            'Already Requested',
-            'A friend request is already pending.',
-          );
+          Alert.alert('Already Requested', 'A friend request is already pending.');
+
           break;
       }
     } catch (e) {
@@ -203,7 +206,9 @@ export function Friends({
           {
             text: 'Send',
             onPress: (text?: string) => {
-              if (typeof text === 'string') void handleSendFriendRequest(text);
+              if (typeof text === 'string') {
+                void handleSendFriendRequest(text);
+              }
             },
           },
         ],
@@ -215,23 +220,24 @@ export function Friends({
   };
 
   const renderFriendItem = (f: FriendshipDoc) => {
-    if (!uid) return null;
+    if (!uid) {
+      return null;
+    }
+
     const label = otherName(f, uid);
     const fid = otherUid(f, uid);
     const profile = friendProfiles[fid];
     const rocketColorInt = profile?.rocketColor ?? 0x2a2f4a; // fallback to theme-ish dark
-    const skin = profile?.selectedSkinId
-      ? getSkinById(profile.selectedSkinId)
-      : undefined;
+    const skin = profile?.selectedSkinId ? getSkinById(profile.selectedSkinId) : undefined;
+
     const borderColorInt = skin ? skin.color : rocketColorInt;
     const borderColor = intColorToHex(borderColorInt);
 
     const content = (
       <>
         <Text style={styles.cardText}>{label}</Text>
-        <Text style={styles.cardText}>
-          Level {calculateLevel(profile?.totalXP ?? 0)}
-        </Text>
+
+        <Text style={styles.cardText}>Level {calculateLevel(profile?.totalXP ?? 0)}</Text>
       </>
     );
 
@@ -243,18 +249,14 @@ export function Friends({
           style={[styles.card, { borderColor }]}
         >
           <View style={styles.cardOverlay} />
+
           {content}
         </ImageBackground>
       );
     }
 
     return (
-      <View
-        style={[
-          styles.card,
-          { backgroundColor: darkenIntColor(rocketColorInt), borderColor },
-        ]}
-      >
+      <View style={[styles.card, { backgroundColor: darkenIntColor(rocketColorInt), borderColor }]}>
         {content}
       </View>
     );
@@ -267,7 +269,10 @@ export function Friends({
    * @returns Row element showing recipient's name
    */
   const renderOutgoingRow = (f: FriendshipDoc) => {
-    if (!uid) return null;
+    if (!uid) {
+      return null;
+    }
+
     const label = otherName(f, uid);
     return (
       <View style={styles.row}>
@@ -277,17 +282,30 @@ export function Friends({
   };
 
   const renderIncomingRow = (f: FriendshipDoc) => {
-    if (!uid) return null;
+    if (!uid) {
+      return null;
+    }
+
     const label = otherName(f, uid);
     return (
       <View style={styles.row}>
         <Text style={styles.rowText}>{label}</Text>
+
         <View style={styles.actions}>
           <HSButton onPress={() => void acceptRequest(f)}>
-            <MaterialIcons name="check" size={20} color={colors.white} />
+            <MaterialIcons
+              name="check"
+              size={20}
+              color={colors.white}
+            />
           </HSButton>
+
           <HSButton onPress={() => void declineRequest(f)}>
-            <MaterialIcons name="close" size={20} color={colors.white} />
+            <MaterialIcons
+              name="close"
+              size={20}
+              color={colors.white}
+            />
           </HSButton>
         </View>
       </View>
@@ -295,7 +313,10 @@ export function Friends({
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView
+      style={styles.container}
+      edges={['top']}
+    >
       {Platform.OS === 'android' && isAdding && (
         <View style={styles.inlinePrompt}>
           <TextInput
@@ -303,14 +324,15 @@ export function Friends({
             placeholder="Enter username"
             placeholderTextColor={colors.grey}
             value={inputUsername}
-            onChangeText={setInputUsername}
             autoCapitalize="none"
             autoCorrect={false}
+            onChangeText={setInputUsername}
           />
+
           <TouchableOpacity
             style={[styles.btn, styles.accept]}
-            onPress={() => void handleSendFriendRequest(inputUsername)}
             disabled={busy}
+            onPress={() => void handleSendFriendRequest(inputUsername)}
           >
             {busy ? (
               <ActivityIndicator color={colors.white} />
@@ -318,13 +340,14 @@ export function Friends({
               <Text style={styles.btnText}>Send</Text>
             )}
           </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.btn, styles.decline]}
+            disabled={busy}
             onPress={() => {
               setIsAdding(false);
               setInputUsername('');
             }}
-            disabled={busy}
           >
             <Text style={styles.btnText}>Cancel</Text>
           </TouchableOpacity>
@@ -333,14 +356,16 @@ export function Friends({
 
       <View style={styles.headerRow}>
         <Text style={styles.sectionTitle}>Friends</Text>
+
         <TouchableOpacity
           style={styles.addBtn}
-          onPress={startAddFriend}
           disabled={!uid || busy}
+          onPress={startAddFriend}
         >
           <Text style={styles.addBtnText}>Add Friend</Text>
         </TouchableOpacity>
       </View>
+
       {loadingAccepted ? (
         <ActivityIndicator color={colors.grey} />
       ) : accepted.length === 0 ? (
@@ -356,6 +381,7 @@ export function Friends({
       )}
 
       <Text style={styles.sectionTitle}>Requests</Text>
+
       {loadingIncoming ? (
         <ActivityIndicator color={colors.grey} />
       ) : incoming.length === 0 ? (
@@ -370,6 +396,7 @@ export function Friends({
       )}
 
       <Text style={styles.sectionTitle}>Requests Sent</Text>
+
       {loadingOutgoing ? (
         <ActivityIndicator color={colors.grey} />
       ) : outgoing.length === 0 ? (
@@ -383,9 +410,7 @@ export function Friends({
         />
       )}
 
-      {!uid && (
-        <Text style={styles.notice}>Sign-in pending. Try again shortly.</Text>
-      )}
+      {!uid && <Text style={styles.notice}>Sign-in pending. Try again shortly.</Text>}
     </SafeAreaView>
   );
 }

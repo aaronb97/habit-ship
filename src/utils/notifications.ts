@@ -44,26 +44,21 @@ function atNinePmLocal(date: Date): Date {
  * now: Reference time (usually current time).
  * includeToday: Whether to include today's 9pm if it's still upcoming.
  */
-function getUpcomingNinePmDates(
-  count: number,
-  now: Date,
-  includeToday: boolean,
-): Date[] {
+function getUpcomingNinePmDates(count: number, now: Date, includeToday: boolean): Date[] {
   const results: Date[] = [];
   const todayNine = atNinePmLocal(now);
   const tomorrowNine = atNinePmLocal(
     new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1),
   );
-  const startDate =
-    includeToday && todayNine.getTime() > now.getTime()
-      ? todayNine
-      : tomorrowNine;
+
+  const startDate = includeToday && todayNine.getTime() > now.getTime() ? todayNine : tomorrowNine;
 
   for (let i = 0; i < count; i++) {
     const d = new Date(startDate);
     d.setDate(startDate.getDate() + i);
     results.push(d);
   }
+
   return results;
 }
 
@@ -79,13 +74,12 @@ async function cancelAllDailyReminders(): Promise<void> {
       const t = (data as Record<string, unknown>).type;
       return t === 'dailyReminder';
     }
+
     return false;
   });
 
   await Promise.all(
-    daily.map((req) =>
-      Notifications.cancelScheduledNotificationAsync(req.identifier),
-    ),
+    daily.map((req) => Notifications.cancelScheduledNotificationAsync(req.identifier)),
   );
 }
 
@@ -103,13 +97,12 @@ export async function cancelTodayDailyReminder(): Promise<void> {
         const r = data as Record<string, unknown>;
         return r.type === 'dailyReminder' && r.dateKey === todayKey;
       }
+
       return false;
     });
 
     await Promise.all(
-      toCancel.map((req) =>
-        Notifications.cancelScheduledNotificationAsync(req.identifier),
-      ),
+      toCancel.map((req) => Notifications.cancelScheduledNotificationAsync(req.identifier)),
     );
   } catch (e) {
     console.warn('cancelTodayDailyReminder failed', e);
@@ -139,10 +132,8 @@ export async function scheduleDailyReminders(
       type: 'dailyReminder',
       dateKey: formatDateKey(date),
     };
-    const seconds = Math.max(
-      1,
-      Math.floor((date.getTime() - Date.now()) / 1000),
-    );
+
+    const seconds = Math.max(1, Math.floor((date.getTime() - Date.now()) / 1000));
 
     await Notifications.scheduleNotificationAsync({
       content: {
@@ -188,8 +179,14 @@ export async function logScheduledNotifications(): Promise<void> {
     const summary = scheduled.map((req) => {
       const trigger = req.trigger as unknown;
       const when = (() => {
-        if (!trigger) return 'unknown';
-        if (trigger instanceof Date) return trigger.toString();
+        if (!trigger) {
+          return 'unknown';
+        }
+
+        if (trigger instanceof Date) {
+          return trigger.toString();
+        }
+
         if (typeof trigger === 'object') {
           const t = trigger as Record<string, unknown>;
           // Some platforms expose a `date` field for absolute triggers
@@ -197,15 +194,18 @@ export async function logScheduledNotifications(): Promise<void> {
             if (typeof t.date === 'number') {
               return new Date(t.date).toString();
             }
+
             if (typeof t.date === 'string') {
               const parsed = Date.parse(t.date);
               return new Date(parsed).toString();
             }
           }
+
           if (typeof t.seconds === 'number') {
             return `in ${t.seconds}s (interval)`;
           }
         }
+
         return 'unknown';
       })();
 

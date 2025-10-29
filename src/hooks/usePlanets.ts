@@ -40,10 +40,7 @@ export function usePlanets(): PlanetWithDistance[] {
       // Determine if planet should be disabled and why
       let disabledReason: string | undefined;
 
-      if (
-        planet.name === userPosition.startingLocation &&
-        !userPosition.target
-      ) {
+      if (planet.name === userPosition.startingLocation && !userPosition.target) {
         disabledReason = 'You are currently on this planet';
       } else if (planet.name === userPosition.target) {
         disabledReason = 'You are traveling here';
@@ -64,8 +61,7 @@ export function useLandablePlanets(): LandablePlanetWithDistance[] {
 
   return planetsWithDistance.filter(
     (item) =>
-      (item.planet instanceof Planet && item.planet.isLandable) ||
-      item.planet instanceof Moon,
+      (item.planet instanceof Planet && item.planet.isLandable) || item.planet instanceof Moon,
   ) as LandablePlanetWithDistance[];
 }
 
@@ -100,9 +96,7 @@ export function useVisibleLandablePlanets(): LandablePlanetWithDistance[] {
   const nextLocked =
     nextLockedLevel === undefined
       ? []
-      : locked.filter(
-          ({ planet }) => (planet.minLevel ?? 0) === nextLockedLevel,
-        );
+      : locked.filter(({ planet }) => (planet.minLevel ?? 0) === nextLockedLevel);
 
   return [...unlocked, ...nextLocked];
 }

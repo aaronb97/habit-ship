@@ -91,9 +91,7 @@ describe('store', () => {
     });
 
     expect(result.current.habits).toHaveLength(2);
-    expect(result.current.habits[0]!.id).not.toEqual(
-      result.current.habits[1]!.id,
-    );
+    expect(result.current.habits[0]!.id).not.toEqual(result.current.habits[1]!.id);
   });
 
   it('should edit a habit', () => {
@@ -147,9 +145,7 @@ describe('store', () => {
     });
 
     expect(result.current.habits[0]!.completions).toHaveLength(1);
-    const per = getDailyDistanceForLevel(
-      calculateLevel(result.current.totalXP),
-    );
+    const per = getDailyDistanceForLevel(calculateLevel(result.current.totalXP));
 
     // Fuel accrued, but no travel yet
     expect(result.current.fuelKm).toBe(per);
@@ -162,9 +158,7 @@ describe('store', () => {
     });
 
     const initialDist = result.current.userPosition.initialDistance!;
-    expect(result.current.userPosition!.distanceTraveled).toBe(
-      Math.min(initialDist, per),
-    );
+    expect(result.current.userPosition!.distanceTraveled).toBe(Math.min(initialDist, per));
 
     expect(traveling.current).toBe(true);
   });
@@ -191,9 +185,7 @@ describe('store', () => {
     });
 
     const distAfterFirst = result.current.userPosition.distanceTraveled!;
-    expect(distAfterFirst).toBe(
-      Math.min(result.current.userPosition.initialDistance!, firstMove),
-    );
+    expect(distAfterFirst).toBe(Math.min(result.current.userPosition.initialDistance!, firstMove));
 
     await act(async () => {
       await result.current.completeHabit(habitId); // Second completion (fuel)
@@ -277,9 +269,7 @@ describe('store', () => {
 
     // Loop completing habits across days and applying fuel until arrival
     const initialDist = result.current.userPosition.initialDistance!;
-    const perHabit = getDailyDistanceForLevel(
-      calculateLevel(result.current.totalXP),
-    );
+    const perHabit = getDailyDistanceForLevel(calculateLevel(result.current.totalXP));
 
     const needed = Math.ceil(initialDist / perHabit);
     for (let i = 1; i < needed; i++) {

@@ -17,17 +17,9 @@ export type PlanetMeshUserData = {
   visualRadius?: number;
 };
 
-export function createPlanetMesh(
-  body: CBody,
-  radius: number,
-  texture?: THREE.Texture,
-): THREE.Mesh {
+export function createPlanetMesh(body: CBody, radius: number, texture?: THREE.Texture): THREE.Mesh {
   const { name, color } = body;
-  const geom = new THREE.SphereGeometry(
-    radius,
-    SPHERE_SEGMENTS,
-    SPHERE_SEGMENTS,
-  );
+  const geom = new THREE.SphereGeometry(radius, SPHERE_SEGMENTS, SPHERE_SEGMENTS);
 
   let mat: THREE.Material;
 
@@ -58,10 +50,7 @@ export function createPlanetMesh(
  * @param planetRadius Visual radius of the planet (scene units)
  * @param texture The ring texture with transparency (e.g., saturn_rings.png)
  */
-export function createSaturnRings(
-  planetRadius: number,
-  texture: THREE.Texture,
-): THREE.Mesh {
+export function createSaturnRings(planetRadius: number, texture: THREE.Texture): THREE.Mesh {
   // Approximate inner/outer radii of Saturn's main rings
   const MULT = 1.2;
   const inner = planetRadius * 1.2 * MULT;

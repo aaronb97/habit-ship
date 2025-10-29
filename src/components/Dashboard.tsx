@@ -10,12 +10,7 @@ import {
 } from 'react-native';
 import { GlassViewProps } from 'expo-glass-effect';
 import { colors, fonts, fontSizes } from '../styles/theme';
-import {
-  useIsTraveling,
-  useStore,
-  useUserLevel,
-  type HabitId,
-} from '../utils/store';
+import { useIsTraveling, useStore, useUserLevel, type HabitId } from '../utils/store';
 import { cBodies } from '../planets';
 import { ProgressBar } from './ProgressBar';
 import TimerSelection from './TimerSelection';
@@ -75,9 +70,9 @@ export function Dashboard() {
   const setLastLevelUpSeenLevel = useStore((s) => s.setLastLevelUpSeenLevel);
   const activeTab = useStore((s) => s.activeTab);
 
-  const [mode, setMode] = useState<
-    'default' | 'addHabit' | 'editHabit' | 'selectDestination'
-  >('default');
+  const [mode, setMode] = useState<'default' | 'addHabit' | 'editHabit' | 'selectDestination'>(
+    'default',
+  );
 
   const [canCancelSelection, setCanCancelSelection] = useState<boolean>(true);
 
@@ -86,20 +81,14 @@ export function Dashboard() {
   const [newDescription, setNewDescription] = useState('');
   const [newTimer, setNewTimer] = useState(0);
   const titleInputRef = useRef<TextInput | null>(null);
-  const [editingHabitId, setEditingHabitId] = useState<HabitId | undefined>(
-    undefined,
-  );
+  const [editingHabitId, setEditingHabitId] = useState<HabitId | undefined>(undefined);
 
   // Available destinations
   const visiblePlanets = useVisibleLandablePlanets();
 
   useEffect(() => {
     // Auto-open destination selection inline if no target and Home is focused
-    if (
-      activeTab === 'HomeTab' &&
-      !isLevelUpModalVisible &&
-      !userPosition.target
-    ) {
+    if (activeTab === 'HomeTab' && !isLevelUpModalVisible && !userPosition.target) {
       setCanCancelSelection(false);
       setMode('selectDestination');
     }
@@ -114,14 +103,10 @@ export function Dashboard() {
     }
   }, [mode]);
 
-  const displayLocation = isTraveling
-    ? userPosition.target
-    : userPosition.startingLocation;
+  const displayLocation = isTraveling ? userPosition.target : userPosition.startingLocation;
 
   const planet = cBodies.find((p) => p.name === displayLocation);
-  const bodyHex = planet
-    ? `#${planet.color.toString(16).padStart(6, '0')}`
-    : colors.white;
+  const bodyHex = planet ? `#${planet.color.toString(16).padStart(6, '0')}` : colors.white;
 
   const targetName = userPosition.target;
   const targetHex = targetName
@@ -155,12 +140,9 @@ export function Dashboard() {
   const levelThreshold = xpCurrentThresholdForLevel(level);
   const currentXP = getCurrentLevelXP(totalXP);
   const dailyFuelCap = getDailyDistanceForLevel(level);
-  const fuelProgress =
-    dailyFuelCap > 0 ? Math.min(1, fuelKm / dailyFuelCap) : 0;
+  const fuelProgress = dailyFuelCap > 0 ? Math.min(1, fuelKm / dailyFuelCap) : 0;
 
-  const timerHabit = activeTimer
-    ? habits.find((h) => h.id === activeTimer.habitId)
-    : undefined;
+  const timerHabit = activeTimer ? habits.find((h) => h.id === activeTimer.habitId) : undefined;
 
   const initialExpiryTimestamp = activeTimer
     ? new Date(
@@ -181,9 +163,7 @@ export function Dashboard() {
       const habit = habits.find((h) => h.id === activeTimer.habitId);
       const timerLen = habit?.timerLength ?? 0;
       const expiry = new Date(
-        new Date(activeTimer.startTime).getTime() -
-          timeOffset +
-          timerLen * 1000,
+        new Date(activeTimer.startTime).getTime() - timeOffset + timerLen * 1000,
       );
 
       restart(expiry);
@@ -215,7 +195,10 @@ export function Dashboard() {
   if (mode === 'editHabit') {
     const isFormValid = newTitle.trim().length > 0 && !!editingHabitId;
     return (
-      <GlassOrDefault style={styles.container} {...glassViewProps}>
+      <GlassOrDefault
+        style={styles.container}
+        {...glassViewProps}
+      >
         <View style={styles.flowHeader}>
           <TouchableOpacity
             onPress={() => {
@@ -228,7 +211,9 @@ export function Dashboard() {
           >
             <Text style={styles.flowHeaderButton}>Cancel</Text>
           </TouchableOpacity>
+
           <Text style={styles.flowHeaderTitle}>Edit Habit</Text>
+
           <TouchableOpacity
             disabled={!isFormValid}
             onPress={() => {
@@ -278,9 +263,14 @@ export function Dashboard() {
 
           <View style={styles.labelRow}>
             <Text style={styles.labelText}>Timer</Text>
+
             <Text style={styles.subLabelText}>(optional)</Text>
           </View>
-          <TimerSelection initialTimer={newTimer} onTimerChange={setNewTimer} />
+
+          <TimerSelection
+            initialTimer={newTimer}
+            onTimerChange={setNewTimer}
+          />
 
           <TouchableOpacity
             style={styles.deleteButton}
@@ -295,7 +285,10 @@ export function Dashboard() {
 
   if (isLevelUpModalVisible && levelUpInfo && activeTab === 'HomeTab') {
     return (
-      <GlassOrDefault style={styles.container} {...glassViewProps}>
+      <GlassOrDefault
+        style={styles.container}
+        {...glassViewProps}
+      >
         <LevelUpPanel
           info={levelUpInfo}
           onOk={() => {
@@ -315,12 +308,17 @@ export function Dashboard() {
         {...glassViewProps}
       >
         <Text style={styles.timerTitle}>{timerHabit.title}</Text>
+
         <View style={styles.timerCircle}>
           <Text style={styles.timerText}>{`${hours * 60 + minutes}:${seconds
             .toString()
             .padStart(2, '0')}`}</Text>
         </View>
-        <TouchableOpacity style={styles.cancelButton} onPress={cancelTimer}>
+
+        <TouchableOpacity
+          style={styles.cancelButton}
+          onPress={cancelTimer}
+        >
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
       </GlassOrDefault>
@@ -370,11 +368,15 @@ export function Dashboard() {
    * If only one habit exists, shows an informational alert and aborts.
    */
   function handleDeleteEditingHabit(): void {
-    if (!editingHabitId) return;
+    if (!editingHabitId) {
+      return;
+    }
+
     if (habits.length <= 1) {
       Alert.alert('Cannot Delete', "You can't delete your only habit.", [
         { text: 'OK', style: 'default' },
       ]);
+
       return;
     }
 
@@ -403,7 +405,10 @@ export function Dashboard() {
   if (mode === 'addHabit') {
     const isFormValid = newTitle.trim().length > 0;
     return (
-      <GlassOrDefault style={styles.container} {...glassViewProps}>
+      <GlassOrDefault
+        style={styles.container}
+        {...glassViewProps}
+      >
         <View style={styles.flowHeader}>
           <TouchableOpacity
             onPress={() => {
@@ -415,7 +420,9 @@ export function Dashboard() {
           >
             <Text style={styles.flowHeaderButton}>Cancel</Text>
           </TouchableOpacity>
+
           <Text style={styles.flowHeaderTitle}>New Habit</Text>
+
           <TouchableOpacity
             disabled={!isFormValid}
             onPress={() => {
@@ -464,9 +471,14 @@ export function Dashboard() {
 
           <View style={styles.labelRow}>
             <Text style={styles.labelText}>Timer</Text>
+
             <Text style={styles.subLabelText}>(optional)</Text>
           </View>
-          <TimerSelection initialTimer={newTimer} onTimerChange={setNewTimer} />
+
+          <TimerSelection
+            initialTimer={newTimer}
+            onTimerChange={setNewTimer}
+          />
         </View>
       </GlassOrDefault>
     );
@@ -475,7 +487,10 @@ export function Dashboard() {
   // Inline Select Destination flow
   if (mode === 'selectDestination') {
     return (
-      <GlassOrDefault style={styles.container} {...glassViewProps}>
+      <GlassOrDefault
+        style={styles.container}
+        {...glassViewProps}
+      >
         <View style={styles.flowHeader}>
           {canCancelSelection ? (
             <TouchableOpacity
@@ -489,51 +504,47 @@ export function Dashboard() {
 
           <View style={styles.flowHeaderTitleContainer}>
             <Text style={styles.flowHeaderTitle}>
-              {!canCancelSelection
-                ? 'Select Next Destination'
-                : 'Change Destination'}
+              {!canCancelSelection ? 'Select Next Destination' : 'Change Destination'}
             </Text>
+
             {!canCancelSelection ? (
               <Text style={styles.flowHeaderSubTitle}>
                 You can change this later by tapping the destination name.
               </Text>
             ) : null}
           </View>
+
           {/* Spacer to balance layout */}
           <Text style={[styles.flowHeaderButton, { opacity: 0 }]}>Cancel</Text>
         </View>
+
         <ScrollView
           style={styles.flowScroll}
           contentContainerStyle={styles.flowScrollContent}
         >
-          {visiblePlanets.map(
-            ({ planet: body, distance, disabledReason, isVisited }) => (
-              <PlanetListItem
-                key={body.name}
-                planet={body}
-                distance={distance}
-                disabledReason={disabledReason}
-                isVisited={isVisited}
-                onPress={() => handleSetDestination(body.name)}
-              />
-            ),
-          )}
+          {visiblePlanets.map(({ planet: body, distance, disabledReason, isVisited }) => (
+            <PlanetListItem
+              key={body.name}
+              planet={body}
+              distance={distance}
+              disabledReason={disabledReason}
+              isVisited={isVisited}
+              onPress={() => handleSetDestination(body.name)}
+            />
+          ))}
         </ScrollView>
       </GlassOrDefault>
     );
   }
 
-  const renderProgressItem = (
-    left: string,
-    right: string,
-    progress: number,
-    barColor: string,
-  ) => (
+  const renderProgressItem = (left: string, right: string, progress: number, barColor: string) => (
     <View style={styles.progressContainer}>
       <View style={styles.progressRow}>
         <Text style={styles.progressLabel}>{left}</Text>
+
         <Text style={styles.progressValue}>{right}</Text>
       </View>
+
       <ProgressBar
         progress={progress}
         color={barColor}
@@ -543,16 +554,17 @@ export function Dashboard() {
   );
 
   return (
-    <GlassOrDefault style={styles.container} {...glassViewProps}>
+    <GlassOrDefault
+      style={styles.container}
+      {...glassViewProps}
+    >
       {!!planet && (
         <View style={styles.journeySection}>
           <View style={styles.planetInfoContainer}>
-            {!isTraveling && (
-              <Text style={[styles.statusText]}>Welcome to</Text>
-            )}
-            {isTraveling && (
-              <Text style={[styles.statusText]}>En route to</Text>
-            )}
+            {!isTraveling && <Text style={[styles.statusText]}>Welcome to</Text>}
+
+            {isTraveling && <Text style={[styles.statusText]}>En route to</Text>}
+
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => {
@@ -560,18 +572,14 @@ export function Dashboard() {
                 setMode('selectDestination');
               }}
             >
-              <Text style={[styles.planetTitle, { color: bodyHex }]}>
-                {planet.name}
-              </Text>
+              <Text style={[styles.planetTitle, { color: bodyHex }]}>{planet.name}</Text>
             </TouchableOpacity>
+
             {!isTraveling && userPosition.target && fuelKm > 0 ? (
               <Text>
-                <Text style={[styles.statusText]}>
-                  Open the rocket tab to launch to{' '}
-                </Text>
-                <Text style={[styles.statusText, { color: targetHex }]}>
-                  {userPosition.target}
-                </Text>
+                <Text style={[styles.statusText]}>Open the rocket tab to launch to </Text>
+
+                <Text style={[styles.statusText, { color: targetHex }]}>{userPosition.target}</Text>
               </Text>
             ) : null}
           </View>
@@ -626,8 +634,10 @@ export function Dashboard() {
           </TouchableOpacity>
         </View>
       )}
+
       <HabitList
         habits={habits}
+        currentDate={getCurrentDate()}
         onStartTimer={startTimer}
         onCompleteHabit={completeHabit}
         onLongPressHabit={(id) => {
@@ -642,7 +652,6 @@ export function Dashboard() {
           setNewTimer(h.timerLength ?? 0);
           setMode('editHabit');
         }}
-        currentDate={getCurrentDate()}
       />
     </GlassOrDefault>
   );

@@ -23,7 +23,8 @@ export function Home() {
   return (
     <>
       <LevelUpListener />
-      <SafeAreaView style={styles.container}></SafeAreaView>
+
+      <SafeAreaView style={styles.container} />
     </>
   );
 }

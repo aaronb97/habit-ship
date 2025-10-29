@@ -31,6 +31,7 @@ export function startFirestoreSync(firebaseId: string): () => void {
     'totalXP',
     'selectedSkinId',
   ] satisfies (keyof UsersDoc)[];
+
   type SyncKey = (typeof SYNC_FIELDS)[number];
 
   /**
@@ -42,7 +43,10 @@ export function startFirestoreSync(firebaseId: string): () => void {
    */
   async function allocateUniqueUsernameIfMissing(): Promise<void> {
     const s = useStore.getState();
-    if (s.username) return; // already assigned
+    if (s.username) {
+      return;
+    } // already assigned
+
     // Try a handful of candidates to find an unused username
     const MAX_TRIES = 8;
     for (let i = 0; i < MAX_TRIES; i++) {
@@ -58,6 +62,7 @@ export function startFirestoreSync(firebaseId: string): () => void {
         // On transient errors, try a different candidate
       }
     }
+
     // As a last resort, include a short suffix to reduce collision likelihood
     const fallback = `${generateName()}-${Math.random().toString(36).slice(2, 5)}`;
     s.setUsername(fallback);
@@ -74,6 +79,7 @@ export function startFirestoreSync(firebaseId: string): () => void {
     for (const k of SYNC_FIELDS) {
       (out as Record<SyncKey, unknown>)[k] = (s as Record<SyncKey, unknown>)[k];
     }
+
     // Ensure plain data (no functions/undefined) and deep clone
     return JSON.parse(JSON.stringify(out)) as Partial<UsersDoc>;
   }
@@ -83,11 +89,20 @@ export function startFirestoreSync(firebaseId: string): () => void {
    * Subsequent calls within the debounce window will coalesce into one write.
    */
   function scheduleWrite() {
-    if (stopped) return;
+    if (stopped) {
+      return;
+    }
+
     pending = true;
-    if (timeout) clearTimeout(timeout);
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+
     timeout = setTimeout(async () => {
-      if (stopped) return;
+      if (stopped) {
+        return;
+      }
+
       const data = buildPayload(useStore.getState());
       try {
         await writeUser(firebaseId, data);
@@ -125,12 +140,14 @@ export function startFirestoreSync(firebaseId: string): () => void {
       clearTimeout(timeout);
       timeout = undefined;
     }
+
     // If a write is pending, do a final immediate flush for best-effort consistency
     if (pending) {
       const data = buildPayload(useStore.getState());
       void writeUser(firebaseId, data).catch((e: unknown) => {
         console.warn('[firestoreSync] Failed to set users doc', e);
       });
+
       pending = false;
     }
   };

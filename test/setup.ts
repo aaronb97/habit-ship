@@ -47,7 +47,9 @@ vi.mock('expo-notifications', () => {
     }),
     cancelScheduledNotificationAsync: vi.fn(async (id: string) => {
       const idx = scheduled.findIndex((r) => r.identifier === id);
-      if (idx >= 0) scheduled.splice(idx, 1);
+      if (idx >= 0) {
+        scheduled.splice(idx, 1);
+      }
     }),
     getAllScheduledNotificationsAsync: vi.fn(async () => scheduled.slice()),
   };

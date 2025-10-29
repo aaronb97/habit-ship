@@ -62,13 +62,10 @@ export class Rocket {
     this.exhaustGroup = exhaustGroup;
     this.outlinePass = outlinePass;
     this.baseColor = baseColor;
-    this.outlineGlobalEnabled = Boolean(
-      useStore.getState().outlinesRocketEnabled,
-    );
+    this.outlineGlobalEnabled = Boolean(useStore.getState().outlinesRocketEnabled);
 
     if (this.outlinePass) {
-      this.outlinePass.enabled =
-        this.outlineGlobalEnabled && this.group.visible;
+      this.outlinePass.enabled = this.outlineGlobalEnabled && this.group.visible;
     }
 
     {
@@ -76,8 +73,7 @@ export class Rocket {
       const unsub = useStore.subscribe((s: RootState, _prev: RootState) => {
         this.outlineGlobalEnabled = Boolean(s.outlinesRocketEnabled);
         if (this.outlinePass) {
-          this.outlinePass.enabled =
-            this.outlineGlobalEnabled && this.group.visible;
+          this.outlinePass.enabled = this.outlineGlobalEnabled && this.group.visible;
         }
       });
 
@@ -113,7 +109,10 @@ export class Rocket {
     other.setHSL(hsl.h, hsl.s, altL);
 
     this.hull.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) return;
+      if (!(child instanceof THREE.Mesh)) {
+        return;
+      }
+
       const upper = (child.name || '').toUpperCase();
       const isBody = upper.includes('BODY_MAIN');
 
@@ -172,12 +171,9 @@ export class Rocket {
     // Outline just the hull (not the exhaust)
     let outline: OutlinePass | undefined;
     if (!withoutOutline) {
-      outline = new OutlinePass(
-        resolution.clone(),
-        scene,
-        camera as THREE.PerspectiveCamera,
-        [obj],
-      );
+      outline = new OutlinePass(resolution.clone(), scene, camera as THREE.PerspectiveCamera, [
+        obj,
+      ]);
 
       outline.edgeStrength = OUTLINE_EDGE_STRENGTH;
       outline.edgeGlow = OUTLINE_EDGE_GLOW;
@@ -208,6 +204,7 @@ export class Rocket {
     if (!this.currentTexture) {
       this.applyBaseColors();
     }
+
     if (this.outlinePass) {
       try {
         this.outlinePass.visibleEdgeColor.set(color);
@@ -236,7 +233,10 @@ export class Rocket {
 
     // Apply to all parts
     this.hull.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) return;
+      if (!(child instanceof THREE.Mesh)) {
+        return;
+      }
+
       const upper = (child.name || '').toUpperCase();
       const isBody = upper.includes('BODY_MAIN');
       let std: THREE.MeshStandardMaterial;
@@ -259,6 +259,7 @@ export class Rocket {
       } else {
         std.map = null;
       }
+
       std.needsUpdate = true;
     });
 
@@ -288,25 +289,15 @@ export class Rocket {
     return this.group.localToWorld(this.centerOffset.clone());
   }
 
-  update(
-    position: THREE.Vector3,
-    aimPos: THREE.Vector3,
-    traveling: boolean,
-    animAlpha: number,
-  ) {
+  update(position: THREE.Vector3, aimPos: THREE.Vector3, traveling: boolean, animAlpha: number) {
     this.group.position.copy(position);
     const dir = aimPos.clone().sub(this.group.position);
     if (dir.lengthSq() > 1e-12) {
       dir.normalize();
-      const q = new THREE.Quaternion().setFromUnitVectors(
-        DEFAULT_ROCKET_FORWARD,
-        dir,
-      );
+      const q = new THREE.Quaternion().setFromUnitVectors(DEFAULT_ROCKET_FORWARD, dir);
 
       this.group.quaternion.copy(q);
-      this.spinAngle = traveling
-        ? this.spinAngle + ROCKET_SPIN_SPEED
-        : this.spinAngle * 0.95;
+      this.spinAngle = traveling ? this.spinAngle + ROCKET_SPIN_SPEED : this.spinAngle * 0.95;
 
       this.group.rotateOnAxis(DEFAULT_ROCKET_FORWARD, this.spinAngle);
     }
@@ -321,10 +312,7 @@ export class Rocket {
    * @param camera Perspective camera used for rendering.
    * @param viewportHeightPx Height of the drawing buffer in pixels.
    */
-  enforceMinimumApparentSize(
-    camera: THREE.PerspectiveCamera,
-    viewportHeightPx: number,
-  ): void {
+  enforceMinimumApparentSize(camera: THREE.PerspectiveCamera, viewportHeightPx: number): void {
     const minPx = Math.max(0, ROCKET_MIN_SCREEN_PIXELS);
     if (minPx <= 0 || this.baseBoundingRadius <= 1e-9) {
       return;
@@ -347,8 +335,7 @@ export class Rocket {
     const neededPxRadius = minPx / 2; // interpret constant as minimum diameter
 
     // Desired uniform scale relative to group scale = 1
-    const scaleNeeded =
-      pxRadiusAtScale1 > 1e-9 ? neededPxRadius / pxRadiusAtScale1 : 1;
+    const scaleNeeded = pxRadiusAtScale1 > 1e-9 ? neededPxRadius / pxRadiusAtScale1 : 1;
 
     const targetScale = Math.max(1, scaleNeeded);
 
@@ -480,11 +467,7 @@ export class Rocket {
     const dirN = dir.clone().normalize();
     return targetCenter
       .clone()
-      .sub(
-        dirN
-          .clone()
-          .multiplyScalar(targetVisualRadius + ROCKET_LANDING_CLEARANCE),
-      );
+      .sub(dirN.clone().multiplyScalar(targetVisualRadius + ROCKET_LANDING_CLEARANCE));
   }
 
   static computeSurfaceEndpoints(
@@ -497,17 +480,11 @@ export class Rocket {
     const dirLen = Math.max(1e-9, dir.length());
     const dirN = dir.clone().divideScalar(dirLen);
 
-    const startSurface = startCenter
-      .clone()
-      .add(dirN.clone().multiplyScalar(startVisualRadius));
+    const startSurface = startCenter.clone().add(dirN.clone().multiplyScalar(startVisualRadius));
 
     const targetSurface = targetCenter
       .clone()
-      .sub(
-        dirN
-          .clone()
-          .multiplyScalar(targetVisualRadius + ROCKET_LANDING_CLEARANCE),
-      );
+      .sub(dirN.clone().multiplyScalar(targetVisualRadius + ROCKET_LANDING_CLEARANCE));
 
     return { startSurface, targetSurface };
   }
@@ -523,26 +500,29 @@ export class Rocket {
    * Subsequent `create()` calls will clone this cached group instead of reparsing.
    */
   static async preloadModel(): Promise<void> {
-    if (Rocket.baseModel) return;
+    if (Rocket.baseModel) {
+      return;
+    }
+
     if (!Rocket.baseModelPromise) {
       Rocket.baseModelPromise = (async () => {
         const rocketAsset = Asset.fromModule(
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           require('../../../assets/Rocket.obj'),
         );
+
         try {
           await rocketAsset.downloadAsync();
         } catch (err) {
-          console.warn(
-            '[rocket] downloadAsync failed for Rocket.obj, using uri fallback',
-            err,
-          );
+          console.warn('[rocket] downloadAsync failed for Rocket.obj, using uri fallback', err);
         }
+
         const loader = new OBJLoader();
         const uri = rocketAsset.localUri ?? rocketAsset.uri;
         const group: THREE.Group = await new Promise((resolve, reject) => {
           loader.load(uri, resolve, undefined, reject);
         });
+
         return group;
       })();
     }
@@ -562,10 +542,9 @@ export class Rocket {
    */
   private static cloneBaseModel(): THREE.Group {
     if (!Rocket.baseModel) {
-      throw new Error(
-        'Rocket base model not loaded. Call preloadModel() first.',
-      );
+      throw new Error('Rocket base model not loaded. Call preloadModel() first.');
     }
+
     // Deep clone hierarchy; geometry references are shared which is desired.
     // Materials will be replaced per-instance by applyRocketMaterials()/setBodyTexture().
     const cloned = Rocket.baseModel.clone(true);

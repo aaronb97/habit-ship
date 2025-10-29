@@ -1,15 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import {
-  earth,
-  jupiter,
-  mars,
-  mercury,
-  neptune,
-  pluto,
-  saturn,
-  uranus,
-  venus,
-} from './planets';
+import { earth, jupiter, mars, mercury, neptune, pluto, saturn, uranus, venus } from './planets';
 
 describe('landability', () => {
   test('mercury should be landable', () => {

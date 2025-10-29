@@ -17,9 +17,8 @@ export type AllUsersData = {
  * Returns: Object with a map of uid -> UsersDoc and a loading flag.
  */
 export function useAllUsers(enabled: boolean): AllUsersData {
-  const [profiles, setProfiles] = useState<Record<string, UsersDoc | undefined>>(
-    {},
-  );
+  const [profiles, setProfiles] = useState<Record<string, UsersDoc | undefined>>({});
+
   const [loading, setLoading] = useState<boolean>(!!enabled);
   const unsubRef = useRef<(() => void) | undefined>(undefined);
 
@@ -29,6 +28,7 @@ export function useAllUsers(enabled: boolean): AllUsersData {
       try {
         unsubRef.current();
       } catch {}
+
       unsubRef.current = undefined;
     }
 
@@ -49,6 +49,7 @@ export function useAllUsers(enabled: boolean): AllUsersData {
             next[doc.id] = undefined;
           }
         });
+
         setProfiles(next);
         setLoading(false);
       },
@@ -64,6 +65,7 @@ export function useAllUsers(enabled: boolean): AllUsersData {
         try {
           unsubRef.current();
         } catch {}
+
         unsubRef.current = undefined;
       }
     };

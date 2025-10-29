@@ -6,10 +6,7 @@ import { immer } from 'zustand/middleware/immer';
 
 import { earth, moon, cBodies } from '../planets';
 import { schedulePushNotification } from './schedulePushNotification';
-import {
-  cancelTodayDailyReminder,
-  rescheduleDailyReminders,
-} from './notifications';
+import { cancelTodayDailyReminder, rescheduleDailyReminders } from './notifications';
 import { getCurrentTime, getCurrentDate, setTimeOffsetProvider } from './time';
 import { Coordinates, UserPosition, XPGain } from '../types';
 import { useShallow } from 'zustand/shallow';
@@ -21,12 +18,7 @@ import * as Sentry from '@sentry/react-native';
 
 export type HabitId = string & { __habitId: true };
 
-export type TabName =
-  | 'HomeTab'
-  | 'MapTab'
-  | 'ProfileTab'
-  | 'FriendsTab'
-  | 'DevTab';
+export type TabName = 'HomeTab' | 'MapTab' | 'ProfileTab' | 'FriendsTab' | 'DevTab';
 
 /**
  * Structured information to present when a user levels up.
@@ -58,11 +50,7 @@ export type Habit = {
 };
 
 export function calculateDistance(a: Coordinates, b: Coordinates): number {
-  return Math.sqrt(
-    Math.pow(b[0] - a[0], 2) +
-      Math.pow(b[1] - a[1], 2) +
-      Math.pow(b[2] - a[2], 2),
-  );
+  return Math.sqrt(Math.pow(b[0] - a[0], 2) + Math.pow(b[1] - a[1], 2) + Math.pow(b[2] - a[2], 2));
 }
 
 function randomColorInt(): number {
@@ -175,16 +163,10 @@ type Store = {
     timerLength?: number; // in seconds
   }) => void;
 
-  editHabit: (
-    habitId: HabitId,
-    editedHabit: Partial<Omit<Habit, 'id'>>,
-  ) => void;
+  editHabit: (habitId: HabitId, editedHabit: Partial<Omit<Habit, 'id'>>) => void;
 
   removeHabit: (habitId: HabitId) => void;
-  addXP: (
-    amount: number,
-    source: 'habit_completion' | 'planet_completion',
-  ) => void;
+  addXP: (amount: number, source: 'habit_completion' | 'planet_completion') => void;
   /**
    * Adds a specified amount of money to the user's balance.
    * amount: Positive integer amount of money to add.
@@ -376,39 +358,31 @@ export const useStore = create<Store>()(
           state.userPosition.target = planetName;
 
           // Initialize travel metrics toward target
-          const startPos = getPlanetPosition(
-            state.userPosition.startingLocation,
-          );
+          const startPos = getPlanetPosition(state.userPosition.startingLocation);
 
           const targetPos = getPlanetPosition(planetName);
           const centerDistance = calculateDistance(startPos, targetPos);
-          const startBody = cBodies.find(
-            (b) => b.name === state.userPosition.startingLocation,
-          );
+          const startBody = cBodies.find((b) => b.name === state.userPosition.startingLocation);
 
           const targetBody = cBodies.find((b) => b.name === planetName);
-          const radiusBuffer =
-            (startBody?.radiusKm ?? 0) + (targetBody?.radiusKm ?? 0);
+          const radiusBuffer = (startBody?.radiusKm ?? 0) + (targetBody?.radiusKm ?? 0);
 
-          state.userPosition.initialDistance = Math.max(
-            0,
-            centerDistance - radiusBuffer,
-          );
+          state.userPosition.initialDistance = Math.max(0, centerDistance - radiusBuffer);
 
           state.userPosition.distanceTraveled = 0;
           state.userPosition.previousDistanceTraveled = 0;
           state.userPosition.launchTime = null;
           state.lastUpdateTime = undefined;
         });
+
         // Keep reminders' copy in sync with destination and skip today's reminder if already completed
         {
           const s = get();
           const todayKey = getCurrentDate().toDateString();
           const anyCompletedToday = s.habits.some((h) =>
-            h.completions.some(
-              (ts) => new Date(ts).toDateString() === todayKey,
-            ),
+            h.completions.some((ts) => new Date(ts).toDateString() === todayKey),
           );
+
           void rescheduleDailyReminders(planetName, !anyCompletedToday);
         }
       },
@@ -427,16 +401,12 @@ export const useStore = create<Store>()(
       setShowTrails: (value) => set({ showTrails: value }),
       setShowTextures: (value) => set({ showTextures: value }),
       setShowDebugOverlay: (value) => set({ showDebugOverlay: value }),
-      setOutlinesBodiesEnabled: (value) =>
-        set({ outlinesBodiesEnabled: value }),
-      setOutlinesRocketEnabled: (value) =>
-        set({ outlinesRocketEnabled: value }),
+      setOutlinesBodiesEnabled: (value) => set({ outlinesBodiesEnabled: value }),
+      setOutlinesRocketEnabled: (value) => set({ outlinesRocketEnabled: value }),
       setShowAllRockets: (value) => set({ showAllRockets: value }),
       setLevelUpModalVisible: (value) => set({ isLevelUpModalVisible: value }),
-      showLevelUp: (info) =>
-        set({ isLevelUpModalVisible: true, levelUpInfo: info }),
-      hideLevelUp: () =>
-        set({ isLevelUpModalVisible: false, levelUpInfo: undefined }),
+      showLevelUp: (info) => set({ isLevelUpModalVisible: true, levelUpInfo: info }),
+      hideLevelUp: () => set({ isLevelUpModalVisible: false, levelUpInfo: undefined }),
       setLastLevelUpSeenLevel: (level) => set({ lastLevelUpSeenLevel: level }),
       setActiveTab: (tab) => {
         set({ activeTab: tab });
@@ -466,13 +436,17 @@ export const useStore = create<Store>()(
         const state = get();
         const owned = new Set(state.unlockedSkins);
         const pool = ROCKET_SKIN_IDS.filter((id) => !owned.has(id));
-        if (pool.length === 0) return undefined;
+        if (pool.length === 0) {
+          return undefined;
+        }
+
         const idx = Math.floor(Math.random() * pool.length);
         const awarded = pool[idx]!;
         set((s) => {
           s.unlockedSkins.push(awarded);
           s.unseenUnlockedSkins.push(awarded);
         });
+
         return awarded;
       },
       setSkipRocketAnimation: (value) => set({ skipRocketAnimation: value }),
@@ -481,14 +455,10 @@ export const useStore = create<Store>()(
 
       // --- Tilt-shift setters ---
       setTiltShiftEnabled: (value) => set({ tiltShiftEnabled: value }),
-      setTiltShiftFocus: (value) =>
-        set({ tiltShiftFocus: Math.min(1, Math.max(0, value)) }),
-      setTiltShiftRange: (value) =>
-        set({ tiltShiftRange: Math.min(1, Math.max(0, value)) }),
-      setTiltShiftFeather: (value) =>
-        set({ tiltShiftFeather: Math.min(1, Math.max(0, value)) }),
-      setTiltShiftBlur: (value) =>
-        set({ tiltShiftBlur: Math.max(0, Math.min(64, value)) }),
+      setTiltShiftFocus: (value) => set({ tiltShiftFocus: Math.min(1, Math.max(0, value)) }),
+      setTiltShiftRange: (value) => set({ tiltShiftRange: Math.min(1, Math.max(0, value)) }),
+      setTiltShiftFeather: (value) => set({ tiltShiftFeather: Math.min(1, Math.max(0, value)) }),
+      setTiltShiftBlur: (value) => set({ tiltShiftBlur: Math.max(0, Math.min(64, value)) }),
       quickReset: () => {
         // Sign out so a new anonymous user is created on next app tick
         void signOutForDevResets();
@@ -570,10 +540,7 @@ export const useStore = create<Store>()(
             target: 'The Moon',
             initialDistance: Math.max(
               0,
-              calculateDistance(
-                getPlanetPosition('Earth'),
-                moon.getPosition(),
-              ) -
+              calculateDistance(getPlanetPosition('Earth'), moon.getPosition()) -
                 (earth.radiusKm + moon.radiusKm),
             ),
             distanceTraveled: 0,
@@ -625,10 +592,7 @@ export const useStore = create<Store>()(
           const dailyCap = getDailyDistanceForLevel(level);
           const fuelHabitsCount = Math.max(1, state.habits.length);
           const perCompletion = dailyCap / fuelHabitsCount;
-          const remainingAllowance = Math.max(
-            0,
-            dailyCap - state.fuelEarnedTodayKm,
-          );
+          const remainingAllowance = Math.max(0, dailyCap - state.fuelEarnedTodayKm);
 
           const grant = Math.min(perCompletion, remainingAllowance);
 
@@ -648,9 +612,7 @@ export const useStore = create<Store>()(
         const { activeTimer, habits } = get();
 
         if (activeTimer) {
-          console.warn(
-            'Timer Already Active: Another timer is already running.',
-          );
+          console.warn('Timer Already Active: Another timer is already running.');
 
           return false; // Indicate failure
         }
@@ -689,9 +651,7 @@ export const useStore = create<Store>()(
         const { activeTimer } = get();
         if (activeTimer?.timerNotificationId) {
           try {
-            await Notifications.cancelScheduledNotificationAsync(
-              activeTimer.timerNotificationId,
-            );
+            await Notifications.cancelScheduledNotificationAsync(activeTimer.timerNotificationId);
           } catch (e) {
             console.warn('Failed to cancel timer notification', e);
           }
@@ -718,8 +678,7 @@ export const useStore = create<Store>()(
             typeof state.userPosition.distanceTraveled === 'number' &&
             state.userPosition.target
           ) {
-            state.userPosition.previousDistanceTraveled =
-              state.userPosition.distanceTraveled;
+            state.userPosition.previousDistanceTraveled = state.userPosition.distanceTraveled;
           }
         });
       },
@@ -794,6 +753,7 @@ export const useStore = create<Store>()(
         if (xpReward > 0) {
           state.addXP(xpReward, 'planet_completion');
         }
+
         if (moneyReward > 0) {
           state.addMoney(moneyReward);
         }
@@ -864,7 +824,10 @@ export const useStore = create<Store>()(
        * amount: Positive integer amount to add to the balance.
        */
       addMoney: (amount) => {
-        if (amount <= 0) return;
+        if (amount <= 0) {
+          return;
+        }
+
         set((state) => {
           state.money += amount;
         });
@@ -881,14 +844,14 @@ export const useStore = create<Store>()(
 
         if (version === 3) {
           const store = persistedState as Store;
-          if (store.totalXP > 0) store.totalXP += 200;
+          if (store.totalXP > 0) {
+            store.totalXP += 200;
+          }
 
           const { userPosition } = store;
-          if (
-            userPosition.distanceTraveled &&
-            userPosition.distanceTraveled > 0
-          )
+          if (userPosition.distanceTraveled && userPosition.distanceTraveled > 0) {
             userPosition.distanceTraveled += 26_000_000;
+          }
         }
 
         return persistedState;
@@ -927,28 +890,19 @@ function getCurrentPosition(position: UserPosition) {
   }
 
   // Otherwise, use the current body's true position
-  return (
-    cBodies.find((p) => p.name === position.startingLocation) ?? earth
-  ).getPosition();
+  return (cBodies.find((p) => p.name === position.startingLocation) ?? earth).getPosition();
 }
 
 export function useCurrentPosition() {
-  return useStore(
-    useShallow((state) => getCurrentPosition(state.userPosition)),
-  );
+  return useStore(useShallow((state) => getCurrentPosition(state.userPosition)));
 }
 
-export const useIsSetupFinished = () =>
-  useStore((state) => state.isSetupFinished);
+export const useIsSetupFinished = () => useStore((state) => state.isSetupFinished);
 
-export const useUserLevel = () =>
-  useStore((state) => calculateLevel(state.totalXP));
+export const useUserLevel = () => useStore((state) => calculateLevel(state.totalXP));
 
 export function isTraveling(store: Store) {
-  return (
-    !!store.userPosition.target &&
-    (store.userPosition.distanceTraveled ?? 0) > 0
-  );
+  return !!store.userPosition.target && (store.userPosition.distanceTraveled ?? 0) > 0;
 }
 
 export function useIsTraveling() {

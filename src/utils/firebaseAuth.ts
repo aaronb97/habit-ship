@@ -11,9 +11,13 @@ export async function ensureFirebaseId(): Promise<string | undefined> {
     const mod = (await import('@react-native-firebase/auth')) as unknown as {
       default: () => FirebaseAuthTypes.Module;
     };
+
     const inst = mod.default();
     const existing = inst.currentUser;
-    if (existing?.uid) return existing.uid;
+    if (existing?.uid) {
+      return existing.uid;
+    }
+
     const cred = await inst.signInAnonymously();
     return cred.user.uid;
   } catch (e) {
@@ -32,8 +36,12 @@ export async function signOutForDevResets(): Promise<void> {
     const mod = (await import('@react-native-firebase/auth')) as unknown as {
       default: () => FirebaseAuthTypes.Module;
     };
+
     const inst = mod.default();
-    if (!inst.currentUser) return;
+    if (!inst.currentUser) {
+      return;
+    }
+
     await inst.signOut();
   } catch {
     // Best-effort only

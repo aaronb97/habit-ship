@@ -64,25 +64,24 @@ export function PlanetListItem({
         >
           {planet.name}
         </Text>
+
         {isVisited && <Text style={styles.visitedBadge}>✓ Visited</Text>}
       </View>
 
       <Text style={[styles.planetInfo, isDisabled && styles.lockedText]}>
-        <Text style={styles.planetInfoLabel}>Distance:</Text>{' '}
-        {formatDistance(distance)}
+        <Text style={styles.planetInfoLabel}>Distance:</Text> {formatDistance(distance)}
       </Text>
 
       {planet.xpReward && (
         <Text style={[styles.planetInfo, isDisabled && styles.lockedText]}>
-          <Text style={styles.planetInfoLabel}>Landing XP:</Text>{' '}
-          {planet.xpReward} XP
+          <Text style={styles.planetInfoLabel}>Landing XP:</Text> {planet.xpReward} XP
         </Text>
       )}
 
       {planet.moneyReward && (
         <Text style={[styles.planetInfo, isDisabled && styles.lockedText]}>
-          <Text style={styles.planetInfoLabel}>Landing Money:</Text>{' '}
-          {planet.moneyReward} Space Money
+          <Text style={styles.planetInfoLabel}>Landing Money:</Text> {planet.moneyReward} Space
+          Money
         </Text>
       )}
 

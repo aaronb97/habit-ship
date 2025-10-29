@@ -75,9 +75,7 @@ export class CelestialBodyNode {
     this.body = body;
     this.scene = scene;
     this.camera = camera;
-    this.outlineGlobalEnabled = Boolean(
-      useStore.getState().outlinesBodiesEnabled,
-    );
+    this.outlineGlobalEnabled = Boolean(useStore.getState().outlinesBodiesEnabled);
 
     // Compute apparent visual radius
     const radiusKm = Math.max(100, body.radiusKm);
@@ -96,6 +94,7 @@ export class CelestialBodyNode {
         this.mesh.add(ringMesh);
       } catch {}
     }
+
     this.ringMesh = ringMesh;
 
     // Orientation: align equator horizontally, then apply axial tilt about X
@@ -133,16 +132,12 @@ export class CelestialBodyNode {
     scene.add(this.mesh);
 
     // Outline for planets and moons (optional for stars)
-    const hasOutline =
-      params.hasOutline ?? (body instanceof Planet || body instanceof Moon);
+    const hasOutline = params.hasOutline ?? (body instanceof Planet || body instanceof Moon);
 
     if (hasOutline) {
-      const pass = new OutlinePass(
-        new THREE.Vector2(resolution.x, resolution.y),
-        scene,
-        camera,
-        [this.mesh],
-      );
+      const pass = new OutlinePass(new THREE.Vector2(resolution.x, resolution.y), scene, camera, [
+        this.mesh,
+      ]);
 
       pass.edgeStrength = 0; // start hidden; we fade in based on screen size
       pass.edgeGlow = OUTLINE_EDGE_GLOW;
@@ -164,8 +159,7 @@ export class CelestialBodyNode {
             this.outlinePass.enabled = false;
           } else {
             const enabled =
-              this.outlineGlobalEnabled &&
-              this.outlineIntensity > OUTLINE_MIN_ENABLED_FACTOR;
+              this.outlineGlobalEnabled && this.outlineIntensity > OUTLINE_MIN_ENABLED_FACTOR;
 
             this.outlinePass.enabled = enabled;
           }
@@ -176,10 +170,7 @@ export class CelestialBodyNode {
     }
 
     // Trails optionally created for Planets and Moons
-    if (
-      params.initialTrailsEnabled &&
-      (body instanceof Planet || body instanceof Moon)
-    ) {
+    if (params.initialTrailsEnabled && (body instanceof Planet || body instanceof Moon)) {
       const pts = getTrailForBody(body);
       const nearFade = 2 * this.getVisualRadius() * TRAIL_NEAR_BODY_DIAMETERS;
       const line = createTrailLine(pts, body.color, nearFade);
@@ -200,7 +191,10 @@ export class CelestialBodyNode {
    * - texture: Texture to apply to the body surface, or null to clear.
    */
   setBodyTexture(texture: THREE.Texture | null): void {
-    if (this.disposed) return;
+    if (this.disposed) {
+      return;
+    }
+
     const name = this.body.name;
 
     // Dispose previous material but do not dispose shared texture maps
@@ -235,8 +229,13 @@ export class CelestialBodyNode {
    * - texture: Ring texture with transparency to apply.
    */
   setRingTexture(texture: THREE.Texture): void {
-    if (this.disposed) return;
-    if (this.body.name !== 'Saturn') return;
+    if (this.disposed) {
+      return;
+    }
+
+    if (this.body.name !== 'Saturn') {
+      return;
+    }
 
     if (!this.ringMesh) {
       try {
@@ -244,6 +243,7 @@ export class CelestialBodyNode {
         this.mesh.add(ring);
         this.ringMesh = ring;
       } catch {}
+
       return;
     }
 
@@ -260,6 +260,7 @@ export class CelestialBodyNode {
       depthWrite: false,
       alphaTest: 0.3,
     });
+
     this.ringMesh.material = newMat;
   }
 
@@ -282,8 +283,7 @@ export class CelestialBodyNode {
         this.outlinePass.enabled = false;
       } else {
         const enabled =
-          this.outlineGlobalEnabled &&
-          this.outlineIntensity > OUTLINE_MIN_ENABLED_FACTOR;
+          this.outlineGlobalEnabled && this.outlineIntensity > OUTLINE_MIN_ENABLED_FACTOR;
 
         this.outlinePass.enabled = enabled;
       }
@@ -352,6 +352,7 @@ export class CelestialBodyNode {
       const allowed = always
         ? isUnlocked || isVisited || isStart || isTarget
         : isVisited || isStart || isTarget;
+
       this.mesh.visible = allowed;
       this.setTrailsEnabled(opts.showTrails && allowed);
     } else {
@@ -384,8 +385,7 @@ export class CelestialBodyNode {
 
           // Rebuild
           const pts = getTrailForBody(this.body);
-          const nearFade =
-            2 * this.getVisualRadius() * TRAIL_NEAR_BODY_DIAMETERS;
+          const nearFade = 2 * this.getVisualRadius() * TRAIL_NEAR_BODY_DIAMETERS;
 
           const line = createTrailLine(pts, this.body.color, nearFade);
           if (line) {
@@ -417,14 +417,12 @@ export class CelestialBodyNode {
       const target = THREE.MathUtils.clamp((px - START) / (END - START), 0, 1);
 
       this.outlineIntensity =
-        this.outlineIntensity +
-        (target - this.outlineIntensity) * OUTLINE_INTENSITY_SMOOTHING;
+        this.outlineIntensity + (target - this.outlineIntensity) * OUTLINE_INTENSITY_SMOOTHING;
 
       const strength = OUTLINE_EDGE_STRENGTH * this.outlineIntensity;
       this.outlinePass.edgeStrength = strength;
       this.outlinePass.enabled =
-        this.outlineGlobalEnabled &&
-        this.outlineIntensity > OUTLINE_MIN_ENABLED_FACTOR;
+        this.outlineGlobalEnabled && this.outlineIntensity > OUTLINE_MIN_ENABLED_FACTOR;
     } else if (this.outlinePass) {
       // Invisible mesh => disable outline
       this.outlineIntensity = 0;
@@ -459,10 +457,12 @@ export class CelestialBodyNode {
         if (cm.map) {
           cm.map.dispose();
         }
+
         child.geometry.dispose();
         (child.material as THREE.Material).dispose();
       }
     } catch {}
+
     this.mesh.geometry.dispose();
     if (Array.isArray(this.mesh.material)) {
       this.mesh.material.forEach((m) => {

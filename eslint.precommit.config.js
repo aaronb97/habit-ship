@@ -6,6 +6,7 @@ const { defineConfig } = require('eslint/config');
 const react = require('eslint-plugin-react');
 const stylistic = require('@stylistic/eslint-plugin');
 const tsParser = require('@typescript-eslint/parser');
+const jsxPlugin = require('@stylistic/eslint-plugin-jsx');
 
 module.exports = defineConfig([
   // Ignore build artifacts and this config file itself
@@ -22,6 +23,7 @@ module.exports = defineConfig([
     plugins: {
       react,
       '@stylistic': stylistic,
+      '@stylistic/jsx': jsxPlugin,
     },
     settings: {
       react: { version: 'detect' },
@@ -47,14 +49,12 @@ module.exports = defineConfig([
         'error',
         {
           blankLine: 'always',
-          prev: [
-            'multiline-block-like',
-            'multiline-expression',
-            'multiline-const',
-          ],
+          prev: ['multiline-block-like', 'multiline-expression', 'multiline-const'],
           next: '*',
         },
       ],
+
+      '@stylistic/jsx/jsx-newline': ['error', { prevent: false }],
 
       // Core
       'object-shorthand': 'error',

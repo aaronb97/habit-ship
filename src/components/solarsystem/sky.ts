@@ -11,11 +11,7 @@ import { SKY_SEGMENTS, SKY_SPHERE_RADIUS, SKY_BRIGHTNESS } from './constants';
  * be populated once the underlying image finishes loading.
  */
 export function createSky(): THREE.Mesh {
-  const skyGeometry = new THREE.SphereGeometry(
-    SKY_SPHERE_RADIUS,
-    SKY_SEGMENTS,
-    SKY_SEGMENTS,
-  );
+  const skyGeometry = new THREE.SphereGeometry(SKY_SPHERE_RADIUS, SKY_SEGMENTS, SKY_SEGMENTS);
 
   const skyMaterial = new THREE.MeshBasicMaterial({
     // Start black until texture loads; brightness applied once map is set
@@ -28,17 +24,12 @@ export function createSky(): THREE.Mesh {
 
   // Kick off async texture load and apply when ready
   void (async () => {
-    const spaceAsset = Asset.fromModule(
-      require('../../../assets/cbodies/space.jpg'),
-    );
+    const spaceAsset = Asset.fromModule(require('../../../assets/cbodies/space.jpg'));
 
     try {
       await spaceAsset.downloadAsync();
     } catch (err) {
-      console.warn(
-        '[sky] downloadAsync failed for space.jpg, using uri fallback',
-        err,
-      );
+      console.warn('[sky] downloadAsync failed for space.jpg, using uri fallback', err);
     }
 
     const loader = new TextureLoader();

@@ -1,11 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  Animated,
-  Text,
-  TouchableOpacity,
-  View,
-  StyleSheet,
-} from 'react-native';
+import { Animated, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
 import type { LevelUpInfo } from '../utils/store';
 import { cBodies } from '../planets';
 import { colors, fonts, fontSizes } from '../styles/theme';
@@ -38,13 +32,7 @@ function formatKm(km: number): string {
  * intervalMs: Optional per-line stagger interval.
  * Returns: JSX for the panel content.
  */
-export function LevelUpPanel({
-  info,
-  onOk,
-}: {
-  info: LevelUpInfo;
-  onOk: () => void;
-}) {
+export function LevelUpPanel({ info, onOk }: { info: LevelUpInfo; onOk: () => void }) {
   const okOpacity = useRef(new Animated.Value(0)).current;
   const titleOpacity = useRef(new Animated.Value(0)).current;
   const [showList, setShowList] = useState(false);
@@ -87,9 +75,7 @@ export function LevelUpPanel({
 
   // Optional skin reward line
   const skinLine: FadingLine[] = info.awardedSkinId
-    ? [
-        `New Rocket Skin: ${getSkinById(info.awardedSkinId)?.title ?? info.awardedSkinId}`,
-      ]
+    ? [`New Rocket Skin: ${getSkinById(info.awardedSkinId)?.title ?? info.awardedSkinId}`]
     : [];
 
   const fullDiscovered = info.discoveredBodies
@@ -109,6 +95,7 @@ export function LevelUpPanel({
     content: (
       <Text style={styles.line}>
         <Text style={{ color: colors.white }}>Discovered: </Text>
+
         <Text style={{ color: lightenHex(b.colorHex) }}>{b.name}</Text>
       </Text>
     ),
@@ -123,9 +110,8 @@ export function LevelUpPanel({
 
   return (
     <View>
-      <Animated.Text style={[styles.title, { opacity: titleOpacity }]}>
-        Level Up!
-      </Animated.Text>
+      <Animated.Text style={[styles.title, { opacity: titleOpacity }]}>Level Up!</Animated.Text>
+
       {showList && (
         <FadingTextList
           key={`lvl-${info.prevLevel}-${info.currLevel}`}
@@ -143,6 +129,7 @@ export function LevelUpPanel({
           }}
         />
       )}
+
       <Animated.View style={{ opacity: okOpacity }}>
         <TouchableOpacity
           style={[styles.okBtn, styles.okBtnPrimary, { marginTop: 12 }]}

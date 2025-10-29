@@ -35,9 +35,7 @@ export function useFriendships(uid?: string): FriendshipsData {
   const [loadingIncoming, setLoadingIncoming] = useState<boolean>(true);
   const [loadingOutgoing, setLoadingOutgoing] = useState<boolean>(true);
 
-  const [friendProfiles, setFriendProfiles] = useState<
-    Record<string, UsersDoc | undefined>
-  >({});
+  const [friendProfiles, setFriendProfiles] = useState<Record<string, UsersDoc | undefined>>({});
 
   function otherUid(f: FriendshipDoc, selfUid: string): string {
     return f.user1 === selfUid ? f.user2 : f.user1;
@@ -63,10 +61,12 @@ export function useFriendships(uid?: string): FriendshipsData {
       setAccepted(rows);
       setLoadingAccepted(false);
     });
+
     const unsubIncoming = observeFriendshipsIncoming(uid, (rows) => {
       setIncoming(rows);
       setLoadingIncoming(false);
     });
+
     const unsubOutgoing = observeFriendshipsOutgoing(uid, (rows) => {
       setOutgoing(rows);
       setLoadingOutgoing(false);
@@ -90,6 +90,7 @@ export function useFriendships(uid?: string): FriendshipsData {
           unsub();
         } catch {}
       });
+
       friendProfileUnsubsRef.current.clear();
       setFriendProfiles({});
       return;
@@ -103,6 +104,7 @@ export function useFriendships(uid?: string): FriendshipsData {
         try {
           unsub();
         } catch {}
+
         friendProfileUnsubsRef.current.delete(fid);
         setFriendProfiles((prev) => {
           const next = { ...prev };
@@ -114,7 +116,10 @@ export function useFriendships(uid?: string): FriendshipsData {
 
     // Subscribe to new friends' user docs
     uids.forEach((fid) => {
-      if (friendProfileUnsubsRef.current.has(fid)) return;
+      if (friendProfileUnsubsRef.current.has(fid)) {
+        return;
+      }
+
       const unsub = userDoc(fid).onSnapshot(
         (snap) => {
           const data = snap.data() as UsersDoc | undefined;
@@ -124,6 +129,7 @@ export function useFriendships(uid?: string): FriendshipsData {
           setFriendProfiles((prev) => ({ ...prev, [fid]: undefined }));
         },
       );
+
       friendProfileUnsubsRef.current.set(fid, unsub);
     });
 
@@ -139,6 +145,7 @@ export function useFriendships(uid?: string): FriendshipsData {
           unsub();
         } catch {}
       });
+
       mapAtMount.clear();
     };
   }, []);

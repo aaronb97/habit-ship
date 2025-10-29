@@ -1,12 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
-import {
-  Animated,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, fonts, fontSizes } from '../../styles/theme';
 
 export function WelcomeTransition() {

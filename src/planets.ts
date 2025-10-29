@@ -84,10 +84,7 @@ export interface SatelliteOrbit {
   epochJd?: number; // defaults to J2000.0
 }
 
-function heliocentricFromKepler(
-  el: KeplerianElements,
-  date: Date,
-): Coordinates {
+function heliocentricFromKepler(el: KeplerianElements, date: Date): Coordinates {
   const T = centuriesSinceJ2000(date);
 
   const a = el.a + (el.aDot ?? 0) * T; // AU
@@ -332,17 +329,9 @@ export class Moon extends CBody {
     }
 
     const parentPos: Coordinates = parent.getPosition(d);
-    const rel = satelliteRelativePosition(
-      this.satellite,
-      d,
-      parent.axialTiltDeg ?? 0,
-    );
+    const rel = satelliteRelativePosition(this.satellite, d, parent.axialTiltDeg ?? 0);
 
-    return [
-      parentPos[0] + rel[0],
-      parentPos[1] + rel[1],
-      parentPos[2] + rel[2],
-    ];
+    return [parentPos[0] + rel[0], parentPos[1] + rel[1], parentPos[2] + rel[2]];
   }
 
   getVisualPosition(): Coordinates {
@@ -364,9 +353,9 @@ export class Moon extends CBody {
 
   private getCachedParent(): Planet | undefined {
     if (!this.cachedParent) {
-      this.cachedParent = cBodies.find(
-        (b) => b.name === this.orbits && b instanceof Planet,
-      ) as Planet | undefined;
+      this.cachedParent = cBodies.find((b) => b.name === this.orbits && b instanceof Planet) as
+        | Planet
+        | undefined;
     }
 
     return this.cachedParent;

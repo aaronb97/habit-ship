@@ -1,10 +1,6 @@
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { colors } from '../styles/theme';
 
 interface ProgressBarProps {
@@ -34,9 +30,7 @@ export function ProgressBar({
 
   return (
     <View style={[styles.container, { height, backgroundColor }]}>
-      <Animated.View
-        style={[styles.progressBar, { backgroundColor: color }, animatedStyle]}
-      />
+      <Animated.View style={[styles.progressBar, { backgroundColor: color }, animatedStyle]} />
     </View>
   );
 }

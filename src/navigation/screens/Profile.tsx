@@ -1,13 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import {
-  Alert,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useIsFocused } from '@react-navigation/native';
 import { colors, fonts, fontSizes } from '../../styles/theme';
@@ -35,13 +27,13 @@ export function Profile() {
 
   useEffect(() => {
     if (isFocused && unseenUnlockedSkins.length > 0) {
-      const names = unseenUnlockedSkins
-        .map((id) => getSkinById(id)?.title ?? id)
-        .join(', ');
+      const names = unseenUnlockedSkins.map((id) => getSkinById(id)?.title ?? id).join(', ');
+
       Alert.alert('New skins unlocked!', names);
       markSkinsSeen();
     }
   }, [isFocused, unseenUnlockedSkins, markSkinsSeen]);
+
   /**
    * Handles skin card selection. If the skin is locked, shows an info alert.
    * If the selected skin is already applied, prompts to remove it (become skinless).
@@ -49,7 +41,9 @@ export function Profile() {
    */
   const onSelect = (skinId: string) => {
     const skin = getSkinById(skinId);
-    if (!skin) return;
+    if (!skin) {
+      return;
+    }
 
     const isUnlocked = unlockedSkins.includes(skinId);
     if (!isUnlocked) {
@@ -66,6 +60,7 @@ export function Profile() {
           onPress: () => setSelectedSkinId(undefined),
         },
       ]);
+
       return;
     }
 
@@ -94,28 +89,41 @@ export function Profile() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView
+      style={styles.container}
+      edges={['top']}
+    >
       <View style={styles.balanceRow}>
         <Text style={styles.balanceLabel}>Username</Text>
+
         <View style={styles.usernameRight}>
           <Text style={styles.balanceValue}>{username}</Text>
+
           <TouchableOpacity
             style={styles.copyBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Copy username"
             onPress={() => {
               void copyUsername();
             }}
-            accessibilityRole="button"
-            accessibilityLabel="Copy username"
           >
-            <FontAwesome5 name="copy" size={16} color={colors.accent} />
+            <FontAwesome5
+              name="copy"
+              size={16}
+              color={colors.accent}
+            />
           </TouchableOpacity>
         </View>
       </View>
+
       <View style={styles.balanceRow}>
         <Text style={styles.balanceLabel}>Space Money</Text>
+
         <Text style={styles.balanceValue}>{money.toLocaleString()}</Text>
       </View>
+
       <Text style={styles.sectionTitle}>Skins</Text>
+
       <FlatList
         data={visibleSkins}
         keyExtractor={(item) => item.id}
@@ -127,14 +135,21 @@ export function Profile() {
           return (
             <TouchableOpacity
               style={[styles.card, isSelected && styles.selected]}
-              onPress={() => onSelect(item.id)}
               activeOpacity={0.8}
+              onPress={() => onSelect(item.id)}
             >
               <View style={styles.square}>
-                <Image source={item.preview} style={styles.image} />
+                <Image
+                  source={item.preview}
+                  style={styles.image}
+                />
               </View>
+
               <View style={styles.cardTitleContainer}>
-                <Text style={styles.cardTitle} numberOfLines={2}>
+                <Text
+                  style={styles.cardTitle}
+                  numberOfLines={2}
+                >
                   {item.title}
                 </Text>
               </View>

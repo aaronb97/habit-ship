@@ -59,6 +59,7 @@ export function useComposedGesture(params: {
         controllerRef.current?.endPan(0, 0, width, height);
         panStartedRef.current = false;
       }
+
       lastPanXRef.current = 0;
       lastPanYRef.current = 0;
     })

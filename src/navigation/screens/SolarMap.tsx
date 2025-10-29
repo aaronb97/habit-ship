@@ -66,27 +66,34 @@ export function SolarMap() {
   // Transparent gesture surface above the global GL overlay
   return (
     <GestureDetector gesture={gesture}>
-      <View style={styles.container} pointerEvents="auto">
+      <View
+        style={styles.container}
+        pointerEvents="auto"
+      >
         {(() => {
           const target = userPosition.target;
           const initialDistance = userPosition.initialDistance;
           const distanceTraveled = userPosition.distanceTraveled ?? 0;
-          const previousDistanceTraveled =
-            userPosition.previousDistanceTraveled ?? 0;
+          const previousDistanceTraveled = userPosition.previousDistanceTraveled ?? 0;
+
           const hasTarget = !!target && typeof initialDistance === 'number';
           const hasDelta = distanceTraveled !== previousDistanceTraveled;
           const isTraveling = hasTarget && distanceTraveled > 0;
           const label = isTraveling ? 'Boost' : 'Launch';
-          const initDist =
-            typeof initialDistance === 'number' ? initialDistance : 0;
-          const remaining = Math.max(0, initDist - distanceTraveled);
-          const canBoost =
-            hasTarget && fuelKm > 0 && !hasDelta && remaining > 0;
+          const initDist = typeof initialDistance === 'number' ? initialDistance : 0;
 
-          if (!hasTarget || !canBoost) return null;
+          const remaining = Math.max(0, initDist - distanceTraveled);
+          const canBoost = hasTarget && fuelKm > 0 && !hasDelta && remaining > 0;
+
+          if (!hasTarget || !canBoost) {
+            return null;
+          }
 
           return (
-            <View style={styles.ctaContainer} pointerEvents="box-none">
+            <View
+              style={styles.ctaContainer}
+              pointerEvents="box-none"
+            >
               <HSButton
                 onPress={() => {
                   applyFuelToTravel();

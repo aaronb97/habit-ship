@@ -1,11 +1,4 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Switch,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { colors, fonts } from '../../styles/theme';
 import { useStore } from '../../utils/store';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -42,7 +35,10 @@ export function Dev() {
     const { addXP } = useStore.getState();
     for (let i = 0; i < levels; i++) {
       const xpNeeded = getXPToNextLevel(totalXP);
-      if (xpNeeded <= 0) break;
+      if (xpNeeded <= 0) {
+        break;
+      }
+
       addXP(xpNeeded, 'habit_completion');
       totalXP += xpNeeded;
     }
@@ -58,38 +54,49 @@ export function Dev() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <TouchableOpacity style={styles.button} onPress={handleQuickReset}>
-            <Text style={styles.buttonText}>
-              Quick Reset (Home with Default Habit)
-            </Text>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleQuickReset}
+          >
+            <Text style={styles.buttonText}>Quick Reset (Home with Default Habit)</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.button}
             onPress={() => store.unlockAllSkins()}
           >
             <Text style={styles.buttonText}>Unlock All Skins</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={handleLevelUpOnce}>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleLevelUpOnce}
+          >
             <Text style={styles.buttonText}>Level +1</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.button}
             onPress={() => handleLevelUpBy(5)}
           >
             <Text style={styles.buttonText}>Level +5</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.button}
             onPress={() => handleLevelUpBy(10)}
           >
             <Text style={styles.buttonText}>Level +10</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.button}
             onPress={() => handleLevelUpBy(20)}
           >
             <Text style={styles.buttonText}>Level +20</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.button, styles.dangerButton]}
             onPress={() => clearData()}
@@ -102,6 +109,7 @@ export function Dev() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Warp To Planet</Text>
+
           <View style={styles.buttonGrid}>
             {cBodies.map((p) => (
               <TouchableOpacity
@@ -117,146 +125,155 @@ export function Dev() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Rendering Toggles</Text>
+
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Planet Trails</Text>
+
             <Switch
               value={!!store.showTrails}
               onValueChange={(v) => store.setShowTrails(v)}
             />
           </View>
+
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Planet Textures</Text>
+
             <Switch
               value={!!store.showTextures}
               onValueChange={(v) => store.setShowTextures(v)}
             />
           </View>
+
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Planet/Body Outlines</Text>
+
             <Switch
               value={!!store.outlinesBodiesEnabled}
               onValueChange={(v) => store.setOutlinesBodiesEnabled(v)}
             />
           </View>
+
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Rocket Outline</Text>
+
             <Switch
               value={!!store.outlinesRocketEnabled}
               onValueChange={(v) => store.setOutlinesRocketEnabled(v)}
             />
           </View>
+
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Show All Rockets (DB)</Text>
+
             <Switch
               value={!!store.showAllRockets}
               onValueChange={(v) => store.setShowAllRockets(v)}
             />
           </View>
+
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Skip Rocket Animation</Text>
+
             <Switch
               value={!!store.skipRocketAnimation}
               onValueChange={(v) => store.setSkipRocketAnimation(v)}
             />
           </View>
+
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Debug Overlay</Text>
+
             <Switch
               value={!!store.showDebugOverlay}
               onValueChange={(v) => store.setShowDebugOverlay(v)}
             />
           </View>
+
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Unlock All Skins</Text>
+
             <Switch
               value={store.unlockedSkins.length === ALL_SKIN_IDS.length}
-              onValueChange={(v) =>
-                v ? store.unlockAllSkins() : store.lockSkinsToDefault()
-              }
+              onValueChange={(v) => (v ? store.unlockAllSkins() : store.lockSkinsToDefault())}
             />
           </View>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Tilt-Shift (Miniature)</Text>
+
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Enabled</Text>
+
             <Switch
               value={!!store.tiltShiftEnabled}
               onValueChange={(v) => store.setTiltShiftEnabled(v)}
             />
           </View>
+
           <View style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>
-              Focus: {store.tiltShiftFocus.toFixed(2)}
-            </Text>
+            <Text style={styles.toggleLabel}>Focus: {store.tiltShiftFocus.toFixed(2)}</Text>
+
             <View style={styles.stepperRow}>
               <TouchableOpacity
                 style={styles.stepperButton}
-                onPress={() =>
-                  store.setTiltShiftFocus(store.tiltShiftFocus - 0.02)
-                }
+                onPress={() => store.setTiltShiftFocus(store.tiltShiftFocus - 0.02)}
               >
                 <Text style={styles.stepperText}>-</Text>
               </TouchableOpacity>
+
               <TouchableOpacity
                 style={styles.stepperButton}
-                onPress={() =>
-                  store.setTiltShiftFocus(store.tiltShiftFocus + 0.02)
-                }
+                onPress={() => store.setTiltShiftFocus(store.tiltShiftFocus + 0.02)}
               >
                 <Text style={styles.stepperText}>+</Text>
               </TouchableOpacity>
             </View>
           </View>
+
           <View style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>
-              Range: {store.tiltShiftRange.toFixed(2)}
-            </Text>
+            <Text style={styles.toggleLabel}>Range: {store.tiltShiftRange.toFixed(2)}</Text>
+
             <View style={styles.stepperRow}>
               <TouchableOpacity
                 style={styles.stepperButton}
-                onPress={() =>
-                  store.setTiltShiftRange(store.tiltShiftRange - 0.02)
-                }
+                onPress={() => store.setTiltShiftRange(store.tiltShiftRange - 0.02)}
               >
                 <Text style={styles.stepperText}>-</Text>
               </TouchableOpacity>
+
               <TouchableOpacity
                 style={styles.stepperButton}
-                onPress={() =>
-                  store.setTiltShiftRange(store.tiltShiftRange + 0.02)
-                }
+                onPress={() => store.setTiltShiftRange(store.tiltShiftRange + 0.02)}
               >
                 <Text style={styles.stepperText}>+</Text>
               </TouchableOpacity>
             </View>
           </View>
+
           <View style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>
-              Feather: {store.tiltShiftFeather.toFixed(2)}
-            </Text>
+            <Text style={styles.toggleLabel}>Feather: {store.tiltShiftFeather.toFixed(2)}</Text>
+
             <View style={styles.stepperRow}>
               <TouchableOpacity
                 style={styles.stepperButton}
-                onPress={() =>
-                  store.setTiltShiftFeather(store.tiltShiftFeather - 0.02)
-                }
+                onPress={() => store.setTiltShiftFeather(store.tiltShiftFeather - 0.02)}
               >
                 <Text style={styles.stepperText}>-</Text>
               </TouchableOpacity>
+
               <TouchableOpacity
                 style={styles.stepperButton}
-                onPress={() =>
-                  store.setTiltShiftFeather(store.tiltShiftFeather + 0.02)
-                }
+                onPress={() => store.setTiltShiftFeather(store.tiltShiftFeather + 0.02)}
               >
                 <Text style={styles.stepperText}>+</Text>
               </TouchableOpacity>
             </View>
           </View>
+
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Blur: {store.tiltShiftBlur}</Text>
+
             <View style={styles.stepperRow}>
               <TouchableOpacity
                 style={styles.stepperButton}
@@ -264,6 +281,7 @@ export function Dev() {
               >
                 <Text style={styles.stepperText}>-</Text>
               </TouchableOpacity>
+
               <TouchableOpacity
                 style={styles.stepperButton}
                 onPress={() => store.setTiltShiftBlur(store.tiltShiftBlur + 1)}
@@ -276,20 +294,25 @@ export function Dev() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Time Advancement</Text>
+
           <View style={styles.timeDisplay}>
             <Text style={styles.timeLabel}>Real System Time:</Text>
+
             <Text style={styles.timeValue}>{new Date().toLocaleString()}</Text>
+
             <Text style={styles.timeLabel}>Offset Time:</Text>
-            <Text style={styles.timeValue}>
-              {getCurrentDate().toLocaleString()}
-            </Text>
+
+            <Text style={styles.timeValue}>{getCurrentDate().toLocaleString()}</Text>
+
             <Text style={styles.timeLabel}>Time Offset:</Text>
+
             <Text style={styles.timeValue}>
               {store.timeOffset === 0
                 ? 'None'
                 : `+${(store.timeOffset / 3600000).toFixed(2)} hours`}
             </Text>
           </View>
+
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={styles.timeButton}
@@ -297,24 +320,28 @@ export function Dev() {
             >
               <Text style={styles.timeButtonText}>+1h</Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.timeButton}
               onPress={() => handleAdvanceTime(6)}
             >
               <Text style={styles.timeButtonText}>+6h</Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.timeButton}
               onPress={() => handleAdvanceTime(12)}
             >
               <Text style={styles.timeButtonText}>+12h</Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.timeButton}
               onPress={() => handleAdvanceTime(24)}
             >
               <Text style={styles.timeButtonText}>+1d</Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.timeButton}
               onPress={() => handleAdvanceTime(8760)}
@@ -326,6 +353,7 @@ export function Dev() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Store State</Text>
+
           <Text style={styles.code}>{JSON.stringify(store, null, 2)}</Text>
         </View>
       </ScrollView>

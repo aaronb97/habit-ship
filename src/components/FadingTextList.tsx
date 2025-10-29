@@ -3,10 +3,7 @@ import type { ReactNode } from 'react';
 import { Animated, TextStyle, View, StyleSheet } from 'react-native';
 import { fonts, fontSizes, colors } from '../styles/theme';
 
-export type FadingLine =
-  | string
-  | ReactNode
-  | { content: string | ReactNode; style?: TextStyle };
+export type FadingLine = string | ReactNode | { content: string | ReactNode; style?: TextStyle };
 
 /**
  * Type guard to detect a styled fading line object.
@@ -14,14 +11,8 @@ export type FadingLine =
  * l: Candidate value to test.
  * Returns: True if the value has a 'content' field.
  */
-function isStyledLine(
-  l: unknown,
-): l is { content: string | ReactNode; style?: TextStyle } {
-  return (
-    typeof l === 'object' &&
-    l !== null &&
-    'content' in (l as Record<string, unknown>)
-  );
+function isStyledLine(l: unknown): l is { content: string | ReactNode; style?: TextStyle } {
+  return typeof l === 'object' && l !== null && 'content' in (l as Record<string, unknown>);
 }
 
 /**
@@ -47,9 +38,7 @@ export function FadingTextList({
   onAllVisible?: () => void;
 }) {
   const normalized = lines.map((l) =>
-    isStyledLine(l)
-      ? l
-      : ({ content: l } as { content: string | ReactNode; style?: TextStyle }),
+    isStyledLine(l) ? l : ({ content: l } as { content: string | ReactNode; style?: TextStyle }),
   );
 
   const opacitiesRef = useRef<Animated.Value[]>([]);

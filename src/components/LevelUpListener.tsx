@@ -25,9 +25,7 @@ export function LevelUpListener() {
       const currDist = getDailyDistanceForLevel(curr);
 
       const newBodies = cBodies
-        .filter(
-          (b) => b.minLevel && b.minLevel <= curr && b.minLevel > fromLevel,
-        )
+        .filter((b) => b.minLevel && b.minLevel <= curr && b.minLevel > fromLevel)
         .map((b) => b.name);
 
       const awarded = unlockRandomRocketSkin();

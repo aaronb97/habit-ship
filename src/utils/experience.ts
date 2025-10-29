@@ -36,12 +36,7 @@ export function xpCurrentThresholdForLevel(level: number): number {
     return 125;
   }
 
-  const {
-    baseRequirement,
-    firstIncrement,
-    switchIncrementLevel,
-    secondIncrement,
-  } = XP_CONFIG;
+  const { baseRequirement, firstIncrement, switchIncrementLevel, secondIncrement } = XP_CONFIG;
 
   const L = Math.max(1, Math.floor(level));
   if (L === 1) {
@@ -54,8 +49,7 @@ export function xpCurrentThresholdForLevel(level: number): number {
   }
 
   // After the switch, continue growth using second increment
-  const atSwitch =
-    baseRequirement + firstIncrement * (switchIncrementLevel - 1);
+  const atSwitch = baseRequirement + firstIncrement * (switchIncrementLevel - 1);
 
   return atSwitch + secondIncrement * (L - switchIncrementLevel);
 }

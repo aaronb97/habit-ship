@@ -126,9 +126,7 @@ export function vantageForProgress(p: number): Vantage {
 
   const l = (a: number, b: number, t: number) => a + (b - a) * t;
   const yaw =
-    p <= 0.5
-      ? l(YAW_AHEAD, YAW_SIDE, s(0.0, 0.5, p))
-      : l(YAW_SIDE, YAW_BEHIND, s(0.5, 1.0, p));
+    p <= 0.5 ? l(YAW_AHEAD, YAW_SIDE, s(0.0, 0.5, p)) : l(YAW_SIDE, YAW_BEHIND, s(0.5, 1.0, p));
 
   const pitch = l(PITCH_HIGH, PITCH_LOW, s(0.1, 0.9, p));
   return { yaw, pitch };
@@ -159,10 +157,7 @@ function updateOrbitCamera(
 
   // Plane normal: either forced via override, or defined by the three points (sun, user, target)
   const n = new THREE.Vector3();
-  if (
-    planeNormalOverride &&
-    planeNormalOverride.lengthSq() >= PLANE_NORMAL_EPS
-  ) {
+  if (planeNormalOverride && planeNormalOverride.lengthSq() >= PLANE_NORMAL_EPS) {
     n.copy(planeNormalOverride);
   } else {
     const a = center.clone().sub(sun);
@@ -218,10 +213,7 @@ function updateOrbitCamera(
     .multiplyScalar(Math.cos(theta) * rCos)
     .add(V.clone().multiplyScalar(Math.sin(theta) * rCos));
 
-  const desiredPos = center
-    .clone()
-    .add(n.clone().multiplyScalar(rSin))
-    .add(circleOffset);
+  const desiredPos = center.clone().add(n.clone().multiplyScalar(rSin)).add(circleOffset);
 
   camera.position.copy(desiredPos);
   // Keep camera "up" aligned to the (sign-stabilized) plane normal to minimize roll
@@ -349,11 +341,7 @@ export class CameraController {
    * @param r Desired orbit radius in scene units.
    */
   setRadiusTarget(r: number) {
-    this.radiusTarget = THREE.MathUtils.clamp(
-      r,
-      ZOOM_MIN_RADIUS,
-      ZOOM_MAX_RADIUS,
-    );
+    this.radiusTarget = THREE.MathUtils.clamp(r, ZOOM_MIN_RADIUS, ZOOM_MAX_RADIUS);
 
     this.yawVelocity = 0;
     this.pitchVelocity = 0;
@@ -485,8 +473,7 @@ export class CameraController {
       }
     }
 
-    const nextIndex =
-      currentIndex >= 0 ? (currentIndex + 1) % this.doubleTapStages.length : 0;
+    const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % this.doubleTapStages.length : 0;
 
     const next = this.doubleTapStages[nextIndex];
     if (!next) {
@@ -534,17 +521,10 @@ export class CameraController {
    * @param viewportWidth Current viewport width in pixels.
    * @param viewportHeight Current viewport height in pixels.
    */
-  updatePan(
-    dx: number,
-    dy: number,
-    viewportWidth: number,
-    viewportHeight: number,
-  ) {
-    const RAD_PER_PX_X =
-      PAN_YAW_ROTATION_PER_FULL_DRAG / Math.max(1, viewportWidth);
+  updatePan(dx: number, dy: number, viewportWidth: number, viewportHeight: number) {
+    const RAD_PER_PX_X = PAN_YAW_ROTATION_PER_FULL_DRAG / Math.max(1, viewportWidth);
 
-    const RAD_PER_PX_Y =
-      PAN_PITCH_ROTATION_PER_FULL_DRAG / Math.max(1, viewportHeight);
+    const RAD_PER_PX_Y = PAN_PITCH_ROTATION_PER_FULL_DRAG / Math.max(1, viewportHeight);
 
     this.yawTarget -= dx * RAD_PER_PX_X;
     this.pitchTarget = THREE.MathUtils.clamp(
@@ -561,26 +541,15 @@ export class CameraController {
    * @param viewportWidth Viewport width in px.
    * @param viewportHeight Viewport height in px.
    */
-  endPan(
-    velocityX: number,
-    velocityY: number,
-    viewportWidth: number,
-    viewportHeight: number,
-  ) {
+  endPan(velocityX: number, velocityY: number, viewportWidth: number, viewportHeight: number) {
     this.isPanning = false;
-    const RAD_PER_PX_X =
-      PAN_YAW_ROTATION_PER_FULL_DRAG / Math.max(1, viewportWidth);
+    const RAD_PER_PX_X = PAN_YAW_ROTATION_PER_FULL_DRAG / Math.max(1, viewportWidth);
 
-    const RAD_PER_PX_Y =
-      PAN_PITCH_ROTATION_PER_FULL_DRAG / Math.max(1, viewportHeight);
+    const RAD_PER_PX_Y = PAN_PITCH_ROTATION_PER_FULL_DRAG / Math.max(1, viewportHeight);
 
     const pxPerFrameX = velocityX / INERTIA_FRAMES_PER_SECOND;
     const initialYaw = -(pxPerFrameX * RAD_PER_PX_X);
-    this.yawVelocity = THREE.MathUtils.clamp(
-      initialYaw,
-      -YAW_VELOCITY_CLAMP,
-      YAW_VELOCITY_CLAMP,
-    );
+    this.yawVelocity = THREE.MathUtils.clamp(initialYaw, -YAW_VELOCITY_CLAMP, YAW_VELOCITY_CLAMP);
 
     const pxPerFrameY = velocityY / INERTIA_FRAMES_PER_SECOND;
     const initialPitch = pxPerFrameY * RAD_PER_PX_Y;
@@ -780,11 +749,7 @@ export class CameraController {
    * @param planeNormalOverride Optional forced plane normal. When provided (e.g., (0,1,0)),
    * aligns the orbit plane accordingly regardless of center/target relationship.
    */
-  tick(
-    center: THREE.Vector3,
-    target: THREE.Vector3,
-    planeNormalOverride?: THREE.Vector3,
-  ) {
+  tick(center: THREE.Vector3, target: THREE.Vector3, planeNormalOverride?: THREE.Vector3) {
     this._nowTs = getCurrentTime();
 
     const phase = this.getCameraPhase();
@@ -834,9 +799,7 @@ export class CameraController {
     }
 
     if (this.tweenActive) {
-      const t = clamp01(
-        (this._nowTs - this.tweenStartTs) / this.tweenDurationMs,
-      );
+      const t = clamp01((this._nowTs - this.tweenStartTs) / this.tweenDurationMs);
 
       const e = easeInOutCubic(t);
       this.radius = lerp(this.tweenStartRadius, this.tweenEndRadius, e);
@@ -896,6 +859,7 @@ export class CameraController {
             Math.abs(n.y) < HELPER_AXIS_THRESHOLD
               ? new THREE.Vector3(0, 1, 0)
               : new THREE.Vector3(1, 0, 0);
+
           U = helper.clone().cross(n);
         }
       }
@@ -908,10 +872,8 @@ export class CameraController {
       const circleOffset = U.clone()
         .multiplyScalar(Math.cos(theta) * rCos)
         .add(V.clone().multiplyScalar(Math.sin(theta) * rCos));
-      const desiredPos = center
-        .clone()
-        .add(n.clone().multiplyScalar(rSin))
-        .add(circleOffset);
+
+      const desiredPos = center.clone().add(n.clone().multiplyScalar(rSin)).add(circleOffset);
 
       const safeRadius = this.collisionResolver({
         center,

@@ -28,12 +28,9 @@ const Tab = createNativeBottomTabNavigator<TabParamList>();
  */
 export function TabNavigator() {
   // hiddden dev mode
-  const isDevelopment =
-    useStore((s) => s.habits[0]?.title === 'Dev') || __DEV__;
+  const isDevelopment = useStore((s) => s.habits[0]?.title === 'Dev') || __DEV__;
 
-  const hasFuelAndTarget = useStore(
-    (s) => s.fuelKm > 0 && !!s.userPosition.target,
-  );
+  const hasFuelAndTarget = useStore((s) => s.fuelKm > 0 && !!s.userPosition.target);
 
   const homeNeedsSelection = useStore((s) => s.justLanded);
   const activeTab = useStore((s) => s.activeTab);
@@ -51,6 +48,7 @@ export function TabNavigator() {
     loadingOutgoing,
     friendProfiles,
   } = useFriendships(uid);
+
   const { profiles: allProfiles } = useAllUsers(!!showAllRockets);
   // Inline flows now manage destination prompts; no need to read userPosition or level-up modal here.
   const isMapFocused = activeTab === 'MapTab';
@@ -61,9 +59,7 @@ export function TabNavigator() {
 
   const fadeOpacity = fadeOpacityRef.current;
 
-  const [imageSources, setImageSources] = useState<
-    Record<string, ImageSourcePropType>
-  >({});
+  const [imageSources, setImageSources] = useState<Record<string, ImageSourcePropType>>({});
 
   useEffect(() => {
     const iconNames = [
@@ -77,7 +73,10 @@ export function TabNavigator() {
     iconNames.forEach(({ key, name }) => {
       void Ionicons.getImageSource(name, ICON_SIZE, 'inherit').then(
         (source: ImageSourcePropType | null) => {
-          if (!source) return;
+          if (!source) {
+            return;
+          }
+
           setImageSources((prev) => ({ ...prev, [key]: source }));
         },
       );
@@ -106,8 +105,7 @@ export function TabNavigator() {
         name="HomeTab"
         component={Home}
         options={{
-          title:
-            Device.deviceType === Device.DeviceType.TABLET ? 'Dashboard' : '',
+          title: Device.deviceType === Device.DeviceType.TABLET ? 'Dashboard' : '',
           tabBarBadge: homeNeedsSelection ? ' ' : undefined,
           ...(imageSources.home && {
             tabBarIcon: () => imageSources.home!,
@@ -117,6 +115,7 @@ export function TabNavigator() {
           focus: () => setActiveTab('HomeTab'),
         }}
       />
+
       <Tab.Screen
         name="MapTab"
         component={SolarMap}
@@ -131,12 +130,12 @@ export function TabNavigator() {
           focus: () => setActiveTab('MapTab'),
         }}
       />
+
       <Tab.Screen
         name="ProfileTab"
         component={Profile}
         options={{
-          title:
-            Device.deviceType === Device.DeviceType.TABLET ? 'Profile' : '',
+          title: Device.deviceType === Device.DeviceType.TABLET ? 'Profile' : '',
           tabBarBadge: unseenSkins.length > 0 ? ' ' : undefined,
           ...(imageSources.profile && {
             tabBarIcon: () => imageSources.profile!,
@@ -148,13 +147,12 @@ export function TabNavigator() {
           },
         }}
       />
+
       <Tab.Screen
         name="FriendsTab"
         options={{
-          title:
-            Device.deviceType === Device.DeviceType.TABLET ? 'Friends' : '',
-          tabBarBadge:
-            incoming.length > 0 ? String(incoming.length) : undefined,
+          title: Device.deviceType === Device.DeviceType.TABLET ? 'Friends' : '',
+          tabBarBadge: incoming.length > 0 ? String(incoming.length) : undefined,
           ...(imageSources.friends && {
             tabBarIcon: () => imageSources.friends!,
           }),
@@ -175,6 +173,7 @@ export function TabNavigator() {
           />
         )}
       </Tab.Screen>
+
       {isDevelopment && (
         <Tab.Screen
           name="DevTab"
@@ -198,7 +197,10 @@ export function TabNavigator() {
     <View style={styles.container}>
       {/* SolarSystemMap doesn't work on emulators */}
       {Device.isDevice && (
-        <View style={styles.mapOverlay} pointerEvents={'none'}>
+        <View
+          style={styles.mapOverlay}
+          pointerEvents={'none'}
+        >
           {(() => {
             // Build friend entries (uid + profile) without useMemo for React compiler compatibility
             const friendEntries = (() => {
@@ -214,6 +216,7 @@ export function TabNavigator() {
               const friendUids = new Set(
                 accepted.map((f) => (f.user1 === uid ? f.user2 : f.user1)),
               );
+
               return Array.from(friendUids)
                 .map((fid) => {
                   const profile = friendProfiles[fid];
@@ -234,6 +237,7 @@ export function TabNavigator() {
           })()}
         </View>
       )}
+
       {tabs}
 
       {/* Persistent overlay hosting Dashboard and related modals */}
@@ -252,6 +256,7 @@ export function TabNavigator() {
         >
           <Dashboard />
         </Animated.View>
+
         {/* Modals removed: flows are inline within Dashboard */}
       </KeyboardAvoidingView>
     </View>

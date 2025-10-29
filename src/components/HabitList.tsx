@@ -43,9 +43,7 @@ export function HabitList({
       return false;
     }
 
-    const lastCompletion = new Date(
-      habit.completions[habit.completions.length - 1]!,
-    );
+    const lastCompletion = new Date(habit.completions[habit.completions.length - 1]!);
 
     return lastCompletion.toDateString() === currentDate.toDateString();
   };
@@ -79,12 +77,7 @@ type HabitMetaTextProps = { completed: boolean; children: React.ReactNode };
 
 function HabitMetaText({ completed, children }: HabitMetaTextProps) {
   return (
-    <Text
-      style={[
-        styles.habitDescription,
-        completed ? styles.completedHabitTitle : null,
-      ]}
-    >
+    <Text style={[styles.habitDescription, completed ? styles.completedHabitTitle : null]}>
       {children}
     </Text>
   );
@@ -115,21 +108,14 @@ function HabitRow({
     <View style={[styles.habitRow, hasDivider ? styles.habitRowDivider : null]}>
       <TouchableOpacity
         style={styles.habitRowInfo}
-        onLongPress={
-          onLongPressHabit ? () => onLongPressHabit(habit.id) : undefined
-        }
+        onLongPress={onLongPressHabit ? () => onLongPressHabit(habit.id) : undefined}
       >
-        <Text
-          style={[
-            styles.habitTitle,
-            completed ? styles.completedHabitTitle : null,
-          ]}
-        >
+        <Text style={[styles.habitTitle, completed ? styles.completedHabitTitle : null]}>
           {habit.title}
         </Text>
-        {line1 ? (
-          <HabitMetaText completed={completed}>{line1}</HabitMetaText>
-        ) : null}
+
+        {line1 ? <HabitMetaText completed={completed}>{line1}</HabitMetaText> : null}
+
         {showCount ? (
           <HabitMetaText completed={completed}>
             {`${habit.completions.length} completions`}
@@ -139,7 +125,10 @@ function HabitRow({
 
       <View style={styles.actionsRow}>
         {habit.timerLength ? (
-          <TimerButton habit={habit} onPress={() => onStartTimer(habit.id)} />
+          <TimerButton
+            habit={habit}
+            onPress={() => onStartTimer(habit.id)}
+          />
         ) : null}
 
         <CompleteButton
@@ -159,15 +148,9 @@ function getCompletionText(habit: Habit, now: Date): string | undefined {
 
   const last = new Date(habit.completions[count - 1]!);
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const lastStart = new Date(
-    last.getFullYear(),
-    last.getMonth(),
-    last.getDate(),
-  );
+  const lastStart = new Date(last.getFullYear(), last.getMonth(), last.getDate());
 
-  const diffDays = Math.round(
-    (todayStart.getTime() - lastStart.getTime()) / 86400000,
-  );
+  const diffDays = Math.round((todayStart.getTime() - lastStart.getTime()) / 86400000);
 
   if (diffDays === 0) {
     const timeStr = last.toLocaleTimeString(undefined, {
@@ -191,19 +174,19 @@ function getCompletionText(habit: Habit, now: Date): string | undefined {
  * habit: Habit for which to start the timer.
  * onPress: Invoked when the button is pressed.
  */
-function TimerButton({
-  habit,
-  onPress,
-}: {
-  habit: Habit;
-  onPress: () => void;
-}) {
+function TimerButton({ habit, onPress }: { habit: Habit; onPress: () => void }) {
   return (
-    <HSButton style={[styles.actionButton]} onPress={onPress}>
-      <MaterialIcons name="timer" size={20} color={colors.white} />
-      <Text
-        style={styles.actionButtonText}
-      >{`${habit.timerLength! / 60} min`}</Text>
+    <HSButton
+      style={[styles.actionButton]}
+      onPress={onPress}
+    >
+      <MaterialIcons
+        name="timer"
+        size={20}
+        color={colors.white}
+      />
+
+      <Text style={styles.actionButtonText}>{`${habit.timerLength! / 60} min`}</Text>
     </HSButton>
   );
 }
@@ -214,20 +197,19 @@ function TimerButton({
  * onPress: Invoked when the button is pressed.
  * isCompleted: Whether the habit has already been completed today.
  */
-function CompleteButton({
-  onPress,
-  isCompleted,
-}: {
-  onPress: () => void;
-  isCompleted: boolean;
-}) {
+function CompleteButton({ onPress, isCompleted }: { onPress: () => void; isCompleted: boolean }) {
   return (
     <HSButton
       disabled={isCompleted}
       style={[styles.actionButton]}
       onPress={onPress}
     >
-      <MaterialIcons name="check" size={20} color={colors.white} />
+      <MaterialIcons
+        name="check"
+        size={20}
+        color={colors.white}
+      />
+
       {isCompleted ? <Text style={styles.actionButtonText}>Done</Text> : null}
     </HSButton>
   );

@@ -49,6 +49,7 @@ const prefix = createURL('/');
 Asset.loadAsync([...NavigationAssets]).catch((e) => {
   console.warn('[App] Failed to preload navigation assets', e);
 });
+
 void SplashScreen.preventAutoHideAsync();
 
 Appearance.setColorScheme('dark');
@@ -94,16 +95,13 @@ function App() {
       void Notifications.getNotificationChannelsAsync();
     }
 
-    const notificationListener = Notifications.addNotificationReceivedListener(
-      () => {
-        // Handle notification received
-      },
-    );
+    const notificationListener = Notifications.addNotificationReceivedListener(() => {
+      // Handle notification received
+    });
 
-    const responseListener =
-      Notifications.addNotificationResponseReceivedListener((response) => {
-        console.log(response);
-      });
+    const responseListener = Notifications.addNotificationResponseReceivedListener((response) => {
+      console.log(response);
+    });
 
     return () => {
       notificationListener.remove();
@@ -114,17 +112,25 @@ function App() {
   // Ensure anonymous Firebase auth whenever firebaseId is missing (first run or after dev resets)
   const firebaseId = useStore((s) => s.firebaseId);
   useEffect(() => {
-    if (firebaseId) return;
+    if (firebaseId) {
+      return;
+    }
+
     const s = useStore.getState();
     void (async () => {
       const uid = await ensureFirebaseId();
-      if (uid) s.setFirebaseId(uid);
+      if (uid) {
+        s.setFirebaseId(uid);
+      }
     })();
   }, [firebaseId]);
 
   // Mirror Zustand store to Firestore (device-only source of truth)
   useEffect(() => {
-    if (!firebaseId) return;
+    if (!firebaseId) {
+      return;
+    }
+
     const stop = startFirestoreSync(firebaseId);
     return () => stop();
   }, [firebaseId]);
@@ -139,17 +145,20 @@ function App() {
         const anyCompletedToday = s.habits.some((h) =>
           h.completions.some((ts) => new Date(ts).toDateString() === todayKey),
         );
+
         void rescheduleDailyReminders(dest, !anyCompletedToday);
       }
     });
+
     // Also run once on initial mount
     const s = useStore.getState();
-    const initialDest =
-      s.userPosition.target ?? s.userPosition.startingLocation;
+    const initialDest = s.userPosition.target ?? s.userPosition.startingLocation;
+
     const todayKey = getCurrentDate().toDateString();
     const anyCompletedToday = s.habits.some((h) =>
       h.completions.some((ts) => new Date(ts).toDateString() === todayKey),
     );
+
     void rescheduleDailyReminders(initialDest, !anyCompletedToday);
     return () => sub.remove();
   }, []);
@@ -174,7 +183,11 @@ function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={colors.background}
+      />
+
       <Navigation
         theme={customTheme}
         linking={linking}
@@ -197,8 +210,7 @@ async function registerForPushNotificationsAsync() {
   }
 
   if (Device.isDevice) {
-    const { status: existingStatus } =
-      await Notifications.getPermissionsAsync();
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
 
     let finalStatus = existingStatus;
 
@@ -214,8 +226,7 @@ async function registerForPushNotificationsAsync() {
 
     try {
       const projectId =
-        Constants.expoConfig?.extra?.eas?.projectId ??
-        Constants.easConfig?.projectId;
+        Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
 
       if (!projectId) {
         throw new Error('Project ID not found');

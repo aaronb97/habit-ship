@@ -31,10 +31,7 @@ export function createComposer(
     blur: useStore.getState().tiltShiftBlur,
   };
 
-  const tilt = createTiltShiftPasses(
-    new THREE.Vector2(size.x, size.y),
-    initialTilt,
-  );
+  const tilt = createTiltShiftPasses(new THREE.Vector2(size.x, size.y), initialTilt);
 
   composer.addPass(tilt.horizontal);
   composer.addPass(tilt.vertical);

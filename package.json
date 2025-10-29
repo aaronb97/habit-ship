@@ -69,6 +69,7 @@
     "@eslint/compat": "^1.4.0",
     "@eslint/js": "^9.37.0",
     "@stylistic/eslint-plugin": "^5.4.0",
+    "@stylistic/eslint-plugin-jsx": "^4.4.1",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",

@@ -1,8 +1,4 @@
-import {
-  NavigationContainer,
-  Theme,
-  LinkingOptions,
-} from '@react-navigation/native';
+import { NavigationContainer, Theme, LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { colors, fonts } from '../styles/theme';
 import { TabNavigator } from './TabNavigator';
@@ -20,7 +16,11 @@ type NavigationProps = {
 
 export function Navigation({ theme, linking, onReady }: NavigationProps) {
   return (
-    <NavigationContainer theme={theme} linking={linking} onReady={onReady}>
+    <NavigationContainer
+      theme={theme}
+      linking={linking}
+      onReady={onReady}
+    >
       <KeyboardProvider>
         <Stack.Navigator
           screenOptions={{
@@ -38,6 +38,7 @@ export function Navigation({ theme, linking, onReady }: NavigationProps) {
               headerShown: false,
             }}
           />
+
           <Stack.Screen
             name="WelcomeTransition"
             component={WelcomeTransition}
@@ -45,6 +46,7 @@ export function Navigation({ theme, linking, onReady }: NavigationProps) {
               headerShown: false,
             }}
           />
+
           <Stack.Screen
             name="NotFound"
             component={NotFound}

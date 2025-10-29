@@ -78,9 +78,16 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
 
   return (
     <View style={{ width: '100%' }}>
-      <FadingTextList lines={lines} onAllVisible={animateOk} />
+      <FadingTextList
+        lines={lines}
+        onAllVisible={animateOk}
+      />
+
       <Animated.View style={{ opacity: okOpacity }}>
-        <HSButton onPress={onNext} style={styles.onboardOkButton}>
+        <HSButton
+          style={styles.onboardOkButton}
+          onPress={onNext}
+        >
           OK
         </HSButton>
       </Animated.View>
@@ -93,11 +100,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
  *
  * onSubmitHabit: Called with the habit title when user taps OK.
  */
-function FirstHabitStep({
-  onSubmitHabit,
-}: {
-  onSubmitHabit: (title: string) => void;
-}) {
+function FirstHabitStep({ onSubmitHabit }: { onSubmitHabit: (title: string) => void }) {
   const [title, setTitle] = useState('');
   const [showControls, setShowControls] = useState(false);
   const okOpacity = useRef(new Animated.Value(0)).current;
@@ -139,7 +142,11 @@ function FirstHabitStep({
 
   return (
     <View style={{ width: '100%' }}>
-      <FadingTextList lines={lines} onAllVisible={afterLines} />
+      <FadingTextList
+        lines={lines}
+        onAllVisible={afterLines}
+      />
+
       {showControls ? (
         <>
           <Animated.View
@@ -161,6 +168,7 @@ function FirstHabitStep({
               }}
             />
           </Animated.View>
+
           <Animated.View style={{ opacity: okOpacity }}>
             <HSButton
               disabled={!canSubmit}
@@ -206,9 +214,16 @@ function MoonStep({ onDone }: { onDone: () => void }) {
 
   return (
     <View style={{ width: '100%' }}>
-      <FadingTextList lines={lines} onAllVisible={animateOk} />
+      <FadingTextList
+        lines={lines}
+        onAllVisible={animateOk}
+      />
+
       <Animated.View style={{ opacity: okOpacity }}>
-        <HSButton style={styles.onboardOkButton} onPress={onDone}>
+        <HSButton
+          style={styles.onboardOkButton}
+          onPress={onDone}
+        >
           OK
         </HSButton>
       </Animated.View>

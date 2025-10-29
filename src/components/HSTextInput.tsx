@@ -20,17 +20,15 @@ const styles = StyleSheet.create({
 /**
  * A styled TextInput component for HabitShip.
  */
-export const HSTextInput = forwardRef<TextInput, TextInputProps>(
-  (props, ref) => {
-    return (
-      <TextInput
-        ref={ref}
-        style={styles.input}
-        placeholderTextColor="rgba(255,255,255,0.6)"
-        {...props}
-      />
-    );
-  },
-);
+export const HSTextInput = forwardRef<TextInput, TextInputProps>((props, ref) => {
+  return (
+    <TextInput
+      ref={ref}
+      style={styles.input}
+      placeholderTextColor="rgba(255,255,255,0.6)"
+      {...props}
+    />
+  );
+});
 
 HSTextInput.displayName = 'HSTextInput';
