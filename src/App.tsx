@@ -233,6 +233,7 @@ async function registerForPushNotificationsAsync() {
 
   if (Device.isDevice) {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    const s = useStore.getState();
 
     let finalStatus = existingStatus;
 
@@ -242,12 +243,13 @@ async function registerForPushNotificationsAsync() {
     }
 
     if (finalStatus !== 'granted') {
-      alert('Failed to get push token for push notification!');
+      Sentry.logger.error('Failed to get push token for push notification', { user: s.username });
       return;
     }
 
+    Sentry.logger.info('Successfully got push token for push notification', { user: s.username });
+
     // Permission granted: only default reminders if the user explicitly opted in.
-    const s = useStore.getState();
     if (s.notificationsOptedIn === true && s.dailyReminderMinutesLocal == null) {
       void s.setDailyReminderMinutesLocal(21 * 60);
     }
