@@ -5,6 +5,7 @@ export const colors = {
   text: 'rgb(232, 233, 243)', // Light text for dark background
   primary: 'rgb(123, 104, 238)', // Medium slate blue (nebula-like)
   primaryText: 'rgb(157, 141, 241)', // Lighter purple
+  secondaryText: 'rgba(175, 177, 186, 0.95)',
   accent: 'rgb(0, 217, 255)', // Bright cyan (like stars/plasma)
   white: 'rgb(255, 255, 255)',
   black: 'rgb(0, 0, 0)',

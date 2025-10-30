@@ -29,6 +29,9 @@ import { OnboardingPanel } from './OnboardingPanel';
 import { HSTextInput } from './common/HSTextInput';
 import { HabitList } from './HabitList';
 import { GlassOrDefault } from './GlassOrDefault';
+import { HSButton } from './common/HSButton';
+import { Ionicons } from '@expo/vector-icons';
+import { PetIcon } from './PetIcon';
 
 function formatNum(num: number) {
   return num.toLocaleString(undefined, {
@@ -70,9 +73,9 @@ export function Dashboard() {
   const setLastLevelUpSeenLevel = useStore((s) => s.setLastLevelUpSeenLevel);
   const activeTab = useStore((s) => s.activeTab);
 
-  const [mode, setMode] = useState<'default' | 'addHabit' | 'editHabit' | 'selectDestination'>(
-    'default',
-  );
+  const [mode, setMode] = useState<
+    'default' | 'addHabit' | 'editHabit' | 'selectDestination' | 'pet'
+  >('default');
 
   const [canCancelSelection, setCanCancelSelection] = useState<boolean>(true);
 
@@ -158,6 +161,21 @@ export function Dashboard() {
     onExpire: () => expireTimer(),
   });
 
+  // Pet state and actions
+  const { pets, petPet } = useStore();
+  const pet = pets[0];
+  const [petFeedbackVisible, setPetFeedbackVisible] = useState(false);
+  const petTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (petTimeoutRef.current) {
+        clearTimeout(petTimeoutRef.current);
+        petTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (activeTimer) {
       const habit = habits.find((h) => h.id === activeTimer.habitId);
@@ -188,6 +206,56 @@ export function Dashboard() {
           onCreateFirstHabit={(title) => addHabit({ title })}
           onComplete={() => setIsSetupFinished(true)}
         />
+      </GlassOrDefault>
+    );
+  }
+
+  // Pet mode UI
+  if (mode === 'pet') {
+    return (
+      <GlassOrDefault
+        style={styles.container}
+        {...glassViewProps}
+      >
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={() => setMode('default')}
+          style={styles.modeButton}
+        >
+          <Ionicons
+            name="tv-outline"
+            size={20}
+            color={colors.white}
+          />
+        </TouchableOpacity>
+
+        <View style={[styles.centered, { gap: 10 }]}>
+          <Text style={styles.petTitle}>{`${pet?.name} the Space ${pet?.type}`}</Text>
+          <PetIcon />
+
+          <Text
+            style={styles.petCount}
+          >{`Petted ${pet?.petCount ?? 0} time${(pet?.petCount ?? 0) === 1 ? '' : 's'}`}</Text>
+
+          {!petFeedbackVisible ? (
+            <HSButton
+              onPress={() => {
+                petPet(0);
+                setPetFeedbackVisible(true);
+                if (petTimeoutRef.current) {
+                  clearTimeout(petTimeoutRef.current);
+                }
+                petTimeoutRef.current = setTimeout(() => {
+                  setPetFeedbackVisible(false);
+                }, 2000);
+              }}
+            >
+              Pet
+            </HSButton>
+          ) : (
+            <Text style={styles.petFeedback}>{`you petted ${pet?.name}`}</Text>
+          )}
+        </View>
       </GlassOrDefault>
     );
   }
@@ -558,6 +626,15 @@ export function Dashboard() {
       style={styles.container}
       {...glassViewProps}
     >
+      <TouchableOpacity
+        accessibilityRole="button"
+        onPress={() => {
+          setMode('pet');
+        }}
+        style={styles.modeButton}
+      >
+        <PetIcon />
+      </TouchableOpacity>
       {!!planet && (
         <View style={styles.journeySection}>
           <View style={styles.planetInfoContainer}>
@@ -667,6 +744,15 @@ const styles = StyleSheet.create({
   },
   centered: {
     alignItems: 'center',
+  },
+  modeButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    zIndex: 1,
   },
   onboardTitle: {
     fontFamily: fonts.bold,
@@ -846,6 +932,24 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     fontSize: fontSizes.medium,
     color: colors.white,
+  },
+  petTitle: {
+    fontFamily: fonts.bold,
+    fontSize: fontSizes.large,
+    color: colors.white,
+    textAlign: 'center',
+  },
+  petCount: {
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.medium,
+    color: colors.white,
+    opacity: 0.9,
+    marginBottom: 80,
+  },
+  petFeedback: {
+    fontFamily: fonts.semiBold,
+    fontSize: fontSizes.medium,
+    color: colors.primaryText,
   },
   actionButton: {
     paddingHorizontal: 8,

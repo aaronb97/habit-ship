@@ -1,5 +1,5 @@
 import { useStore } from './store';
-import { generateName } from './generateName';
+import { generateUsername } from './names/generateName';
 import { usernameExists, writeUser, UsersDoc } from './db';
 
 /**
@@ -50,7 +50,7 @@ export function startFirestoreSync(firebaseId: string): () => void {
     // Try a handful of candidates to find an unused username
     const MAX_TRIES = 8;
     for (let i = 0; i < MAX_TRIES; i++) {
-      const candidate = generateName();
+      const candidate = generateUsername();
       try {
         const exists = await usernameExists(candidate);
         if (!exists) {
@@ -64,7 +64,7 @@ export function startFirestoreSync(firebaseId: string): () => void {
     }
 
     // As a last resort, include a short suffix to reduce collision likelihood
-    const fallback = `${generateName()}-${Math.random().toString(36).slice(2, 5)}`;
+    const fallback = `${generateUsername()}-${Math.random().toString(36).slice(2, 5)}`;
     s.setUsername(fallback);
   }
 

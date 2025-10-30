@@ -20,6 +20,8 @@ import { hasSkinForBody, ALL_SKIN_IDS, ROCKET_SKIN_IDS } from './skins';
 // username is assigned during initial Firestore sync to ensure uniqueness
 import { signOutForDevResets } from './firebaseAuth';
 import * as Sentry from '@sentry/react-native';
+import { generateAnimalType } from './names/animals';
+import { generatePetName } from './names/petNames';
 
 export type HabitId = string & { __habitId: true };
 
@@ -54,6 +56,12 @@ export type Habit = {
   timerLength?: number; // in seconds
 };
 
+type Pet = {
+  name: string;
+  type: string;
+  petCount: number;
+};
+
 export function calculateDistance(a: Coordinates, b: Coordinates): number {
   return Math.sqrt(Math.pow(b[0] - a[0], 2) + Math.pow(b[1] - a[1], 2) + Math.pow(b[2] - a[2], 2));
 }
@@ -81,6 +89,7 @@ export function getPlanetPosition(planetName: string): Coordinates {
 type Store = {
   isSetupFinished: boolean;
   habits: Habit[];
+  pets: Pet[];
   userPosition: UserPosition;
   completedPlanets: string[];
   // Skins
@@ -231,6 +240,12 @@ type Store = {
   setShowJourneyRemaining: (value: boolean) => void;
   setShowFuelCapacity: (value: boolean) => void;
 
+  /**
+   * Increments the pet count for the specified pet index.
+   * index: Zero-based index into the pets array to increment.
+   */
+  petPet: (index: number) => void;
+
   completeHabit: (habitId: HabitId) => Promise<void>;
   startTimer: (habitId: HabitId) => Promise<boolean>; // Returns true on success, false on failure
   cancelTimer: () => Promise<void>;
@@ -273,6 +288,13 @@ type Store = {
 const initialData = {
   isSetupFinished: false,
   habits: [],
+  pets: [
+    {
+      name: generatePetName(),
+      type: generateAnimalType(),
+      petCount: 0,
+    },
+  ],
   userPosition: {
     startingLocation: 'Earth',
     target: 'The Moon',
@@ -497,6 +519,19 @@ export const useStore = create<Store>()(
       setSkipRocketAnimation: (value) => set({ skipRocketAnimation: value }),
       setShowJourneyRemaining: (value) => set({ showJourneyRemaining: value }),
       setShowFuelCapacity: (value) => set({ showFuelCapacity: value }),
+
+      petPet: (index) =>
+        set((state) => {
+          const p = state.pets[index];
+          if (p) {
+            p.petCount += 1;
+          }
+
+          Sentry.logger.info('Pet pet', {
+            petCount: p?.petCount,
+            user: state.username,
+          });
+        }),
 
       // --- Tilt-shift setters ---
       setTiltShiftEnabled: (value) => set({ tiltShiftEnabled: value }),
@@ -881,7 +916,7 @@ export const useStore = create<Store>()(
     {
       name: 'space-explorer-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 5,
+      version: 6,
       migrate: (persistedState, version) => {
         Sentry.logger.info(`Migrating store from version ${version}`, {
           user: (persistedState as Store).username,
@@ -904,6 +939,20 @@ export const useStore = create<Store>()(
           const store = persistedState as Partial<Store>;
           if (store.dailyReminderMinutesLocal === undefined) {
             (store as Store).dailyReminderMinutesLocal = null;
+          }
+        }
+
+        // v6: initialize a default pet if missing
+        if (version < 6) {
+          const store = persistedState as Partial<Store>;
+          if (!Array.isArray(store.pets) || store.pets.length === 0) {
+            (store as Store).pets = [
+              {
+                name: generatePetName(),
+                type: generateAnimalType(),
+                petCount: 0,
+              },
+            ];
           }
         }
 

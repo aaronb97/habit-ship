@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   completedHabitTitle: {
-    color: colors.grey,
+    color: colors.secondaryText,
   },
   habitDescription: {
     fontFamily: fonts.regular,

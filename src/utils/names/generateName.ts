@@ -1,8 +1,6 @@
-function getRandomElement<T>(array: T[]): T {
-  return array[Math.floor(Math.random() * array.length)]!;
-}
+import { getRandomElement } from '../getRandomElement';
 
-export function generateName() {
+export function generateUsername() {
   return `${getRandomElement(adjectives)}${getRandomElement(nouns)}${Math.floor(
     Math.random() * 10000,
   )}`;
