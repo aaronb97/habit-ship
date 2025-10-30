@@ -7,8 +7,6 @@ export function PetIcon() {
 
   if (!pet) return null;
 
-  console.log(pet.type);
-
   if (pet.type === 'Penguin' || pet.type === 'Puffin') {
     return (
       <MaterialCommunityIcons
