@@ -153,7 +153,7 @@ function App() {
         const includeToday = shouldIncludeTodayReminder(s.habits, getCurrentDate());
 
         const mins = s.dailyReminderMinutesLocal;
-        if (mins == null) {
+        if (mins === 'off' || mins === 'unset') {
           void cancelAllDailyReminders();
         } else {
           void rescheduleDailyRemindersAtLocalTime(dest, mins, includeToday);
@@ -167,17 +167,8 @@ function App() {
 
     const includeToday = shouldIncludeTodayReminder(s.habits, getCurrentDate());
 
-    // If the user explicitly opted in but has no time set, default to 9:00 PM.
-    if (s.notificationsOptedIn === true && s.dailyReminderMinutesLocal == null) {
-      void Notifications.getPermissionsAsync().then((p) => {
-        if (p.status === 'granted') {
-          void s.setDailyReminderMinutesLocal(21 * 60);
-        }
-      });
-    }
-
     const mins = s.dailyReminderMinutesLocal;
-    if (mins == null) {
+    if (mins === 'off' || mins === 'unset') {
       void cancelAllDailyReminders();
     } else {
       void rescheduleDailyRemindersAtLocalTime(initialDest, mins, includeToday);
@@ -238,20 +229,30 @@ async function registerForPushNotificationsAsync() {
     let finalStatus = existingStatus;
 
     if (existingStatus !== 'granted') {
+      console.log('Requesting push notification permissions', { user: s.username });
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
+    } else {
+      console.log('Push notification permissions already granted', { user: s.username });
     }
 
     if (finalStatus !== 'granted') {
-      Sentry.logger.error('Failed to get push token for push notification', { user: s.username });
+      console.error('Failed to get push token for push notification; status: ' + finalStatus, {
+        user: s.username,
+      });
       return;
     }
 
-    Sentry.logger.info('Successfully got push token for push notification', { user: s.username });
+    console.log('Successfully got push token for push notification; status: ' + finalStatus, {
+      user: s.username,
+    });
 
-    // Permission granted: only default reminders if the user explicitly opted in.
-    if (s.notificationsOptedIn === true && s.dailyReminderMinutesLocal == null) {
+    // Permission granted: only default reminders if unset
+    if (s.dailyReminderMinutesLocal === 'unset') {
+      console.log('Setting default daily reminder time', { user: s.username });
       void s.setDailyReminderMinutesLocal(21 * 60);
+    } else {
+      console.log('Using existing daily reminder time', { user: s.username });
     }
 
     try {

@@ -268,21 +268,14 @@ type Store = {
    */
   setUsername: (name: string | null | undefined) => void;
 
-  // Daily reminders
-  /** Minutes since midnight local for daily reminder time, or null if disabled. */
-  dailyReminderMinutesLocal: number | null;
-  /**
-   * Whether the user has explicitly opted into daily reminders in-app.
-   * null indicates no explicit choice recorded yet.
-   */
-  notificationsOptedIn: boolean | null;
+  dailyReminderMinutesLocal: number | 'unset' | 'off';
   /**
    * Enables/disables daily reminders at a specific local time and immediately
    * applies scheduling changes. Pass null to disable and cancel all reminders.
    *
    * value: Minutes since midnight local [0..1439], or null to disable.
    */
-  setDailyReminderMinutesLocal: (value: number | null) => Promise<void>;
+  setDailyReminderMinutesLocal: (value: number | 'off') => Promise<void>;
 };
 
 const initialData = {
@@ -354,8 +347,7 @@ const initialData = {
   lastLandingReward: undefined,
   username: null,
   firebaseId: undefined,
-  dailyReminderMinutesLocal: null,
-  notificationsOptedIn: null,
+  dailyReminderMinutesLocal: 'unset',
 } satisfies Partial<Store>;
 
 export const useStore = create<Store>()(
@@ -372,14 +364,14 @@ export const useStore = create<Store>()(
        * then schedule/cancel notifications accordingly.
        */
       setDailyReminderMinutesLocal: async (value) => {
-        set({ dailyReminderMinutesLocal: value, notificationsOptedIn: value != null });
+        set({ dailyReminderMinutesLocal: value });
 
         try {
           const s = get();
           const dest = s.userPosition.target ?? s.userPosition.startingLocation;
           const includeToday = shouldIncludeTodayReminder(s.habits, getCurrentDate());
 
-          if (value == null) {
+          if (value === 'off') {
             await cancelAllDailyReminders();
           } else {
             await rescheduleDailyRemindersAtLocalTime(dest, value, includeToday);
@@ -446,7 +438,18 @@ export const useStore = create<Store>()(
           const s = get();
           const includeToday = shouldIncludeTodayReminder(s.habits, getCurrentDate());
           const mins = s.dailyReminderMinutesLocal;
-          if (mins == null) {
+          if (mins === 'unset') {
+            Sentry.logger.error(
+              'Illegal state: setDestination: dailyReminderMinutesLocal is unset',
+              {
+                user: s.username,
+              },
+            );
+
+            return;
+          }
+
+          if (mins === 'off') {
             void cancelAllDailyReminders();
           } else {
             void rescheduleDailyRemindersAtLocalTime(planetName, mins, includeToday);
@@ -934,11 +937,11 @@ export const useStore = create<Store>()(
           }
         }
 
-        // v5: introduce dailyReminderMinutesLocal with default null
+        // v5: introduce dailyReminderMinutesLocal with default unset
         if (version < 5) {
           const store = persistedState as Partial<Store>;
           if (store.dailyReminderMinutesLocal === undefined) {
-            (store as Store).dailyReminderMinutesLocal = null;
+            (store as Store).dailyReminderMinutesLocal = 'unset';
           }
         }
 

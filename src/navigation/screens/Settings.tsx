@@ -92,7 +92,7 @@ export function Settings() {
    * Disable reminders and cancel any scheduled notifications.
    */
   const disableReminders = async () => {
-    await setDailyReminderMinutesLocal(null);
+    await setDailyReminderMinutesLocal('off');
   };
 
   /**
