@@ -26,7 +26,7 @@ import { useTimer } from 'react-timer-hook';
 import { useGetCurrentDate } from '../utils/time';
 import { LevelUpPanel } from './LevelUpPanel';
 import { OnboardingPanel } from './OnboardingPanel';
-import { HSTextInput } from './HSTextInput';
+import { HSTextInput } from './common/HSTextInput';
 import { HabitList } from './HabitList';
 import { GlassOrDefault } from './GlassOrDefault';
 

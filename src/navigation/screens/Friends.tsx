@@ -22,7 +22,7 @@ import {
   type FriendshipDoc,
   type UsersDoc,
 } from '../../utils/db';
-import { HSButton } from '../../components/HSButton';
+import { HSButton } from '../../components/common/HSButton';
 import { MaterialIcons } from '@expo/vector-icons';
 import { getSkinById } from '../../utils/skins';
 import { calculateLevel } from '../../utils/experience';

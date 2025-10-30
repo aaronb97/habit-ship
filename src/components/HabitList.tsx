@@ -3,7 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, fonts, fontSizes } from '../styles/theme';
 import { Habit, HabitId } from '../utils/store';
 import { MaterialIcons } from '@expo/vector-icons';
-import { HSButton } from './HSButton';
+import { HSButton } from './common/HSButton';
 
 export type HabitListProps = {
   /** List of habits to render. */

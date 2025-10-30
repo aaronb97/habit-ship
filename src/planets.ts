@@ -1,6 +1,6 @@
 import { getCurrentDate } from './utils/time';
 import { Coordinates } from './types';
-import { ORBIT_OFFSET_MULTIPLIER } from './components/solarsystem/constants';
+import { ORBIT_OFFSET_MULTIPLIER } from './utils/solarsystem/constants';
 
 // ================================================================
 // Orbital mechanics utils (heliocentric ecliptic, epoch J2000.0)

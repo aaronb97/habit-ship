@@ -3,9 +3,9 @@ import { useStore } from '../../utils/store';
 import { useIsFocused } from '@react-navigation/native';
 import { useEffect, useRef } from 'react';
 import { GestureDetector } from 'react-native-gesture-handler';
-import { useComposedGesture } from '../../components/solarsystem/gestures';
-import type { CameraController } from '../../components/solarsystem/camera';
-import { HSButton } from '../../components/HSButton';
+import { useComposedGesture } from '../../utils/solarsystem/gestures';
+import type { CameraController } from '../../utils/solarsystem/camera';
+import { HSButton } from '../../components/common/HSButton';
 
 interface Props {
   cameraController: CameraController;

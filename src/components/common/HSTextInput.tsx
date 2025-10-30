@@ -1,5 +1,5 @@
 import { StyleSheet, TextInputProps, TextInput } from 'react-native';
-import { colors, fonts, fontSizes } from '../styles/theme';
+import { colors, fonts, fontSizes } from '../../styles/theme';
 import { forwardRef } from 'react';
 
 const styles = StyleSheet.create({

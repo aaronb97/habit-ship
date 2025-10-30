@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { StyleSheet, TouchableOpacity, TouchableOpacityProps, Text } from 'react-native';
-import { fonts, fontSizes, colors } from '../styles/theme';
+import { fonts, fontSizes, colors } from '../../styles/theme';
 
 interface HSButtonProps extends TouchableOpacityProps {
   children: ReactNode;

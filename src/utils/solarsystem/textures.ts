@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { TextureLoader } from 'expo-three';
 import { Asset } from 'expo-asset';
 import { TEXTURE_ANISOTROPY } from './constants';
-import { SKINS } from '../../utils/skins';
+import { SKINS } from '../skins';
 
 // Simple in-memory caches for skin textures to avoid redundant loads/decodes
 const skinTextureCache = new Map<string, THREE.Texture>();

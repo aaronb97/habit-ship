@@ -14,7 +14,7 @@ import {
   ROCKET_EXHAUST_SCALE,
   ROCKET_MIN_SCREEN_PIXELS,
 } from './constants';
-import { useStore } from '../../utils/store';
+import { useStore } from '../store';
 
 // NOTE: Material application is handled by Rocket.applyBaseColors().
 

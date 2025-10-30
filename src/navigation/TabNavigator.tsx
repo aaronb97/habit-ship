@@ -15,7 +15,7 @@ import { ProfileStack } from './stacks/ProfileStack';
 import * as Device from 'expo-device';
 import { useFriendships } from '../hooks/useFriendships';
 import { useAllUsers } from '../hooks/useAllUsers';
-import { CameraController } from '../components/solarsystem/camera';
+import { CameraController } from '../utils/solarsystem/camera';
 
 const ICON_SIZE = 24;
 

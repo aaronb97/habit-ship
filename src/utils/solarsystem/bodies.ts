@@ -24,8 +24,8 @@ import {
 } from './constants';
 import { toVec3, apparentScaleRatio, getTrailForBody } from './helpers';
 import { CBody, Planet, Moon, earth } from '../../planets';
-import { useStore } from '../../utils/store';
-import { getCurrentTime } from '../../utils/time';
+import { useStore } from '../store';
+import { getCurrentTime } from '../time';
 
 export type BodyNodeUpdateOpts = {
   glHeight: number;

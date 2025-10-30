@@ -22,18 +22,18 @@ import {
   toVec3,
   computeFriendSurfacePosAimByNames,
   computeFriendTravelPosAimByNames,
-} from './solarsystem/helpers';
-import { type MappedMaterial } from './solarsystem/builders';
-import { loadBodyTexture, loadRingTexture, loadSkinTextures } from './solarsystem/textures';
-import { createSky } from './solarsystem/sky';
-import { CameraController, clamp01, easeInOutCubic } from './solarsystem/camera';
-import type { CameraCollisionResolver } from './solarsystem/camera';
-import { Rocket } from './solarsystem/rocket';
-import { CelestialBodyNode, BodyNodesRegistry } from './solarsystem/bodies';
-import { getRelevantPlanetSystemsFor } from './solarsystem/relevance';
-import { createComposer } from './solarsystem/postprocessing';
-import { useComposedGesture } from './solarsystem/gestures';
-import { addDefaultLights } from './solarsystem/lights';
+} from '../utils/solarsystem/helpers';
+import { type MappedMaterial } from '../utils/solarsystem/builders';
+import { loadBodyTexture, loadRingTexture, loadSkinTextures } from '../utils/solarsystem/textures';
+import { createSky } from '../utils/solarsystem/sky';
+import { CameraController, clamp01, easeInOutCubic } from '../utils/solarsystem/camera';
+import type { CameraCollisionResolver } from '../utils/solarsystem/camera';
+import { Rocket } from '../utils/solarsystem/rocket';
+import { CelestialBodyNode, BodyNodesRegistry } from '../utils/solarsystem/bodies';
+import { getRelevantPlanetSystemsFor } from '../utils/solarsystem/relevance';
+import { createComposer } from '../utils/solarsystem/postprocessing';
+import { useComposedGesture } from '../utils/solarsystem/gestures';
+import { addDefaultLights } from '../utils/solarsystem/lights';
 import {
   RENDERER_CLEAR_COLOR,
   RENDERER_CLEAR_ALPHA,
@@ -51,12 +51,12 @@ import {
   ZOOM_MAX_RADIUS,
   FRIEND_AIM_YAW_OFFSET_STEP_RAD,
   ORBIT_INITIAL_RADIUS,
-} from './solarsystem/constants';
+} from '../utils/solarsystem/constants';
 import { getSkinById } from '../utils/skins';
 import { DebugOverlay } from './DebugOverlay';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Sentry from '@sentry/react-native';
-import { computeSurfaceEndpoints, computeAimPosition } from './solarsystem/paths';
+import { computeSurfaceEndpoints, computeAimPosition } from '../utils/solarsystem/paths';
 
 // [moved] Helpers moved to './solarsystem/helpers'.
 

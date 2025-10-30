@@ -1,8 +1,8 @@
 import { useState, useRef } from 'react';
 import { Animated, View, TextInput, StyleSheet } from 'react-native';
 import { FadingTextList } from './FadingTextList';
-import { HSTextInput } from './HSTextInput';
-import { HSButton } from './HSButton';
+import { HSTextInput } from './common/HSTextInput';
+import { HSButton } from './common/HSButton';
 
 // Delay used in onboarding for the OK button fade-in after lines appear
 const ONBOARDING_OK_DELAY_MS = 2000;

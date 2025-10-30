@@ -5,7 +5,7 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { CopyShader } from 'three/examples/jsm/shaders/CopyShader.js';
 import type { Renderer } from 'expo-three';
 import { createTiltShiftPasses } from './tiltshift';
-import { useStore } from '../../utils/store';
+import { useStore } from '../store';
 
 export function createComposer(
   renderer: Renderer,

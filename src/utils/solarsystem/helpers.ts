@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { getCurrentDate } from '../../utils/time';
+import { getCurrentDate } from '../time';
 import { cBodies as PLANETS, Planet, Moon, type CBody, earth } from '../../planets';
 import type { Coordinates } from '../../types';
 import {

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { getCurrentTime } from '../../utils/time';
+import { getCurrentTime } from '../time';
 import {
   MAX_PITCH_RAD,
   PLANE_NORMAL_EPS,
