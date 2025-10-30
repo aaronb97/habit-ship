@@ -5,6 +5,9 @@
   },
   "build": {
     "development": {
+      "ios": {
+        "buildConfiguration": "Debug"
+      },
       "developmentClient": true,
       "env": {
         "APP_VARIANT": "development"
@@ -15,7 +18,10 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "ios": {
+        "buildConfiguration": "Release"
+      }
     }
   },
   "submit": {
