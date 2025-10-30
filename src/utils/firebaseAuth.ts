@@ -1,4 +1,4 @@
-import type { FirebaseAuthTypes } from '@react-native-firebase/auth';
+import auth from '@react-native-firebase/auth';
 
 /**
  * Ensures there is an authenticated Firebase user (anonymous) and returns its UID.
@@ -8,17 +8,12 @@ import type { FirebaseAuthTypes } from '@react-native-firebase/auth';
  */
 export async function ensureFirebaseId(): Promise<string | undefined> {
   try {
-    const mod = (await import('@react-native-firebase/auth')) as unknown as {
-      default: () => FirebaseAuthTypes.Module;
-    };
-
-    const inst = mod.default();
-    const existing = inst.currentUser;
+    const existing = auth().currentUser;
     if (existing?.uid) {
       return existing.uid;
     }
 
-    const cred = await inst.signInAnonymously();
+    const cred = await auth().signInAnonymously();
     return cred.user.uid;
   } catch (e) {
     console.warn('[firebaseAuth.native] Anonymous sign-in failed', e);
@@ -33,16 +28,11 @@ export async function ensureFirebaseId(): Promise<string | undefined> {
  */
 export async function signOutForDevResets(): Promise<void> {
   try {
-    const mod = (await import('@react-native-firebase/auth')) as unknown as {
-      default: () => FirebaseAuthTypes.Module;
-    };
-
-    const inst = mod.default();
-    if (!inst.currentUser) {
+    if (!auth().currentUser) {
       return;
     }
 
-    await inst.signOut();
+    await auth().signOut();
   } catch {
     // Best-effort only
   }
