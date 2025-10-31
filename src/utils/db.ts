@@ -11,6 +11,47 @@ export type UsersDoc = {
   selectedSkinId?: string | null;
   rocketColor: number;
   totalXP: number;
+
+  pets: {
+    name: string;
+    type: string;
+    petCount: number;
+  }[];
+};
+
+/**
+ * Firestore representation for documents in the `users_private` collection.
+ * Stores personal and critical, cross-device state. Friends do not observe
+ * this collection; access should be restricted to the owner via security rules.
+ */
+export type UsersPrivateDoc = {
+  // Onboarding and profile progress
+  isSetupFinished: boolean;
+
+  // Habits and pets
+  habits: {
+    id: string;
+    title: string;
+    description?: string;
+    completions: string[];
+    timerLength?: number;
+  }[];
+
+  // Progress and cosmetics ownership
+  completedPlanets: string[];
+  unlockedSkins: string[];
+  unseenUnlockedSkins: string[];
+
+  // Economy and level acks
+  money: number;
+  lastLevelUpSeenLevel?: number | null;
+
+  // Daily accumulators
+  fuelKm: number;
+  fuelEarnedTodayKm: number;
+  fuelEarnedDate?: string;
+  xpEarnedToday: number;
+  xpEarnedDate?: string;
 };
 
 /**
@@ -30,6 +71,25 @@ export function usersCollection() {
  */
 export function userDoc(uid: string) {
   return usersCollection().doc(uid);
+}
+
+/**
+ * Returns a reference to the `users_private` collection.
+ *
+ * Returns: Collection reference for the private users collection.
+ */
+export function usersPrivateCollection() {
+  return firestore().collection('users_private');
+}
+
+/**
+ * Returns a reference to the `users_private/{uid}` document.
+ *
+ * uid: Firebase Authentication UID used as the document id.
+ * Returns: Document reference for the private user document.
+ */
+export function userPrivateDoc(uid: string) {
+  return usersPrivateCollection().doc(uid);
 }
 
 /**
@@ -57,6 +117,19 @@ export async function getUidByUsername(username: string): Promise<string | undef
  */
 export async function writeUser(uid: string, partial: Partial<UsersDoc>): Promise<void> {
   await userDoc(uid).set(partial, { merge: true });
+}
+
+/**
+ * Writes the provided partial private user data to Firestore using merge semantics.
+ *
+ * uid: Firebase Authentication UID used as the document id.
+ * partial: Partial private user document to merge.
+ */
+export async function writeUserPrivate(
+  uid: string,
+  partial: Partial<UsersPrivateDoc>,
+): Promise<void> {
+  await userPrivateDoc(uid).set(partial, { merge: true });
 }
 
 /**

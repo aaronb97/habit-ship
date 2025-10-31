@@ -152,7 +152,7 @@ type Store = {
   // Structured data to render inline level-up content on the Dashboard
   levelUpInfo?: LevelUpInfo;
   // The most recent level the user has acknowledged via the Level Up UI
-  lastLevelUpSeenLevel?: number;
+  lastLevelUpSeenLevel: number | null;
 
   // Navigation state
   activeTab: TabName;
@@ -337,7 +337,7 @@ const initialData = {
   justLanded: false,
   isLevelUpModalVisible: false,
   levelUpInfo: undefined,
-  lastLevelUpSeenLevel: undefined,
+  lastLevelUpSeenLevel: null,
   fuelKm: 0,
   fuelEarnedTodayKm: 0,
   fuelEarnedDate: undefined,
