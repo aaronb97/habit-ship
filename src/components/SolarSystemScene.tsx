@@ -26,7 +26,12 @@ import {
 import { type MappedMaterial } from '../utils/solarsystem/builders';
 import { loadBodyTexture, loadRingTexture, loadSkinTextures } from '../utils/solarsystem/textures';
 import { createSky } from '../utils/solarsystem/sky';
-import { CameraController, clamp01, easeInOutCubic } from '../utils/solarsystem/camera';
+import {
+  CameraController,
+  clamp01,
+  easeInOutCubic,
+  normalizedEaseDerivative,
+} from '../utils/solarsystem/camera';
 import type { CameraCollisionResolver } from '../utils/solarsystem/camera';
 import { Rocket } from '../utils/solarsystem/rocket';
 import { CelestialBodyNode, BodyNodesRegistry } from '../utils/solarsystem/bodies';
@@ -51,6 +56,7 @@ import {
   ZOOM_MAX_RADIUS,
   FRIEND_AIM_YAW_OFFSET_STEP_RAD,
   ORBIT_INITIAL_RADIUS,
+  ROCKET_SPIN_ABS_REF,
 } from '../utils/solarsystem/constants';
 import { getSkinById } from '../utils/skins';
 import { DebugOverlay } from './DebugOverlay';
@@ -400,6 +406,7 @@ export function SolarSystemScene({ cameraController, interactive, friends }: Pro
             lockSideOnYaw: lockSideOn,
           },
         );
+        userAbsDeltaRef.current = Math.abs(toAbs - fromAbs);
       } else {
         pendingScriptedStartRef.current = null;
       }
@@ -467,6 +474,7 @@ export function SolarSystemScene({ cameraController, interactive, friends }: Pro
           lockSideOnYaw: lockSideOn,
         },
       );
+      userAbsDeltaRef.current = Math.abs(toAbs - fromAbs);
     }
 
     // If values differ, an animation is pending; if equal, batch already synced
@@ -513,6 +521,7 @@ export function SolarSystemScene({ cameraController, interactive, friends }: Pro
 
   const animAlphaRef = useRef(0);
   const animSyncedRef = useRef(true);
+  const userAbsDeltaRef = useRef(0);
 
   const pendingScriptedStartRef = useRef<{
     nowTs: number;
@@ -807,6 +816,7 @@ export function SolarSystemScene({ cameraController, interactive, friends }: Pro
       }
 
       lastFrameTsRef.current = nowTs;
+      const dtSec = frameDeltaMs > 0 ? frameDeltaMs / 1000 : 0;
 
       const { showTrails } = useStore.getState();
 
@@ -944,15 +954,37 @@ export function SolarSystemScene({ cameraController, interactive, friends }: Pro
             getVisualRadius(targetBody.name),
           );
 
-          // Only spin/move/exhaust when a travel animation is pending
-          const shouldAnimateTravel = isInteractiveRef.current && !animSyncedRef.current;
-
-          rocketRef.current.update(
-            displayUserPosRef.current,
-            aimPos,
-            shouldAnimateTravel,
-            animAlphaRef.current,
+          // Spin when raw progress is strictly between 0 and total
+          const upos = useStore.getState().userPosition;
+          const inFlightUser = Boolean(
+            upos.target &&
+              typeof upos.initialDistance === 'number' &&
+              typeof upos.distanceTraveled === 'number' &&
+              upos.distanceTraveled > 1e-9,
           );
+
+          console.log({
+            target: upos.target,
+            initialDistance: upos.initialDistance,
+            distanceTraveled: upos.distanceTraveled,
+            inFlightUser,
+          });
+
+          const animActive = isInteractiveRef.current && !animSyncedRef.current;
+          const refAbs = Math.max(1e-6, ROCKET_SPIN_ABS_REF);
+          const boostSpeed01 = animActive
+            ? Math.min(1, Math.max(0, userAbsDeltaRef.current / refAbs)) *
+              normalizedEaseDerivative(animAlphaRef.current)
+            : 0;
+
+          rocketRef.current.update({
+            position: displayUserPosRef.current,
+            aimPos,
+            dtSec,
+            inFlight: inFlightUser,
+            boostSpeed01,
+            animAlpha: animAlphaRef.current,
+          });
         }
       }
 
@@ -1256,7 +1288,23 @@ export function SolarSystemScene({ cameraController, interactive, friends }: Pro
             const traveling = view ? view.traveling : false;
             const tAlpha = view ? view.tAlpha : 0;
             fr.setVisible(true);
-            fr.update(pos, aimPos, traveling, tAlpha);
+            const s = friendAnimStateRef.current.get(uid);
+            const absDelta = s ? Math.abs(s.toAbs - s.fromAbs) : 0;
+            const refAbs = Math.max(1e-6, ROCKET_SPIN_ABS_REF);
+            const boostSpeed01 =
+              s && view
+                ? Math.min(1, Math.max(0, absDelta / refAbs)) *
+                  normalizedEaseDerivative(view.tAlpha)
+                : 0;
+
+            fr.update({
+              position: pos,
+              aimPos,
+              dtSec,
+              inFlight: traveling,
+              boostSpeed01,
+              animAlpha: tAlpha,
+            });
             fr.enforceMinimumApparentSize(cam, resH);
 
             // Clear sticky if the friend cleared target or changed key

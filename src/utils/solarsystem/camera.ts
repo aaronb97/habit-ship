@@ -91,6 +91,34 @@ export function easeInOutCubic(t: number) {
 }
 
 /**
+ * Derivative of easeInOutCubic(t) over t in [0,1].
+ * Peaks at 3 when t = 0.5. Useful for approximating instantaneous speed along
+ * an ease-in-out path when duration and path fraction are known.
+ * @param t Normalized time in [0,1].
+ * @returns The derivative value (0..3).
+ */
+export function easeInOutCubicDeriv(t: number) {
+  const x = Math.min(1, Math.max(0, t));
+  if (x < 0.5) {
+    // d/dt (4 t^3) = 12 t^2
+    return 12 * x * x;
+  }
+  // d/dt (1 - ((-2t+2)^3)/2) = 3 * (-2t + 2)^2
+  const a = -2 * x + 2;
+  return 3 * a * a;
+}
+
+/**
+ * Normalized derivative of easeInOutCubic(t) scaled to [0,1] by dividing by
+ * the maximum derivative value (3).
+ * @param t Normalized time in [0,1].
+ * @returns A normalized derivative in [0,1].
+ */
+export function normalizedEaseDerivative(t: number) {
+  return Math.min(1, Math.max(0, easeInOutCubicDeriv(t) / 3));
+}
+
+/**
  * Linear interpolation between a and b by t in [0,1].
  */
 function lerp(a: number, b: number, t: number) {

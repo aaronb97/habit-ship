@@ -141,6 +141,11 @@ export const OUTLINE_MIN_ENABLED_FACTOR = 0.02;
 // Rocket model controls
 export const ROCKET_MODEL_SCALE = 0.01; // uniform scale for OBJ model
 export const ROCKET_SPIN_SPEED = 0.03; // radians per frame while traveling
+// Time-based spin controls for rockets
+export const ROCKET_BASE_SPIN_RAD_PER_SEC = 1.8; // base spin rate when in-flight (rad/s)
+export const ROCKET_SPIN_BOOST_MAX_MULT = 10; // peak multiplier applied during boost animation
+// Reference absolute fraction for typical boost length to reach near-peak spin-up
+export const ROCKET_SPIN_ABS_REF = 0.35;
 export const DEFAULT_ROCKET_FORWARD = new THREE.Vector3(0, 1, 0); // assumed model forward axis
 // Additional fixed clearance applied at destination to avoid intersecting surface (scene units)
 export const ROCKET_LANDING_CLEARANCE = 0.005;

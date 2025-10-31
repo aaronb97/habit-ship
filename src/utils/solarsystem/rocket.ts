@@ -6,13 +6,14 @@ import { Asset } from 'expo-asset';
 import {
   DEFAULT_ROCKET_FORWARD,
   ROCKET_MODEL_SCALE,
-  ROCKET_SPIN_SPEED,
   OUTLINE_EDGE_GLOW,
   OUTLINE_EDGE_THICKNESS,
   OUTLINE_PULSE_PERIOD,
   OUTLINE_EDGE_STRENGTH,
   ROCKET_EXHAUST_SCALE,
   ROCKET_MIN_SCREEN_PIXELS,
+  ROCKET_BASE_SPIN_RAD_PER_SEC,
+  ROCKET_SPIN_BOOST_MAX_MULT,
 } from './constants';
 import { useStore } from '../store';
 
@@ -288,21 +289,53 @@ export class Rocket {
     return this.group.localToWorld(this.centerOffset.clone());
   }
 
-  update(position: THREE.Vector3, aimPos: THREE.Vector3, traveling: boolean, animAlpha: number) {
+  /**
+   * Update rocket transform and visuals for the current frame.
+   * Rotates the rocket about its forward axis while in-flight, with spin speed
+   * scaled by an optional boost factor tied to the travel animation speed.
+   * Exhaust is emitted only during the active boost animation window.
+   *
+   * Parameters:
+   * - position: Scene-space position for the rocket this frame.
+   * - aimPos: Scene-space point the rocket should face this frame.
+   * - dtSec: Elapsed time this frame in seconds.
+   * - inFlight: True when the rocket is traveling between bodies (not landed).
+   * - boostSpeed01: Optional 0..1 multiplier derived from animation speed.
+   * - animAlpha: Optional 0..1 travel animation alpha (for exhaust window).
+   */
+  update(args: {
+    position: THREE.Vector3;
+    aimPos: THREE.Vector3;
+    dtSec: number;
+    inFlight: boolean;
+    boostSpeed01?: number;
+    animAlpha?: number;
+  }): void {
+    const { position, aimPos, dtSec, inFlight, boostSpeed01 = 0, animAlpha = 0 } = args;
+
     this.group.position.copy(position);
     const dir = aimPos.clone().sub(this.group.position);
     if (dir.lengthSq() > 1e-12) {
       dir.normalize();
       const q = new THREE.Quaternion().setFromUnitVectors(DEFAULT_ROCKET_FORWARD, dir);
-
       this.group.quaternion.copy(q);
-      this.spinAngle = traveling ? this.spinAngle + ROCKET_SPIN_SPEED : this.spinAngle * 0.95;
+    }
 
+    if (inFlight && dtSec > 0) {
+      const mult = 1 + Math.max(0, Math.min(1, boostSpeed01)) * (ROCKET_SPIN_BOOST_MAX_MULT - 1);
+      const spinDelta = ROCKET_BASE_SPIN_RAD_PER_SEC * mult * dtSec;
+      // Accumulate phase for bookkeeping and numerical stability
+      this.spinAngle += spinDelta;
+      if (this.spinAngle > Math.PI * 2 || this.spinAngle < -Math.PI * 2) {
+        this.spinAngle = this.spinAngle % (Math.PI * 2);
+      }
+
+      // After resetting orientation to aim (q), apply absolute phase about forward axis
       this.group.rotateOnAxis(DEFAULT_ROCKET_FORWARD, this.spinAngle);
     }
 
     // Emit only while movement animation is active (after camera move+hold)
-    this.updateExhaust(traveling && animAlpha > 0 && animAlpha < 0.5);
+    this.updateExhaust(inFlight && animAlpha > 0 && animAlpha < 0.5);
   }
 
   /**
