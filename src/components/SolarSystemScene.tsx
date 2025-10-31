@@ -640,7 +640,21 @@ export function SolarSystemScene({ cameraController, interactive, friends }: Pro
     try {
       const skyMesh = createSky();
       skyRef.current = skyMesh;
+
+      const material = Array.isArray(skyMesh.material) ? skyMesh.material[0]! : skyMesh.material;
+      material.opacity = 0;
+      material.transparent = true;
       scene.add(skyMesh);
+
+      const fadeIn = () => {
+        if (material.opacity < 1) {
+          material.opacity = Math.min(1, material.opacity + 0.02);
+          requestAnimationFrame(fadeIn);
+        } else {
+          material.transparent = false;
+        }
+      };
+      fadeIn();
     } catch (e) {
       console.warn('[SolarSystemScene] Failed to initialize sky', e);
     }
@@ -761,37 +775,45 @@ export function SolarSystemScene({ cameraController, interactive, friends }: Pro
     const resolution = new THREE.Vector2(drawingBufferWidth, drawingBufferHeight);
 
     PLANETS.forEach((p) => {
-      const node = new CelestialBodyNode({
-        body: p,
-        scene,
-        camera,
-        composer,
-        resolution,
-        texture: undefined,
-        ringTexture: undefined,
-        initialTrailsEnabled: useStore.getState().showTrails,
-      });
+      Promise.all([
+        showTextures ? loadBodyTexture(p.name) : undefined,
+        showTextures ? loadRingTexture(p.name) : undefined,
+      ])
+        .then(([texture, ringTexture]) => {
+          const node = new CelestialBodyNode({
+            body: p,
+            scene,
+            camera,
+            composer,
+            resolution,
+            texture,
+            ringTexture,
+            initialTrailsEnabled: useStore.getState().showTrails,
+          });
 
-      // Set initial visibility to reduce flicker before first update()
-      if (p instanceof Moon) {
-        const allowed = relevantSystems.has(p.orbits);
-        node.setVisible(allowed);
-        node.setTrailsEnabled(showTrailsInit && allowed);
-      } else if (p instanceof Planet) {
-        const always = Boolean(p.alwaysRenderIfDiscovered);
-        const isVisited = visitedBodies.has(p.name);
-        const isStart = p.name === startName;
-        const isTarget = p.name === targetName;
-        const isUnlocked = unlockedBodies.has(p.name);
-        const allowed = always
-          ? isUnlocked || isVisited || isStart || isTarget
-          : isVisited || isStart || isTarget;
+          if (p instanceof Moon) {
+            const allowed = relevantSystems.has(p.orbits);
+            node.setVisible(allowed);
+            node.setTrailsEnabled(showTrailsInit && allowed);
+          } else if (p instanceof Planet) {
+            const always = Boolean(p.alwaysRenderIfDiscovered);
+            const isVisited = visitedBodies.has(p.name);
+            const isStart = p.name === startName;
+            const isTarget = p.name === targetName;
+            const isUnlocked = unlockedBodies.has(p.name);
+            const allowed = always
+              ? isUnlocked || isVisited || isStart || isTarget
+              : isVisited || isStart || isTarget;
 
-        node.setVisible(allowed);
-        node.setTrailsEnabled(showTrailsInit && allowed);
-      }
+            node.setVisible(allowed);
+            node.setTrailsEnabled(showTrailsInit && allowed);
+          }
 
-      bodyRegistryRef.current.add(node);
+          bodyRegistryRef.current.add(node);
+        })
+        .catch((e) => {
+          console.error(`Failed to load texture for ${p.name}`, e);
+        });
     });
 
     // (Final copy pass is added in createComposer)
@@ -1439,38 +1461,6 @@ export function SolarSystemScene({ cameraController, interactive, friends }: Pro
 
     loopFnRef.current = renderLoop;
     frameRef.current = requestAnimationFrame(renderLoop);
-
-    // After the loop has started, load textures asynchronously and apply to nodes
-    if (showTextures) {
-      for (const p of PLANETS) {
-        const name = p.name;
-        void loadBodyTexture(name)
-          .then((tex) => {
-            const node = bodyRegistryRef.current.get(name);
-            if (node) {
-              node.setBodyTexture(tex);
-            }
-          })
-          .catch(() => {
-            // noop
-          });
-      }
-
-      // Saturn rings (if present)
-      const saturn = PLANETS.find((b) => b.name === 'Saturn');
-      if (saturn) {
-        void loadRingTexture('Saturn')
-          .then((tex) => {
-            const node = bodyRegistryRef.current.get('Saturn');
-            if (node) {
-              node.setRingTexture(tex);
-            }
-          })
-          .catch((e) => {
-            console.warn('[SolarSystemScene] Failed to load Saturn ring texture', e);
-          });
-      }
-    }
 
     // Preload and create the user's rocket asynchronously to avoid blocking first frame
     void (async () => {

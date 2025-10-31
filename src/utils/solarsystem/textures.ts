@@ -53,10 +53,10 @@ const RING_TEXTURE_REQUIRE: Record<string, number> = {
  *
  * Returns: Promise resolving to the loaded THREE.Texture.
  */
-export async function loadBodyTexture(name: string): Promise<THREE.Texture> {
+export async function loadBodyTexture(name: string): Promise<THREE.Texture | undefined> {
   const req = BODY_TEXTURE_REQUIRE[name];
   if (!req) {
-    throw new Error(`[textures] No texture mapping found for body ${name}`);
+    return undefined;
   }
 
   const cached = bodyTextureCache.get(name);
@@ -94,8 +94,10 @@ export async function loadBodyTexture(name: string): Promise<THREE.Texture> {
   }
 }
 
-export async function loadBodyTextures(names: string[]): Promise<Record<string, THREE.Texture>> {
-  const textures: Record<string, THREE.Texture> = {};
+export async function loadBodyTextures(
+  names: string[],
+): Promise<Record<string, THREE.Texture | undefined>> {
+  const textures: Record<string, THREE.Texture | undefined> = {};
   const loader = new TextureLoader();
 
   for (const name of names) {
@@ -134,10 +136,10 @@ export async function loadBodyTextures(names: string[]): Promise<Record<string, 
  *
  * Returns: Promise resolving to the loaded THREE.Texture.
  */
-export async function loadRingTexture(name: string): Promise<THREE.Texture> {
+export async function loadRingTexture(name: string): Promise<THREE.Texture | undefined> {
   const req = RING_TEXTURE_REQUIRE[name];
   if (!req) {
-    throw new Error(`[textures] No ring texture mapping found for body ${name}`);
+    return undefined;
   }
 
   const cached = ringTextureCache.get(name);

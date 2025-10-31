@@ -288,6 +288,22 @@ export class CelestialBodyNode {
         this.outlinePass.enabled = enabled;
       }
     }
+
+    // Fade in the mesh
+    if (visible) {
+      const mat = this.mesh.material as THREE.Material;
+      mat.transparent = true;
+      mat.opacity = 0;
+      const fadeIn = () => {
+        if (mat.opacity < 1) {
+          mat.opacity = Math.min(1, mat.opacity + 0.02);
+          requestAnimationFrame(fadeIn);
+        } else {
+          mat.transparent = false;
+        }
+      };
+      fadeIn();
+    }
   }
 
   setTrailsEnabled(enabled: boolean) {
