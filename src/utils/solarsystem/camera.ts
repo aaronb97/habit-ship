@@ -617,14 +617,23 @@ export class CameraController {
   }
 
   /**
-   * Convenience API: compute vantages from absolute journey progress and optionally
-   * lock yaw to a side-on angle for the entire scripted sequence.
-   * @param nowTs Anchor timestamp (ms).
-   * @param cameraStart Starting camera state.
-   * @param fromAbs Start progress in [0,1].
-   * @param toAbs End progress in [0,1].
-   * @param opts Optional yaw-lock settings.
-   * Note: If fromAbs and toAbs are approximately equal, no scripted sequence is started.
+   * Start a scripted camera sequence from absolute journey progress with sensible yaw policy:
+   * - Direct inter-body travel (typical): yaw blends from "ahead" (0) toward "behind" (π) based on
+   *   `vantageForProgress()` — a cinematic front-to-back sweep along the route.
+   * - Short-hop between very close bodies: when `opts.lockSideOnYaw` is true, yaw is forcibly held
+   *   side-on for the entire sequence to avoid ending up behind a parent body.
+   * - Boost that ends closer to the origin body (origin‑dominant): yaw is frozen "ahead" (0 + buffer)
+   *   for the whole sequence so the origin remains in view; yaw does not animate during the boost.
+   * - Boost that ends closer to the target body (target‑dominant): yaw is frozen "behind"
+   *   (π − buffer) so the target stays or comes into view; yaw does not animate during the boost.
+   * Near-complete progress preserves the cinematic finish (no freezing on near-complete moves).
+   *
+   * @param nowTs Anchor timestamp (ms) for the scripted sequence.
+   * @param cameraStart The starting camera state (yaw, pitch, radius).
+   * @param fromAbs Absolute start progress in [0,1].
+   * @param toAbs Absolute end progress in [0,1].
+   * @param opts Optional yaw-lock settings (`lockSideOnYaw` to force side-on; optional `sideYaw`).
+   * Note: If `fromAbs` and `toAbs` are approximately equal, no scripted sequence is started.
    */
   startScriptedCameraFromProgress(
     nowTs: number,
@@ -638,13 +647,43 @@ export class CameraController {
       return;
     }
 
-    const vStart = vantageForProgress(fromAbs);
-    const vEnd = vantageForProgress(toAbs);
-    const lock = opts?.lockSideOnYaw ?? false;
-    const side = opts?.sideYaw ?? Math.PI / 2;
+    // Compute adjusted vantages in a single, side-effect-free expression to avoid mutable locals.
+    const [vStartAdj, vEndAdj] = (() => {
+      const vStart = vantageForProgress(fromAbs);
+      const vEnd = vantageForProgress(toAbs);
+      const lock = opts?.lockSideOnYaw ?? false;
+      const side = opts?.sideYaw ?? Math.PI / 2;
 
-    const vStartAdj = lock ? { ...vStart, yaw: side } : vStart;
-    const vEndAdj = lock ? { ...vEnd, yaw: side } : vEnd;
+      // Small yaw buffer so the rocket doesn't occlude the body and exhaust doesn't point into camera
+      const BUFFER = 0.1;
+
+      if (lock) {
+        // Short-hop: hold a side-on yaw across the entire sequence.
+        return [{ ...vStart, yaw: side }, { ...vEnd, yaw: side }];
+      }
+
+      // End-dominance: if ending closer to origin, keep yaw ahead; if closer to target, keep behind.
+      const completes = toAbs >= 0.999; // near-complete: keep cinematic finish
+      const MID = 0.5;
+      if (!completes) {
+        if (toAbs < MID) {
+          // Origin-dominant boost: keep the origin in view; do not animate yaw during follow.
+          return [{ ...vStart, yaw: 0 + BUFFER }, { ...vEnd, yaw: 0 + BUFFER }];
+        }
+
+        if (toAbs > MID) {
+          // Target-dominant boost: keep the target in view; do not animate yaw during follow.
+          return [
+            { ...vStart, yaw: Math.PI - BUFFER },
+            { ...vEnd, yaw: Math.PI - BUFFER },
+          ];
+        }
+      }
+
+      // Typical direct travel: blend yaw from ahead to behind using the default vantages.
+      return [vStart, vEnd];
+    })();
+
     this.startScriptedCamera(nowTs, cameraStart, vStartAdj, vEndAdj);
   }
 
