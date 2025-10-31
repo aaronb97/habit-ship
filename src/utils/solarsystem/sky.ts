@@ -4,8 +4,8 @@ import { Asset } from 'expo-asset';
 import { SKY_SEGMENTS, SKY_SPHERE_RADIUS, SKY_BRIGHTNESS } from './constants';
 
 /**
- * Creates a sky sphere mesh immediately and loads its starfield texture
- * asynchronously in the background. This avoids blocking the first render.
+ * Creates a sky sphere mesh and begins loading its starfield texture asynchronously.
+ * The mesh starts transparent (opacity 0) and fades in to opaque to avoid a pop.
  *
  * Returns: THREE.Mesh sky sphere with a basic material; its texture map will
  * be populated once the underlying image finishes loading.
@@ -18,6 +18,8 @@ export function createSky(): THREE.Mesh {
     color: new THREE.Color(0x000000),
     side: THREE.BackSide,
     depthWrite: false,
+    transparent: true,
+    opacity: 0,
   });
 
   const skyMesh = new THREE.Mesh(skyGeometry, skyMaterial);
@@ -45,6 +47,18 @@ export function createSky(): THREE.Mesh {
       console.warn('[sky] Failed to load space texture', e);
     }
   })();
+
+  // Start fade-in to opaque
+  const mat = skyMesh.material as THREE.MeshBasicMaterial;
+  const fadeIn = () => {
+    if (mat.opacity < 1) {
+      mat.opacity = Math.min(1, mat.opacity + 0.02);
+      requestAnimationFrame(fadeIn);
+    } else {
+      mat.transparent = false;
+    }
+  };
+  fadeIn();
 
   return skyMesh;
 }

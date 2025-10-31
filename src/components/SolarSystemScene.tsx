@@ -641,20 +641,7 @@ export function SolarSystemScene({ cameraController, interactive, friends }: Pro
       const skyMesh = createSky();
       skyRef.current = skyMesh;
 
-      const material = Array.isArray(skyMesh.material) ? skyMesh.material[0]! : skyMesh.material;
-      material.opacity = 0;
-      material.transparent = true;
       scene.add(skyMesh);
-
-      const fadeIn = () => {
-        if (material.opacity < 1) {
-          material.opacity = Math.min(1, material.opacity + 0.02);
-          requestAnimationFrame(fadeIn);
-        } else {
-          material.transparent = false;
-        }
-      };
-      fadeIn();
     } catch (e) {
       console.warn('[SolarSystemScene] Failed to initialize sky', e);
     }
