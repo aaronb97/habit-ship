@@ -214,24 +214,33 @@ export function startFirestoreSync(firebaseId: string): () => void {
   // Attach snapshot listeners and perform an initial backfill if needed
   const unsubPublic = userDoc(firebaseId).onSnapshot(
     (snap) => {
-      const data = snap.data() as Partial<UsersDoc> | undefined;
+      const raw = snap.data() as Record<string, unknown> | undefined;
 
-      if (!data) {
+      if (!raw) {
         // Public doc missing: backfill later after initial username allocation pass
       } else {
-        const nextStr = JSON.stringify(data);
+        // Normalize to only the public fields we sync, so comparisons match our write payload shape
+        const normalized = buildPayloadGeneric(
+          PUBLIC_FIELDS as readonly (string | number | symbol)[],
+          raw,
+        ) as Partial<UsersDoc>;
+        const nextStr = JSON.stringify(normalized);
         if (nextStr !== lastPublicSeenStr) {
-          applySnapshotToStoreGeneric(
-            PUBLIC_FIELDS as readonly (string | number | symbol)[],
-            data as unknown as Record<string, unknown>,
-          );
+          // Only apply remote -> local when the admin-controlled `sync` flag is true
+          const shouldApply = Boolean((raw as { sync?: boolean }).sync);
+          if (shouldApply) {
+            applySnapshotToStoreGeneric(
+              PUBLIC_FIELDS as readonly (string | number | symbol)[],
+              normalized as unknown as Record<string, unknown>,
+            );
+          }
           lastPublicSeenStr = nextStr;
         }
       }
 
       // If username missing both locally and remotely after first public snap, allocate one
       const { username } = useStore.getState();
-      const remoteUsername = data?.username ?? null;
+      const remoteUsername = (raw as Partial<UsersDoc> | undefined)?.username ?? null;
       if (!username && !remoteUsername) {
         void allocateUniqueUsernameIfMissing().catch((e) => {
           Sentry.captureException(e);
@@ -239,7 +248,7 @@ export function startFirestoreSync(firebaseId: string): () => void {
       }
 
       // If doc missing, backfill minimal public payload
-      if (!data) {
+      if (!raw) {
         const payload = buildPayloadGeneric(
           PUBLIC_FIELDS as readonly (string | number | symbol)[],
           useStore.getState() as unknown as Record<string, unknown>,
@@ -263,22 +272,31 @@ export function startFirestoreSync(firebaseId: string): () => void {
 
   const unsubPrivate = userPrivateDoc(firebaseId).onSnapshot(
     (snap) => {
-      const data = snap.data() as Partial<UsersPrivateDoc> | undefined;
+      const raw = snap.data() as Record<string, unknown> | undefined;
 
-      if (!data) {
+      if (!raw) {
         // Private doc missing: backfill below
       } else {
-        const nextStr = JSON.stringify(data);
+        // Normalize to only the private fields we sync, so comparisons match our write payload shape
+        const normalized = buildPayloadGeneric(
+          PRIVATE_FIELDS as readonly (string | number | symbol)[],
+          raw,
+        ) as Partial<UsersPrivateDoc>;
+        const nextStr = JSON.stringify(normalized);
         if (nextStr !== lastPrivateSeenStr) {
-          applySnapshotToStoreGeneric(
-            PRIVATE_FIELDS as readonly (string | number | symbol)[],
-            data as unknown as Record<string, unknown>,
-          );
+          // Only apply remote -> local when the admin-controlled `sync` flag is true
+          const shouldApply = Boolean((raw as { sync?: boolean }).sync);
+          if (shouldApply) {
+            applySnapshotToStoreGeneric(
+              PRIVATE_FIELDS as readonly (string | number | symbol)[],
+              normalized as unknown as Record<string, unknown>,
+            );
+          }
           lastPrivateSeenStr = nextStr;
         }
       }
 
-      if (!data) {
+      if (!raw) {
         const payload = buildPayloadGeneric(
           PRIVATE_FIELDS as readonly (string | number | symbol)[],
           useStore.getState() as unknown as Record<string, unknown>,
