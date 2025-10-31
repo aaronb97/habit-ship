@@ -963,13 +963,6 @@ export function SolarSystemScene({ cameraController, interactive, friends }: Pro
               upos.distanceTraveled > 1e-9,
           );
 
-          console.log({
-            target: upos.target,
-            initialDistance: upos.initialDistance,
-            distanceTraveled: upos.distanceTraveled,
-            inFlightUser,
-          });
-
           const animActive = isInteractiveRef.current && !animSyncedRef.current;
           const refAbs = Math.max(1e-6, ROCKET_SPIN_ABS_REF);
           const boostSpeed01 = animActive
